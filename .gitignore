@@ -1,0 +1,119 @@
+# ============================================================
+# Cherry-Studio-BB .gitignore
+# 忽略非源码文件与环境依赖，保持仓库干净，仅上传源码
+# ============================================================
+
+# ---------- 依赖 ----------
+node_modules/
+.pnpm-store/
+.yarn-cache/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+.pnp.loader.mjs
+
+# ---------- 构建产物 ----------
+dist/
+out/
+release/
+build-output/
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+stats.html
+
+# ---------- 缓存与临时文件 ----------
+.cache/
+.vite/
+.turbo/
+.eslintcache
+.tsbuildinfo/
+.context/
+*.tsbuildinfo
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ---------- 日志 ----------
+logs/
+*.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- 环境变量与密钥（保留 .env.example 模板） ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials.json
+secrets.json
+
+# ---------- 测试产物 ----------
+coverage/
+.vitest-cache/
+vitest.config.*.timestamp-*
+playwright-report/
+test-results/
+tests/e2e/.artifacts/
+
+# ---------- 编辑器与 IDE ----------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vim/
+*.iml
+
+# ---------- 本地 AI 工具配置 ----------
+.aider*
+.cursorrules
+.cursor/*
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+.gemini/*
+.qwen/*
+.trae/*
+.claude-code-router/*
+.codebuddy/*
+.antigravitycli/*
+.zed/*
+!.zed/settings.json.example
+CLAUDE.local.md
+AGENTS.override.md
+
+# ---------- 本地数据与运行时目录 ----------
+local/
+mcp_server/
+resources/binaries/
+.sessions/
+
+# ---------- 系统文件 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+.directory
+*.local

@@ -1,0 +1,199 @@
+import { HStack } from '@renderer/components/Layout'
+import { TopView } from '@renderer/components/TopView'
+import { useAssistant } from '@renderer/hooks/useAssistant'
+import type { Assistant } from '@renderer/types'
+import { Menu, Modal } from 'antd'
+import { useState } from 'react'
+import styled from 'styled-components'
+
+import AssistantMCPSettings from './AssistantMCPSettings'
+import AssistantModelSettings from './AssistantModelSettings'
+import AssistantPromptSettings from './AssistantPromptSettings'
+import AssistantRegularPromptsSettings from './AssistantRegularPromptsSettings'
+
+interface AssistantSettingPopupShowParams {
+  assistant: Assistant
+  tab?: AssistantSettingPopupTab
+}
+
+type AssistantSettingPopupTab = 'prompt' | 'model' | 'messages' | 'mcp' | 'regular_phrases'
+
+interface Props extends AssistantSettingPopupShowParams {
+  resolve: (assistant: Assistant) => void
+}
+
+const AssistantSettingPopupContainer: React.FC<Props> = ({ resolve, tab, ...props }) => {
+  const [open, setOpen] = useState(true)
+  const [menu, setMenu] = useState<AssistantSettingPopupTab>(tab || 'model')
+
+  const _useAssistant = useAssistant(props.assistant.id)
+
+  const assistant = _useAssistant.assistant
+  const updateAssistant = _useAssistant.updateAssistant
+  const updateAssistantSettings = _useAssistant.updateAssistantSettings
+
+  const onOk = () => {
+    setOpen(false)
+  }
+
+  const onCancel = () => {
+    setOpen(false)
+  }
+
+  const afterClose = () => {
+    resolve(assistant)
+  }
+
+  const items = [
+    {
+      key: 'model',
+      label: '模型设置'
+    },
+    {
+      key: 'prompt',
+      label: '提示词设置'
+    },
+    {
+      key: 'mcp',
+      label: 'MCP 服务器'
+    },
+    {
+      key: 'regular_phrases',
+      label: '常用短语'
+    }
+  ].filter(Boolean) as { key: string; label: string }[]
+
+  return (
+    <StyledModal
+      open={open}
+      onOk={onOk}
+      onCancel={onCancel}
+      afterClose={afterClose}
+      maskClosable={menu !== 'prompt'}
+      footer={null}
+      title={assistant.name}
+      transitionName="animation-move-down"
+      styles={{
+        content: {
+          padding: 0,
+          overflow: 'hidden'
+        },
+        header: { padding: '10px 15px', borderBottom: '0.5px solid var(--color-border)', margin: 0, borderRadius: 0 },
+        body: {
+          padding: 0
+        }
+      }}
+      width="min(900px, 70vw)"
+      height="80vh"
+      centered>
+      <HStack>
+        <LeftMenu>
+          <StyledMenu
+            defaultSelectedKeys={[tab || 'model']}
+            mode="vertical"
+            items={items}
+            onSelect={({ key }) => setMenu(key as AssistantSettingPopupTab)}
+          />
+        </LeftMenu>
+        <Settings>
+          {menu === 'model' && (
+            <AssistantModelSettings
+              assistant={assistant}
+              updateAssistant={updateAssistant}
+              updateAssistantSettings={updateAssistantSettings}
+            />
+          )}
+          {menu === 'prompt' && (
+            <AssistantPromptSettings
+              assistant={assistant}
+              updateAssistant={updateAssistant}
+              updateAssistantSettings={updateAssistantSettings}
+            />
+          )}
+          {menu === 'mcp' && (
+            <AssistantMCPSettings
+              assistant={assistant}
+              updateAssistant={updateAssistant}
+              updateAssistantSettings={updateAssistantSettings}
+            />
+          )}
+          {menu === 'regular_phrases' && (
+            <AssistantRegularPromptsSettings assistant={assistant} updateAssistant={updateAssistant} />
+          )}
+        </Settings>
+      </HStack>
+    </StyledModal>
+  )
+}
+
+const LeftMenu = styled.div`
+  height: calc(80vh - 20px);
+  border-right: 0.5px solid var(--color-border);
+`
+
+const Settings = styled.div`
+  flex: 1;
+  padding: 16px 16px;
+  height: calc(80vh - 16px);
+  overflow-y: scroll;
+`
+
+const StyledModal = styled(Modal)`
+  .ant-modal-title {
+    font-size: 14px;
+  }
+  .ant-modal-close {
+    top: 4px;
+    right: 4px;
+  }
+  .ant-menu-item {
+    height: 36px;
+    color: var(--color-text-2);
+    display: flex;
+    align-items: center;
+    border: 0.5px solid transparent;
+    border-radius: 6px;
+    .ant-menu-title-content {
+      line-height: 36px;
+    }
+  }
+  .ant-menu-item-active {
+    background-color: var(--color-background-soft) !important;
+    transition: none;
+  }
+  .ant-menu-item-selected {
+    background-color: var(--color-background-soft);
+    border: 0.5px solid var(--color-border);
+    .ant-menu-title-content {
+      color: var(--color-text-1);
+      font-weight: 500;
+    }
+  }
+`
+
+const StyledMenu = styled(Menu)`
+  width: 220px;
+  padding: 5px;
+  background: transparent;
+  margin-top: 2px;
+  .ant-menu-item {
+    margin-bottom: 7px;
+  }
+`
+
+export default class AssistantSettingsPopup {
+  static show(props: AssistantSettingPopupShowParams) {
+    return new Promise<Assistant>((resolve) => {
+      TopView.show(
+        <AssistantSettingPopupContainer
+          {...props}
+          resolve={(v) => {
+            resolve(v)
+            TopView.hide('AssistantSettingsPopup')
+          }}
+        />,
+        'AssistantSettingsPopup'
+      )
+    })
+  }
+}

@@ -1,0 +1,126 @@
+const { Arch } = require('electron-builder')
+const { execSync } = require('child_process')
+const fs = require('fs')
+const path = require('path')
+const { parse, stringify } = require('yaml')
+
+const workspaceConfigPath = path.join(__dirname, '..', 'pnpm-workspace.yaml')
+
+// if you want to add new prebuild binaries packages with different architectures, you can add them here
+// please add to allX64 and allArm64 from pnpm-lock.yaml
+const packages = [
+  // @napi-rs/canvas platform binaries (pulled in by pdf-parse/pdfjs-dist).
+  // Only the current platform's variant must ship; everything else is excluded.
+  '@napi-rs/canvas-android-arm64',
+  '@napi-rs/canvas-darwin-arm64',
+  '@napi-rs/canvas-darwin-x64',
+  '@napi-rs/canvas-linux-arm-gnueabihf',
+  '@napi-rs/canvas-linux-arm64-gnu',
+  '@napi-rs/canvas-linux-arm64-musl',
+  '@napi-rs/canvas-linux-riscv64-gnu',
+  '@napi-rs/canvas-linux-x64-gnu',
+  '@napi-rs/canvas-linux-x64-musl',
+  '@napi-rs/canvas-win32-arm64-msvc',
+  '@napi-rs/canvas-win32-x64-msvc'
+]
+
+const platformToArch = {
+  mac: 'darwin',
+  windows: 'win32',
+  linux: 'linux',
+  linuxmusl: 'linuxmusl'
+}
+
+const ripgrepTargets = ['arm64-darwin', 'arm64-linux', 'arm64-win32', 'x64-darwin', 'x64-linux', 'x64-win32']
+const rtkTargets = ['darwin-arm64', 'darwin-x64', 'linux-x64', 'linux-arm64', 'win32-x64']
+
+function getTargetPackageFilters({ platform, arch }, packageNames = packages) {
+  const keepPackages = packageNames.filter(
+    (packageName) => packageName.includes(arch) && packageName.includes(platform)
+  )
+  const excludePackageFilters = packageNames
+    .filter((packageName) => !keepPackages.includes(packageName))
+    .map((packageName) => '!node_modules/' + packageName + '/**')
+
+  const excludeRipgrepFilters = ripgrepTargets
+    .filter((target) => target !== `${arch}-${platform}`)
+    .map((target) => '!node_modules/@cherrystudio/ripgrep/vendor/ripgrep/' + target + '/**')
+
+  const currentPlatformKey = `${platform}-${arch}`
+  const excludeRtkFilters = rtkTargets
+    .filter((target) => target !== currentPlatformKey)
+    .map((target) => '!resources/binaries/' + target + '/**')
+
+  return [...excludePackageFilters, ...excludeRipgrepFilters, ...excludeRtkFilters]
+}
+
+exports.getTargetPackageFilters = getTargetPackageFilters
+
+exports.default = async function (context) {
+  const arch = context.arch === Arch.arm64 ? 'arm64' : 'x64'
+  const platformName = context.packager.platform.name
+  const platform = platformToArch[platformName]
+
+  // Download rtk binary for the target platform
+  try {
+    console.log(`Downloading rtk binary for ${platform}-${arch}...`)
+    execSync(`node "${path.join(__dirname, 'download-rtk-binaries.js')}" ${platform} ${arch}`, { stdio: 'inherit' })
+  } catch (error) {
+    console.warn(`Warning: rtk binary download failed (non-fatal): ${error.message}`)
+  }
+
+  const downloadPackages = async () => {
+    // Skip if target platform and architecture match current system
+    if (platform === process.platform && arch === process.arch) {
+      console.log(`Skipping install: target (${platform}/${arch}) matches current system`)
+      return
+    }
+
+    console.log(`Installing packages for target platform=${platform} arch=${arch}...`)
+
+    // Backup and modify pnpm-workspace.yaml to add target platform support
+    const originalWorkspaceConfig = fs.readFileSync(workspaceConfigPath, 'utf-8')
+    const workspaceConfig = parse(originalWorkspaceConfig)
+
+    // Add target platform to supportedArchitectures.os
+    if (!workspaceConfig.supportedArchitectures.os.includes(platform)) {
+      workspaceConfig.supportedArchitectures.os.push(platform)
+    }
+
+    // Add target architecture to supportedArchitectures.cpu
+    if (!workspaceConfig.supportedArchitectures.cpu.includes(arch)) {
+      workspaceConfig.supportedArchitectures.cpu.push(arch)
+    }
+
+    const modifiedWorkspaceConfig = stringify(workspaceConfig)
+    console.log('Modified workspace config:', modifiedWorkspaceConfig)
+    fs.writeFileSync(workspaceConfigPath, modifiedWorkspaceConfig)
+
+    try {
+      execSync(`pnpm install`, { stdio: 'inherit' })
+    } finally {
+      // Restore original pnpm-workspace.yaml
+      fs.writeFileSync(workspaceConfigPath, originalWorkspaceConfig)
+    }
+  }
+
+  await downloadPackages()
+
+  const excludePackages = async (packagesToExclude) => {
+    // 从项目根目录的 electron-builder.yml 读取 files 配置，避免多次覆盖配置导致出错
+    const electronBuilderConfigPath = path.join(__dirname, '..', 'electron-builder.yml')
+    const electronBuilderConfig = parse(fs.readFileSync(electronBuilderConfigPath, 'utf-8'))
+    const files = electronBuilderConfig.files
+    const firstFileSet = files.find((entry) => typeof entry === 'object' && entry.filter)
+
+    // 把其他平台的二进制排除规则追加到第一个 FileSet 的 filter 内，
+    // 避免独立字符串条目与对象条目分属不同 matcher 导致排除失效
+    if (firstFileSet) {
+      firstFileSet.filter.push(...packagesToExclude)
+    }
+
+    context.packager.config.files = files
+  }
+
+  await excludePackages(getTargetPackageFilters({ platform, arch }))
+}

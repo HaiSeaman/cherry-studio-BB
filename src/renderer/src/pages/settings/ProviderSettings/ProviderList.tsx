@@ -1,0 +1,519 @@
+import type { DropResult } from '@hello-pangea/dnd'
+import { loggerService } from '@logger'
+import {
+  DraggableVirtualList,
+  type DraggableVirtualListRef,
+  useDraggableReorder
+} from '@renderer/components/DraggableList'
+import { DeleteIcon, EditIcon } from '@renderer/components/Icons'
+import { ProviderAvatar } from '@renderer/components/ProviderAvatar'
+import { useAllProviders, useProviders } from '@renderer/hooks/useProvider'
+import { useTimer } from '@renderer/hooks/useTimer'
+import ImageStorage from '@renderer/services/ImageStorage'
+import type { Provider, ProviderType } from '@renderer/types'
+import { isSystemProvider } from '@renderer/types'
+import { getFancyProviderName, matchKeywordsInModel, matchKeywordsInProvider, uuid } from '@renderer/utils'
+import { isAnthropicSupportedProvider } from '@renderer/utils/provider'
+import type { MenuProps } from 'antd'
+import { Button, Dropdown, Input, Tag } from 'antd'
+import { Check, Filter, GripVertical, PlusIcon, Search, UserPen } from 'lucide-react'
+import type { FC } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import styled from 'styled-components'
+
+import AddProviderPopup from './AddProviderPopup'
+import ModelNotesPopup from './ModelNotesPopup'
+import ProviderSetting from './ProviderSetting'
+import UrlSchemaInfoPopup from './UrlSchemaInfoPopup'
+
+const logger = loggerService.withContext('ProviderList')
+
+const BUTTON_WRAPPER_HEIGHT = 50
+
+interface ProviderListProps {
+  /** Whether in onboarding mode for new users */
+  isOnboarding?: boolean
+}
+
+const ProviderList: FC<ProviderListProps> = ({ isOnboarding = false }) => {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const providers = useAllProviders()
+  const { updateProviders, addProvider, removeProvider, updateProvider } = useProviders()
+  const { setTimeoutTimer } = useTimer()
+  const [selectedProvider, _setSelectedProvider] = useState<Provider>(providers[0])
+  const [searchText, setSearchText] = useState<string>('')
+  const [dragging, setDragging] = useState(false)
+  const [agentFilterEnabled, setAgentFilterEnabled] = useState(false)
+  const [providerLogos, setProviderLogos] = useState<Record<string, string>>({})
+  const listRef = useRef<DraggableVirtualListRef>(null)
+
+  const setSelectedProvider = useCallback((provider: Provider) => {
+    startTransition(() => _setSelectedProvider(provider))
+  }, [])
+
+  useEffect(() => {
+    const loadAllLogos = async () => {
+      const logos: Record<string, string> = {}
+      for (const provider of providers) {
+        if (provider.id) {
+          try {
+            const logoData = await ImageStorage.get(`provider-${provider.id}`)
+            if (logoData) {
+              logos[provider.id] = logoData
+            }
+          } catch (error) {
+            logger.error(`Failed to load logo for provider ${provider.id}`, error as Error)
+          }
+        }
+      }
+      setProviderLogos(logos)
+    }
+
+    void loadAllLogos()
+  }, [providers])
+
+  useEffect(() => {
+    let shouldUpdate = false
+    const hasFilterParam = searchParams.get('filter') === 'agent'
+
+    // Handle filter param first - when filter is enabled, ignore id param
+    if (hasFilterParam) {
+      setAgentFilterEnabled(true)
+      searchParams.delete('filter')
+      searchParams.delete('id') // Clear id param when filter is enabled
+      shouldUpdate = true
+    } else if (searchParams.get('id')) {
+      const providerId = searchParams.get('id')
+      const provider = providers.find((p) => p.id === providerId)
+      if (provider) {
+        setSelectedProvider(provider)
+        // 滚动到选中的 provider
+        const index = providers.findIndex((p) => p.id === providerId)
+        if (index >= 0) {
+          setTimeoutTimer(
+            'scroll-to-selected-provider',
+            () => listRef.current?.scrollToIndex(index, { align: 'center' }),
+            100
+          )
+        }
+      } else {
+        setSelectedProvider(providers[0])
+      }
+      searchParams.delete('id')
+      shouldUpdate = true
+    }
+
+    if (shouldUpdate) {
+      setSearchParams(searchParams)
+    }
+  }, [providers, searchParams, setSearchParams, setSelectedProvider, setTimeoutTimer])
+
+  // Handle provider add key from URL schema
+  useEffect(() => {
+    const handleProviderAddKey = async (data: {
+      id: string
+      apiKey: string
+      baseUrl: string
+      type?: ProviderType
+      name?: string
+    }) => {
+      const { id } = data
+
+      const { updatedProvider, isNew, displayName } = await UrlSchemaInfoPopup.show(data)
+      window.navigate(`/settings/provider?id=${id}`)
+
+      if (!updatedProvider) {
+        return
+      }
+
+      if (isNew) {
+        addProvider(updatedProvider)
+      } else {
+        updateProvider(updatedProvider)
+      }
+
+      setSelectedProvider(updatedProvider)
+      window.toast.success(`成功为 ${displayName} 添加 API 密钥`)
+    }
+
+    // 检查 URL 参数
+    const addProviderData = searchParams.get('addProviderData')
+    if (!addProviderData) {
+      return
+    }
+
+    try {
+      const { id, apiKey: newApiKey, baseUrl, type, name } = JSON.parse(addProviderData)
+      if (!id || !newApiKey || !baseUrl) {
+        window.toast.error('添加服务商 API 密钥失败，数据格式错误')
+        window.navigate('/settings/provider')
+        return
+      }
+
+      void handleProviderAddKey({ id, apiKey: newApiKey, baseUrl, type, name })
+    } catch (error) {
+      window.toast.error('添加服务商 API 密钥失败，数据格式错误')
+      window.navigate('/settings/provider')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const onAddProvider = async () => {
+    const { name: providerName, type, logo } = await AddProviderPopup.show()
+
+    if (!providerName.trim()) {
+      return
+    }
+
+    const provider = {
+      id: uuid(),
+      name: providerName.trim(),
+      type,
+      apiKey: '',
+      apiHost: '',
+      models: [],
+      enabled: true,
+      isSystem: false
+    } as Provider
+
+    let updatedLogos = { ...providerLogos }
+    if (logo) {
+      try {
+        await ImageStorage.set(`provider-${provider.id}`, logo)
+        updatedLogos = {
+          ...updatedLogos,
+          [provider.id]: logo
+        }
+        setProviderLogos(updatedLogos)
+      } catch (error) {
+        logger.error('Failed to save logo', error as Error)
+        window.toast.error('保存提供商 Logo 失败')
+      }
+    }
+
+    addProvider(provider)
+    setSelectedProvider(provider)
+  }
+
+  const getDropdownMenus = (provider: Provider): MenuProps['items'] => {
+    const noteMenu = {
+      label: '模型备注',
+      key: 'notes',
+      icon: <UserPen size={14} />,
+      onClick: () => ModelNotesPopup.show({ provider })
+    }
+
+    const editMenu = {
+      label: '编辑',
+      key: 'edit',
+      icon: <EditIcon size={14} />,
+      async onClick() {
+        const { name, type, logoFile, logo } = await AddProviderPopup.show(provider)
+
+        if (name) {
+          updateProvider({ ...provider, name, type })
+          if (provider.id) {
+            if (logo) {
+              try {
+                await ImageStorage.set(`provider-${provider.id}`, logo)
+                setProviderLogos((prev) => ({
+                  ...prev,
+                  [provider.id]: logo
+                }))
+              } catch (error) {
+                logger.error('Failed to save logo', error as Error)
+                window.toast.error('更新提供商 Logo 失败')
+              }
+            } else if (logo === undefined && logoFile === undefined) {
+              try {
+                await ImageStorage.set(`provider-${provider.id}`, '')
+                setProviderLogos((prev) => {
+                  const newLogos = { ...prev }
+                  delete newLogos[provider.id]
+                  return newLogos
+                })
+              } catch (error) {
+                logger.error('Failed to reset logo', error as Error)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const deleteMenu = {
+      label: '删除',
+      key: 'delete',
+      icon: <DeleteIcon size={14} className="lucide-custom" />,
+      danger: true,
+      async onClick() {
+        window.modal.confirm({
+          title: '删除提供商',
+          content: '确定要删除此模型提供商吗？',
+          okButtonProps: { danger: true },
+          okText: '删除',
+          centered: true,
+          onOk: async () => {
+            // 删除provider前先清理其logo
+            if (provider.id) {
+              try {
+                await ImageStorage.remove(`provider-${provider.id}`)
+                setProviderLogos((prev) => {
+                  const newLogos = { ...prev }
+                  delete newLogos[provider.id]
+                  return newLogos
+                })
+              } catch (error) {
+                logger.error('Failed to delete logo', error as Error)
+              }
+            }
+
+            setSelectedProvider(providers.filter((p) => isSystemProvider(p))[0])
+            removeProvider(provider)
+          }
+        })
+      }
+    }
+
+    const menus = [editMenu, noteMenu, deleteMenu]
+
+    if (providers.filter((p) => p.id === provider.id).length > 1) {
+      return menus
+    }
+
+    if (isSystemProvider(provider)) {
+      return [noteMenu]
+    } else if (provider.isSystem) {
+      // 这里是处理数据中存在新版本删掉的系统提供商的情况
+      // 未来期望能重构一下，不要依赖isSystem字段
+      return [noteMenu, deleteMenu]
+    } else {
+      return menus
+    }
+  }
+
+  const filteredProviders = providers.filter((provider) => {
+    // Filter by agent support
+    if (agentFilterEnabled && !isAnthropicSupportedProvider(provider)) {
+      return false
+    }
+
+    const keywords = searchText.toLowerCase().split(/\s+/).filter(Boolean)
+    const isProviderMatch = matchKeywordsInProvider(keywords, provider)
+    const isModelMatch = provider.models.some((model) => matchKeywordsInModel(keywords, model))
+    return isProviderMatch || isModelMatch
+  })
+
+  const { onDragEnd: handleReorder, itemKey } = useDraggableReorder({
+    originalList: providers,
+    filteredList: filteredProviders,
+    onUpdate: updateProviders,
+    itemKey: 'id'
+  })
+
+  const handleDragStart = useCallback(() => {
+    setDragging(true)
+  }, [])
+
+  const handleDragEnd = useCallback(
+    (result: DropResult) => {
+      setDragging(false)
+      handleReorder(result)
+    },
+    [handleReorder]
+  )
+
+  return (
+    <Container className="selectable">
+      <ProviderListContainer>
+        <AddButtonWrapper>
+          <Input
+            type="text"
+            placeholder={'搜索模型平台...'}
+            value={searchText}
+            style={{ borderRadius: 'var(--list-item-border-radius)', height: 35 }}
+            prefix={<Search size={14} />}
+            suffix={
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      label: '全部服务商',
+                      key: 'all',
+                      icon: agentFilterEnabled ? <CheckPlaceholder /> : <Check size={14} />,
+                      onClick: () => setAgentFilterEnabled(false)
+                    },
+                    {
+                      label: '支持 Agent',
+                      key: 'agent',
+                      icon: agentFilterEnabled ? <Check size={14} /> : <CheckPlaceholder />,
+                      onClick: () => setAgentFilterEnabled(true)
+                    }
+                  ]
+                }}
+                trigger={['click']}>
+                <FilterButton>
+                  <Filter
+                    size={14}
+                    className={agentFilterEnabled ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-3)]'}
+                  />
+                </FilterButton>
+              </Dropdown>
+            }
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation()
+                setSearchText('')
+              }
+            }}
+            allowClear
+            disabled={dragging}
+          />
+        </AddButtonWrapper>
+        <DraggableVirtualList
+          ref={listRef}
+          list={filteredProviders}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          estimateSize={useCallback(() => 40, [])}
+          itemKey={itemKey}
+          overscan={3}
+          style={{
+            height: `calc(100% - 2 * ${BUTTON_WRAPPER_HEIGHT}px)`
+          }}
+          scrollerStyle={{
+            padding: 8,
+            paddingRight: 5
+          }}
+          itemContainerStyle={{ paddingBottom: 5 }}>
+          {(provider) => (
+            <Dropdown menu={{ items: getDropdownMenus(provider) }} trigger={['contextMenu']}>
+              <ProviderListItem
+                key={provider.id}
+                className={provider.id === selectedProvider?.id ? 'active' : ''}
+                onClick={() => setSelectedProvider(provider)}>
+                <DragHandle>
+                  <GripVertical size={12} />
+                </DragHandle>
+                <ProviderAvatar
+                  style={{
+                    width: 24,
+                    height: 24
+                  }}
+                  provider={provider}
+                  customLogos={providerLogos}
+                />
+                <ProviderItemName className="text-nowrap">{getFancyProviderName(provider)}</ProviderItemName>
+                {provider.enabled && (
+                  <Tag color="green" style={{ marginLeft: 'auto', marginRight: 0, borderRadius: 16 }}>
+                    ON
+                  </Tag>
+                )}
+              </ProviderListItem>
+            </Dropdown>
+          )}
+        </DraggableVirtualList>
+        <AddButtonWrapper>
+          <Button
+            style={{ width: '100%', borderRadius: 'var(--list-item-border-radius)' }}
+            icon={<PlusIcon size={16} />}
+            onClick={onAddProvider}
+            disabled={dragging}>
+            {'添加'}
+          </Button>
+        </AddButtonWrapper>
+      </ProviderListContainer>
+      <ProviderSetting providerId={selectedProvider.id} key={selectedProvider.id} isOnboarding={isOnboarding} />
+    </Container>
+  )
+}
+
+const Container = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+`
+
+const ProviderListContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-width: calc(var(--settings-width) + 10px);
+  padding-bottom: 5px;
+  border-right: 0.5px solid var(--color-border);
+`
+
+const ProviderListItem = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 5px 10px;
+  width: 100%;
+  border-radius: var(--list-item-border-radius);
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+  border: 0.5px solid transparent;
+  user-select: none;
+  cursor: pointer;
+  &:hover {
+    background: var(--color-background-soft);
+  }
+  &.active {
+    background: var(--color-background-soft);
+    border: 0.5px solid var(--color-border);
+    font-weight: bold !important;
+  }
+`
+
+const DragHandle = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -8px;
+  width: 12px;
+  color: var(--color-text-3);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  cursor: grab;
+
+  ${ProviderListItem}:hover & {
+    opacity: 1;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+`
+
+const ProviderItemName = styled.div`
+  margin-left: 10px;
+  font-weight: 500;
+`
+
+const AddButtonWrapper = styled.div`
+  height: ${BUTTON_WRAPPER_HEIGHT}px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 8px;
+`
+
+const FilterButton = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+`
+
+const CheckPlaceholder = styled.span`
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+`
+
+export default ProviderList

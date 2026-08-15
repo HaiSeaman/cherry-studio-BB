@@ -1,0 +1,298 @@
+import { CheckOutlined, InfoCircleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { loggerService } from '@logger'
+import { useTheme } from '@renderer/context/ThemeProvider'
+import { useTimer } from '@renderer/hooks/useTimer'
+import { useBlacklist } from '@renderer/hooks/useWebSearchProviders'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { setExcludeDomains } from '@renderer/store/websearch'
+import { parseMatchPattern, parseSubscribeContent } from '@renderer/utils/blacklistMatchPattern'
+import type { TableProps } from 'antd'
+import { Alert, Button, Table } from 'antd'
+import TextArea from 'antd/es/input/TextArea'
+import type { FC } from 'react'
+import { useEffect, useState } from 'react'
+
+import { SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
+import AddSubscribePopup from './AddSubscribePopup'
+
+type TableRowSelection<T extends object = object> = TableProps<T>['rowSelection']
+interface DataType {
+  key: React.Key
+  url: string
+  name: string
+}
+
+const logger = loggerService.withContext('BlacklistSettings')
+
+const columns: TableProps<DataType>['columns'] = [
+  { title: '名称', dataIndex: 'name', key: 'name' },
+  {
+    title: 'URL',
+    dataIndex: 'url',
+    key: 'url'
+  }
+]
+
+const BlacklistSettings: FC = () => {
+  const [errFormat, setErrFormat] = useState(false)
+  const [blacklistInput, setBlacklistInput] = useState('')
+  const excludeDomains = useAppSelector((state) => state.websearch.excludeDomains)
+  const { websearch, setSubscribeSources, addSubscribeSource } = useBlacklist()
+  const { theme } = useTheme()
+  const [subscribeChecking, setSubscribeChecking] = useState(false)
+  const [subscribeValid, setSubscribeValid] = useState(false)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [dataSource, setDataSource] = useState<DataType[]>(
+    websearch.subscribeSources?.map((source) => ({
+      key: source.key,
+      url: source.url,
+      name: source.name
+    })) || []
+  )
+  const { setTimeoutTimer } = useTimer()
+
+  const dispatch = useAppDispatch()
+
+  useEffect(() => {
+    setDataSource(
+      (websearch.subscribeSources || []).map((source) => ({
+        key: source.key,
+        url: source.url,
+        name: source.name
+      }))
+    )
+    logger.info('subscribeSources', websearch.subscribeSources)
+  }, [websearch.subscribeSources])
+
+  useEffect(() => {
+    if (excludeDomains) {
+      setBlacklistInput(excludeDomains.join('\n'))
+    }
+  }, [excludeDomains])
+
+  function updateManualBlacklist(blacklist: string) {
+    const blacklistDomains = blacklist.split('\n').filter((url) => url.trim() !== '')
+    const validDomains: string[] = []
+    const hasError = blacklistDomains.some((domain) => {
+      const trimmedDomain = domain.trim()
+      // 正则表达式
+      if (trimmedDomain.startsWith('/') && trimmedDomain.endsWith('/')) {
+        try {
+          const regexPattern = trimmedDomain.slice(1, -1)
+          new RegExp(regexPattern, 'i')
+          validDomains.push(trimmedDomain)
+          return false
+        } catch (error) {
+          return true
+        }
+      } else {
+        const parsed = parseMatchPattern(trimmedDomain)
+        if (parsed === null) {
+          return true
+        }
+        validDomains.push(trimmedDomain)
+        return false
+      }
+    })
+
+    setErrFormat(hasError)
+    if (hasError) return
+
+    dispatch(setExcludeDomains(validDomains))
+    window.toast.info({
+      title: '保存成功',
+      timeout: 4000,
+      icon: <InfoCircleOutlined />
+    })
+  }
+  const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
+    logger.info('selectedRowKeys changed: ', newSelectedRowKeys)
+    setSelectedRowKeys(newSelectedRowKeys)
+  }
+
+  const rowSelection: TableRowSelection<DataType> = {
+    selectedRowKeys,
+    onChange: onSelectChange
+  }
+  async function updateSubscribe() {
+    setSubscribeChecking(true)
+
+    try {
+      // 获取选中的订阅源
+      const selectedSources = dataSource.filter((item) => selectedRowKeys.includes(item.key))
+
+      // 用于存储所有成功解析的订阅源数据
+      const updatedSources: {
+        key: number
+        url: string
+        name: string
+        blacklist: string[]
+      }[] = []
+
+      // 为每个选中的订阅源获取并解析内容
+      for (const source of selectedSources) {
+        try {
+          // 获取并解析订阅源内容
+          const blacklist = await parseSubscribeContent(source.url)
+
+          if (blacklist.length > 0) {
+            updatedSources.push({
+              key: Number(source.key),
+              url: source.url,
+              name: source.name,
+              blacklist
+            })
+          }
+        } catch (error) {
+          logger.error(`Error updating subscribe source ${source.url}:`, error as Error)
+          // 显示具体源更新失败的消息
+          window.toast.warning({
+            title: '订阅源更新失败',
+            timeout: 3000
+          })
+        }
+      }
+
+      if (updatedSources.length > 0) {
+        // 更新 Redux store
+        setSubscribeSources(updatedSources)
+        setSubscribeValid(true)
+        // 显示成功消息
+        window.toast.success({
+          title: '订阅源更新成功',
+          timeout: 2000
+        })
+        setTimeoutTimer('updateSubscribe', () => setSubscribeValid(false), 3000)
+      } else {
+        setSubscribeValid(false)
+        throw new Error('No valid sources updated')
+      }
+    } catch (error) {
+      logger.error('Error updating subscribes:', error as Error)
+      window.toast.error({
+        title: '订阅源更新失败',
+        timeout: 2000
+      })
+    }
+    setSubscribeChecking(false)
+  }
+
+  // 修改 handleAddSubscribe 函数
+  async function handleAddSubscribe() {
+    setSubscribeChecking(true)
+    const result = await AddSubscribePopup.show({
+      title: '添加订阅'
+    })
+
+    if (result && result.url) {
+      try {
+        // 获取并解析订阅源内容
+        const blacklist = await parseSubscribeContent(result.url)
+
+        if (blacklist.length === 0) {
+          throw new Error('No valid patterns found in subscribe content')
+        }
+        // 添加到 Redux store
+        addSubscribeSource({
+          url: result.url,
+          name: result.name || result.url,
+          blacklist
+        })
+        setSubscribeValid(true)
+        // 显示成功消息
+        window.toast.success({
+          title: '订阅源添加成功!',
+          timeout: 2000
+        })
+        setTimeoutTimer('handleAddSubscribe', () => setSubscribeValid(false), 3000)
+      } catch (error) {
+        setSubscribeValid(false)
+        window.toast.error({
+          title: '订阅源添加失败',
+          timeout: 2000
+        })
+      }
+    }
+    setSubscribeChecking(false)
+  }
+  function handleDeleteSubscribe() {
+    try {
+      // 过滤掉被选中要删除的项目
+      const remainingSources =
+        websearch.subscribeSources?.filter((source) => !selectedRowKeys.includes(source.key)) || []
+
+      // 更新 Redux store
+      setSubscribeSources(remainingSources)
+
+      // 清空选中状态
+      setSelectedRowKeys([])
+    } catch (error) {
+      logger.error('Error deleting subscribes:', error as Error)
+    }
+  }
+
+  return (
+    <>
+      <SettingGroup theme={theme}>
+        <SettingTitle>{'黑名单'}</SettingTitle>
+        <SettingDivider />
+        <SettingRow style={{ marginBottom: 10 }}>
+          <SettingRowTitle>{'在搜索结果中不会出现以下网站的结果'}</SettingRowTitle>
+        </SettingRow>
+        <TextArea
+          value={blacklistInput}
+          onChange={(e) => setBlacklistInput(e.target.value)}
+          placeholder={'请使用以下格式(换行分隔)\n匹配模式: *://*.example.com/*\n正则表达式: /example\\.(net|org)/'}
+          autoSize={{ minRows: 4, maxRows: 8 }}
+          rows={4}
+        />
+        <Button onClick={() => updateManualBlacklist(blacklistInput)} style={{ marginTop: 10 }}>
+          {'保存'}
+        </Button>
+        {errFormat && (
+          <Alert
+            style={{ marginTop: 10 }}
+            message={'请使用以下格式(换行分隔)\n匹配模式: *://*.example.com/*\n正则表达式: /example\\.(net|org)/'}
+            type="error"
+          />
+        )}
+      </SettingGroup>
+      <SettingGroup theme={theme}>
+        <SettingTitle>
+          {'黑名单订阅'}
+          <Button
+            type={subscribeValid ? 'primary' : 'default'}
+            ghost={subscribeValid}
+            disabled={subscribeChecking}
+            onClick={handleAddSubscribe}>
+            {'添加订阅'}
+          </Button>
+        </SettingTitle>
+        <SettingDivider />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <Table<DataType>
+            rowSelection={{ type: 'checkbox', ...rowSelection }}
+            columns={columns}
+            dataSource={dataSource}
+            pagination={{ position: ['none'] }}
+            tableLayout="fixed"
+          />
+          <SettingRow style={{ height: 50 }}>
+            <Button
+              type={subscribeValid ? 'primary' : 'default'}
+              ghost={subscribeValid}
+              disabled={subscribeChecking || selectedRowKeys.length === 0}
+              style={{ width: 100 }}
+              onClick={updateSubscribe}>
+              {subscribeChecking ? <LoadingOutlined spin /> : subscribeValid ? <CheckOutlined /> : '立即更新'}
+            </Button>
+            <Button style={{ width: 100 }} disabled={selectedRowKeys.length === 0} onClick={handleDeleteSubscribe}>
+              {'删除订阅源'}
+            </Button>
+          </SettingRow>
+        </div>
+      </SettingGroup>
+    </>
+  )
+}
+export default BlacklistSettings

@@ -1,0 +1,116 @@
+import { loggerService } from '@logger'
+import { getBackupProgressLabel } from '@renderer/i18n/label'
+import { backup } from '@renderer/services/BackupService'
+import store from '@renderer/store'
+import { IpcChannel } from '@shared/IpcChannel'
+import { Modal, Progress } from 'antd'
+import { useEffect, useState } from 'react'
+
+import { TopView } from '../TopView'
+
+const logger = loggerService.withContext('BackupPopup')
+
+interface Props {
+  resolve: (data: any) => void
+}
+
+type ProgressStageType = 'preparing' | 'copying_database' | 'copying_files' | 'compressing' | 'completed'
+
+interface ProgressData {
+  stage: ProgressStageType
+  progress: number
+  total: number
+}
+
+const PopupContainer: React.FC<Props> = ({ resolve }) => {
+  const [open, setOpen] = useState(true)
+  const [progressData, setProgressData] = useState<ProgressData>()
+  const skipBackupFile = store.getState().settings.skipBackupFile
+
+  useEffect(() => {
+    const removeListener = window.electron.ipcRenderer.on(IpcChannel.BackupProgress, (_, data: ProgressData) => {
+      setProgressData(data)
+    })
+
+    return () => {
+      removeListener()
+    }
+  }, [])
+
+  const onOk = async () => {
+    logger.debug(`skipBackupFile: ${skipBackupFile}`)
+
+    await backup(skipBackupFile)
+    setOpen(false)
+  }
+
+  const onCancel = () => {
+    setOpen(false)
+  }
+
+  const onClose = () => {
+    resolve({})
+  }
+
+  const getProgressText = () => {
+    if (!progressData) return ''
+
+    if (progressData.stage === 'copying_files') {
+      return `复制文件... ${Math.floor(progressData.progress)}%`
+    }
+    return getBackupProgressLabel(progressData.stage)
+  }
+
+  BackupPopup.hide = onCancel
+
+  const isDisabled = progressData ? progressData.stage !== 'completed' : false
+
+  return (
+    <Modal
+      title={'数据备份'}
+      open={open}
+      onOk={onOk}
+      onCancel={onCancel}
+      afterClose={onClose}
+      okButtonProps={{ disabled: isDisabled }}
+      cancelButtonProps={{ disabled: isDisabled }}
+      okText={'选择备份位置'}
+      maskClosable={false}
+      transitionName="animation-move-down"
+      centered>
+      {!progressData && (
+        <div>
+          {'备份全部数据，包括聊天记录、设置、知识库等所有数据。请注意，备份过程可能需要一些时间，感谢您的耐心等待'}
+        </div>
+      )}
+      {progressData && (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <Progress percent={Math.floor(progressData.progress)} strokeColor="var(--color-primary)" />
+          <div style={{ marginTop: 16 }}>{getProgressText()}</div>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+const TopViewKey = 'BackupPopup'
+
+export default class BackupPopup {
+  static topviewId = 0
+  static hide() {
+    TopView.hide(TopViewKey)
+  }
+  static show() {
+    return new Promise<any>((resolve) => {
+      TopView.show(
+        <PopupContainer
+          resolve={(v) => {
+            resolve(v)
+            TopView.hide(TopViewKey)
+          }}
+        />,
+        TopViewKey
+      )
+    })
+  }
+}

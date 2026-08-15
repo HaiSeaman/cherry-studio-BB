@@ -1,0 +1,146 @@
+appId: com.kangfenmao.CherryStudioBB
+productName: Cherry-Studio-BB
+electronLanguages:
+  - zh-CN
+  - zh-TW
+  - en-US
+  - ja # macOS/linux/win
+  - ru # macOS/linux/win
+  - zh_CN # for macOS
+  - zh_TW # for macOS
+  - en # for macOS
+  - de
+directories:
+  buildResources: build
+
+protocols:
+  - name: Cherry Studio
+    schemes:
+      - cherrystudio
+files:
+  - from: "."
+    filter:
+      - "**/*"
+      - "!**/{.vscode,.yarn,.yarn-lock,.github,.cursorrules,.prettierrc}"
+      - "!electron.vite.config.{js,ts,mjs,cjs}"
+      - "!.*"
+      - "!components.json"
+      - "!**/{.eslintignore,.eslintrc.js,.eslintrc.json,.eslintcache,root.eslint.config.js,eslint.config.js,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,eslint.config.mjs,CHANGELOG.md,README.md,biome.jsonc}"
+      - "!**/{.env,.env.*,.npmrc,pnpm-lock.yaml}"
+      - "!**/{tsconfig.json,tsconfig.tsbuildinfo,tsconfig.node.json,tsconfig.web.json}"
+      - "!**/{.editorconfig,.jekyll-metadata}"
+      - "!src"
+      - "!config"
+      - "!patches"
+      - "!app-upgrade-config.json"
+      - "!**/node_modules/**/*.cpp"
+      - "!**/node_modules/node-addon-api/**"
+      - "!**/node_modules/prebuild-install/**"
+      - "!scripts"
+      - "!local"
+      - "!docs"
+      - "!packages"
+      - "!.swc"
+      - "!.bin"
+      - "!._*"
+      - "!*.log"
+      - "!stats.html"
+      - "!*.md"
+      - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
+      - "!**/*.{map,ts,tsx,jsx,less,scss,sass,css.d.ts,d.cts,d.mts,md,markdown,yaml,yml}"
+      - "!**/{test,tests,__tests__,powered-test,coverage}/**"
+      - "!**/{example,examples}/**"
+      - "!**/*.{spec,test}.{js,jsx,ts,tsx}"
+      - "!**/*.min.*.map"
+      - "!**/*.d.ts"
+      - "!**/dist/es6/**"
+      - "!**/dist/demo/**"
+      - "!**/amd/**"
+      - "!**/{.DS_Store,Thumbs.db,thumbs.db,__pycache__}"
+      - "!**/{LICENSE,license,LICENSE.*,*.LICENSE.txt,NOTICE.txt,README.md,readme.md,CHANGELOG.md}"
+      - "!node_modules/rollup-plugin-visualizer"
+      - "!node_modules/js-tiktoken"
+      - "!node_modules/@tavily/core/node_modules/js-tiktoken"
+      - "!node_modules/pdf-parse/lib/pdf.js/{v1.9.426,v1.10.88,v2.0.550}"
+      - "!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}"
+      - "!node_modules/selection-hook/node_modules" # we don't need what in the node_modules dir
+  - "!node_modules/selection-hook/src" # we don't need source files
+  - "!**/*.{h,iobj,ipdb,tlog,recipe,vcxproj,vcxproj.filters,Makefile,*.Makefile}" # filter .node build files
+  - "resources/**/*" # include all files in resources, and unpack them from asar for runtime access
+  # Exclude cross-platform @napi-rs/canvas binaries nested under pdfjs-dist
+  # (pnpm dependency-hoisting artifacts; pdfjs-dist itself uses the DOM canvas API)
+  - "!**/pdfjs-dist/node_modules/@napi-rs/canvas-android-*/**"
+  - "!**/pdfjs-dist/node_modules/@napi-rs/canvas-darwin-*/**"
+  - "!**/pdfjs-dist/node_modules/@napi-rs/canvas-linux-*/**"
+  - "!**/pdfjs-dist/node_modules/@napi-rs/canvas-win32-arm64-*/**"
+npmRebuild: false # selection-hook uses N-API prebuilds, no need to rebuild from source
+
+asarUnpack:
+  - out/proxy/**
+  - resources/**
+  - "**/*.{metal,exp,lib}"
+  - "node_modules/@cherrystudio/ripgrep/vendor/ripgrep/**"
+  # @napi-rs/canvas native bindings (.node) cannot be loaded from inside asar;
+  # pdf-parse 2.x uses it to polyfill DOMMatrix for pdfjs in the main process
+  - "node_modules/@napi-rs/canvas*/**"
+
+win:
+  executableName: Cherry-Studio-BB
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+  target:
+    - target: nsis
+    - target: portable
+  signtoolOptions:
+    sign: scripts/win-sign.js
+nsis:
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  allowToChangeInstallationDirectory: true
+  oneClick: false
+  include: build/nsis-installer.nsh
+  buildUniversalInstaller: false
+  differentialPackage: false
+portable:
+  artifactName: ${productName}-${version}-${arch}-portable.${ext}
+  buildUniversalInstaller: false
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  target:
+    - target: dmg
+    - target: zip
+dmg:
+  writeUpdateInfo: false
+linux:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  executableName: CherryStudio
+  target:
+    - target: AppImage
+    - target: deb
+    - target: rpm
+  maintainer: electronjs.org
+  category: Utility
+  desktop:
+    entry:
+      Name: Cherry Studio
+      StartupWMClass: CherryStudio
+  mimeTypes:
+    - x-scheme-handler/cherrystudio
+rpm:
+  # Workaround for electron build issue on rpm package:
+  # https://github.com/electron/forge/issues/3594
+  fpm: ["--rpm-rpmbuild-define=_build_id_links none"]
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/
+beforePack: scripts/before-pack.js
+afterPack: scripts/after-pack.js
+afterSign: scripts/notarize.js
+artifactBuildCompleted: scripts/artifact-build-completed.js

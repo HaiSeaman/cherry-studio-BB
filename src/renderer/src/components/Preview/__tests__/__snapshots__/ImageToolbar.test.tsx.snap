@@ -1,0 +1,141 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ImageToolbar > should match snapshot 1`] = `
+<DocumentFragment>
+  .c0 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  gap: 4px;
+  right: 1em;
+  bottom: 1em;
+  z-index: 5;
+}
+
+.c0 .ant-btn {
+  line-height: 0;
+}
+
+.c1 {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.c2 {
+  flex: 1;
+}
+
+<div
+    aria-label="预览"
+    class="c0 preview-toolbar"
+    role="toolbar"
+  >
+    <div
+      class="c1"
+    >
+      <div
+        class="c2"
+      />
+      <button
+        aria-label="上移"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="chevron-up"
+        >
+          ↑
+        </span>
+      </button>
+      <button
+        aria-label="打开预览窗口"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="scan"
+        >
+          ⊞
+        </span>
+      </button>
+    </div>
+    <div
+      class="c1"
+    >
+      <button
+        aria-label="左移"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="chevron-left"
+        >
+          ←
+        </span>
+      </button>
+      <button
+        aria-label="重置"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="reset"
+        >
+          ↻
+        </span>
+      </button>
+      <button
+        aria-label="右移"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="chevron-right"
+        >
+          →
+        </span>
+      </button>
+    </div>
+    <div
+      class="c1"
+    >
+      <button
+        aria-label="缩小"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="zoom-out"
+        >
+          -
+        </span>
+      </button>
+      <button
+        aria-label="下移"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="chevron-down"
+        >
+          ↓
+        </span>
+      </button>
+      <button
+        aria-label="放大"
+        role="button"
+        type="button"
+      >
+        <span
+          data-testid="zoom-in"
+        >
+          +
+        </span>
+      </button>
+    </div>
+  </div>
+</DocumentFragment>
+`;

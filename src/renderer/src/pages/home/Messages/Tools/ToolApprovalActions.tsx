@@ -1,0 +1,145 @@
+import { LoadingIcon } from '@renderer/components/Icons'
+import { Button, Dropdown } from 'antd'
+import { Ban, ChevronDown, CirclePlay, ShieldCheck } from 'lucide-react'
+import type { FC, MouseEvent } from 'react'
+import styled from 'styled-components'
+
+import type { ToolApprovalActions, ToolApprovalState } from './hooks/useToolApproval'
+
+export interface ToolApprovalActionsProps extends ToolApprovalState, ToolApprovalActions {
+  /** Compact mode for use in headers */
+  compact?: boolean
+  /** Show abort button when executing */
+  showAbort?: boolean
+  /** Abort handler */
+  onAbort?: () => void
+}
+
+/**
+ * Unified tool approval action buttons
+ * Used in MessageMcpTool
+ */
+export const ToolApprovalActionsComponent: FC<ToolApprovalActionsProps> = ({
+  isWaiting,
+  isExecuting,
+  isSubmitting,
+  confirm,
+  cancel,
+  autoApprove,
+  compact = false,
+  showAbort = false,
+  onAbort
+}) => {
+  // Stop event propagation and prevent default to avoid triggering
+  // the parent AccordionTrigger's composeEventHandlers toggle when
+  // these buttons are rendered inside a collapsed group header.
+  const handleClick = (e: MouseEvent, handler: () => void) => {
+    e.stopPropagation()
+    e.preventDefault()
+    handler()
+  }
+
+  // Nothing to show if not waiting and not executing
+  if (!isWaiting && !isExecuting) return null
+
+  // Executing state - show loading or abort button
+  if (isExecuting) {
+    if (showAbort && onAbort) {
+      return (
+        <ActionsContainer
+          $compact={compact}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}>
+          <Button size="small" color="danger" variant="solid" onClick={(e) => handleClick(e, onAbort)}>
+            {'暂停'}
+          </Button>
+        </ActionsContainer>
+      )
+    }
+    return (
+      <ActionsContainer
+        $compact={compact}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}>
+        <LoadingIndicator>
+          <LoadingIcon />
+          {!compact && <span>{'调用中'}</span>}
+        </LoadingIndicator>
+      </ActionsContainer>
+    )
+  }
+
+  // Waiting state - show confirm/cancel buttons
+  return (
+    <ActionsContainer
+      $compact={compact}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}>
+      <Button
+        size="small"
+        variant={compact ? 'text' : 'outlined'}
+        disabled={isSubmitting}
+        onClick={(e) => handleClick(e, cancel)}>
+        <Ban size={compact ? 13 : 14} className="lucide-custom" />
+        {!compact && '取消'}
+      </Button>
+
+      {autoApprove ? (
+        <StyledDropdownButton
+          size="small"
+          type="primary"
+          disabled={isSubmitting}
+          icon={<ChevronDown size={compact ? 12 : 14} />}
+          onClick={(e) => handleClick(e, confirm)}
+          menu={{
+            items: [
+              {
+                key: 'autoApprove',
+                label: '自动批准',
+                icon: <ShieldCheck size={14} />,
+                onClick: () => autoApprove()
+              }
+            ]
+          }}>
+          <CirclePlay size={compact ? 13 : 15} className="lucide-custom" />
+          {'运行'}
+        </StyledDropdownButton>
+      ) : (
+        <Button size="small" type="primary" disabled={isSubmitting} onClick={(e) => handleClick(e, confirm)}>
+          <CirclePlay size={compact ? 13 : 15} className="lucide-custom" />
+          {'运行'}
+        </Button>
+      )}
+    </ActionsContainer>
+  )
+}
+
+// Styled components
+
+const ActionsContainer = styled.div<{ $compact: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${(props) => (props.$compact ? '4px' : '8px')};
+
+  .ant-btn-sm {
+    height: ${(props) => (props.$compact ? '24px' : '28px')};
+    padding: ${(props) => (props.$compact ? '0 6px' : '0 8px')};
+    font-size: ${(props) => (props.$compact ? '12px' : '13px')};
+  }
+`
+
+const LoadingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-primary);
+  font-size: 12px;
+`
+
+const StyledDropdownButton = styled(Dropdown.Button)`
+  .ant-btn-group {
+    border-radius: 6px;
+  }
+`
+
+export default ToolApprovalActionsComponent
