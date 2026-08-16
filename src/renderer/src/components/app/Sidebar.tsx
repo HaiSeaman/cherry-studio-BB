@@ -13,7 +13,17 @@ import { getSidebarIconLabel, getThemeModeLabel } from '@renderer/i18n/label'
 import { ThemeMode } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
-import { Image as ImageIcon, LayoutGrid, MessageSquare, Monitor, Moon, Music, Settings, StickyNote, Sun } from 'lucide-react'
+import {
+  Image as ImageIcon,
+  LayoutGrid,
+  MessageSquare,
+  Monitor,
+  Moon,
+  Music,
+  Settings,
+  StickyNote,
+  Sun
+} from 'lucide-react'
 import type { FC } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
