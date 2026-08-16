@@ -83,7 +83,7 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       setCurrentId(track.id)
       setCurrentTime(0)
       setDuration(0)
-      audioEngine.load('local', toFileUrl(track.filePath))
+      audioEngine.load('local', toFileUrl(track.filePath), { trackId: track.id })
       audioEngine.play().catch(() => {
         // play 拒绝由 error 事件统一处理
       })
@@ -218,6 +218,19 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
   )
 
   useEffect(() => {
+    // 页面卸载后引擎继续播放（后台播放特性），重新挂载时恢复 UI 状态
+    const snap = audioEngine.snapshot()
+    if (snap.owner === 'local' && !snap.paused && snap.url) {
+      const meta = snap.meta as { trackId?: number } | null
+      const track = meta?.trackId ? tracksRef.current.find((t) => t.id === meta.trackId) : null
+      if (track) {
+        setCurrentId(track.id ?? null)
+        setIsPlaying(true)
+        setDuration(audioEngine.duration)
+        setCurrentTime(audioEngine.currentTime)
+      }
+    }
+
     const offs = [
       audioEngine.on('local', 'loadedmetadata', () => {
         setDuration(audioEngine.duration)
@@ -258,6 +271,7 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     })
     return () => {
       offs.forEach((off) => off())
+      audioEngine.onStop('local', null)
       if (tipTimer.current) clearTimeout(tipTimer.current)
     }
   }, [showTip, stopPlayback])

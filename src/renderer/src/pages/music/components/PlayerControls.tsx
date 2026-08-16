@@ -136,6 +136,13 @@ const PlayerControls: FC<PlayerControlsProps> = ({
                 setSeekPreview(null)
                 e.currentTarget.blur()
               }}
+              onKeyUp={(e) => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) return
+                const v = Number((e.target as HTMLInputElement).value)
+                if (duration > 0) onSeek((v / 100) * duration)
+                onSeekingChange(false)
+                setSeekPreview(null)
+              }}
               onTouchEnd={(e) => {
                 const v = Number((e.target as HTMLInputElement).value)
                 if (duration > 0) onSeek((v / 100) * duration)

@@ -15,10 +15,16 @@ export class AudioEngine {
   private lastBufferedEnd = 0
   private lastSampleAt = 0
   private lastKbps = 0
+  private ownerMeta: unknown = null
 
   constructor() {
     this.el = new Audio()
     this.el.preload = 'none'
+  }
+
+  /** 引擎快照：owner 方可在组件重新挂载时恢复播放状态（页面卸载后引擎继续播放） */
+  snapshot(): { owner: AudioOwner | null; url: string; paused: boolean; meta: unknown } {
+    return { owner: this.owner, url: this.el.src || '', paused: this.el.paused, meta: this.owner ? this.ownerMeta : null }
   }
 
   /** 取得引擎归属；若另一方正在使用，先将其停掉并复位其回调 */
@@ -36,8 +42,9 @@ export class AudioEngine {
     this.resetBufferSample()
   }
 
-  load(owner: AudioOwner, url: string): void {
+  load(owner: AudioOwner, url: string, meta?: unknown): void {
     this.claim(owner)
+    this.ownerMeta = meta ?? null
     if (this.el.src !== url) {
       this.el.src = url
       this.resetBufferSample()
@@ -97,9 +104,10 @@ export class AudioEngine {
     }
   }
 
-  /** 被另一方抢占播放权时的回调（用于该方 UI 状态复位） */
-  onStop(owner: AudioOwner, cb: () => void): void {
-    this.stopHandlers[owner] = cb
+  /** 被另一方抢占播放权时的回调（用于该方 UI 状态复位）；传 null 清除 */
+  onStop(owner: AudioOwner, cb: (() => void) | null): void {
+    if (cb === null) delete this.stopHandlers[owner]
+    else this.stopHandlers[owner] = cb
   }
 
   /**

@@ -130,6 +130,13 @@ export function useFmPlayer(stations: RadioStation[]) {
 
   // 事件接线（一次）；网速采样在 playing 状态每秒刷新
   useEffect(() => {
+    // 页面卸载后引擎继续播放（后台播放特性），重新挂载时恢复 UI 状态
+    const snap = audioEngine.snapshot()
+    if (snap.owner === 'fm' && snap.url && !snap.paused) {
+      setCurrentUrl(snap.url)
+      setStatus('playing')
+    }
+
     const offs = [
       audioEngine.on('fm', 'playing', () => {
         consecutiveErrors.current = 0
@@ -165,6 +172,7 @@ export function useFmPlayer(stations: RadioStation[]) {
     return () => {
       offs.forEach((off) => off())
       clearInterval(speedInterval)
+      audioEngine.onStop('fm', null)
       clearTimers()
     }
   }, [clearTimers, handleStreamError])
