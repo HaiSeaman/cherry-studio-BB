@@ -6,6 +6,9 @@ import styled from 'styled-components'
 import { db } from '@renderer/databases'
 
 import AlarmPanel from './components/AlarmPanel'
+import CalendarPanel from './components/CalendarPanel'
+import NotesPanel from './components/NotesPanel'
+import TodoPanel from './components/TodoPanel'
 import { mx } from './components/mx'
 import { useAlarmEngine } from './services/alarmScheduler'
 
@@ -24,12 +27,12 @@ const NotesPage: FC = () => {
         <NavbarMain>{'闹钟便签'}</NavbarMain>
       </Navbar>
       <MainArea>
-        <Cell>便签（建设中）</Cell>
+        <NotesPanel />
         <AlarmPanelCell>
           <AlarmPanel ringing={ringing} onStopRinging={stopRinging} />
         </AlarmPanelCell>
-        <Cell>待办事项（建设中）</Cell>
-        <Cell>日历（建设中）</Cell>
+        <TodoPanel />
+        <CalendarPanel />
       </MainArea>
     </Container>
   )
@@ -67,31 +70,6 @@ const MainArea = styled.div`
     grid-template-rows: none;
     grid-template-areas: 'notes' 'todos' 'alarm' 'calendar';
     overflow-y: auto;
-  }
-`
-
-const Cell = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  background: ${mx.card};
-  border: 1px solid ${mx.border};
-  border-radius: 16px;
-  box-shadow: ${mx.shadow};
-  padding: 12px;
-  overflow: hidden;
-  color: ${mx.text3};
-  align-items: center;
-  justify-content: center;
-  &:nth-child(1) {
-    grid-area: notes;
-  }
-  &:nth-child(3) {
-    grid-area: todos;
-  }
-  &:nth-child(4) {
-    grid-area: calendar;
   }
 `
 
