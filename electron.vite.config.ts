@@ -109,6 +109,22 @@ export default defineConfig({
         onwarn(warning, warn) {
           if (warning.code === 'COMMONJS_VARIABLE_IN_ESM') return
           warn(warning)
+        },
+        output: {
+          // 拆分 vendor：避免所有懒加载页面的公共依赖合并成 12MB 巨型 store chunk，
+          // 首页只加载自己依赖的 chunk，缩短首屏解析时间
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined
+            if (id.includes('antd') || id.includes('@ant-design') || id.includes('rc-')) return 'vendor-antd'
+            if (id.includes('react') || id.includes('scheduler')) return 'vendor-react'
+            if (id.includes('motion') || id.includes('framer-motion')) return 'vendor-motion'
+            if (id.includes('highlight')) return 'vendor-highlight'
+            if (id.includes('lodash')) return 'vendor-lodash'
+            if (id.includes('redux') || id.includes('@reduxjs') || id.includes('reselect')) return 'vendor-redux'
+            if (id.includes('dexie') || id.includes('fake-indexeddb')) return 'vendor-dexie'
+            // 其余 node_modules 不强制合并，交给打包器按共享度自动分包
+            return undefined
+          }
         }
       }
     },

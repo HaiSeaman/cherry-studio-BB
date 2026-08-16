@@ -141,16 +141,6 @@ export const getTitleLabel = (key: string): string => {
   return getLabel(titleKeyMap, key)
 }
 
-const themeModeKeyMap = {
-  dark: '深色',
-  light: '浅色',
-  system: '系统'
-} as const
-
-export const getThemeModeLabel = (key: string): string => {
-  return getLabel(themeModeKeyMap, key)
-}
-
 const sidebarIconKeyMap = {
   assistants: '助手',
   store: '助手库',
