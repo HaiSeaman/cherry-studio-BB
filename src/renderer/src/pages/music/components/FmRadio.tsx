@@ -1,5 +1,4 @@
-import { Pause, Play, Plus, RotateCw, SkipBack, SkipForward } from 'lucide-react'
-import { Input, Modal, Segmented, Spin, Tooltip } from 'antd'
+import { Pause, Play, Plus, Radio, RefreshCw, RotateCw, Search, SkipBack, SkipForward } from 'lucide-react'
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import styled, { keyframes } from 'styled-components'
@@ -13,6 +12,7 @@ import {
   getStationsBySource,
   getTopStations,
   searchStations,
+  withBuiltinCnHk,
   type RadioConfig,
   type RadioSource
 } from '../services/radioApi'
@@ -20,6 +20,21 @@ import { addExcludedUrl, clearRadioCache, getCachedCnHk, getCachedTop, getExclud
 import { addCustomStation, removeCustomStation } from '../store/musicSettingsSlice'
 import type { RadioStation } from '../types'
 import VolumeControl from './VolumeControl'
+import {
+  DialogField,
+  DialogInput,
+  DialogLabel,
+  Eq,
+  MXCard,
+  MXDialog,
+  MXGhostPill,
+  MXIconButton,
+  MXSearchInput,
+  MXSpinner,
+  MXTabs,
+  mx,
+  reduceMotion
+} from './mx'
 
 type FmTab = 'top' | 'cnhk' | 'search' | 'favorites'
 type SearchMode = 'keyword' | 'country' | 'tag'
@@ -37,20 +52,19 @@ const SOURCE_LABELS: Record<RadioSource, string> = {
 const FAVICON_FALLBACK =
   'data:image/svg+xml,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#98A79F" stroke-width="1.8"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.25a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>'
   )
 
 const STATUS_TEXT: Record<FmStatus, string> = {
   idle: '未播放',
-  connecting: '连接中…',
+  connecting: '连接中',
   playing: '正在播放',
   paused: '已暂停',
   error: '连接失败'
 }
 
 /**
- * FM 网络电台（音乐页右栏）
- * 数据源：RadioBrowser API（热门榜 / 中港音乐 / 搜索）+ 本地收藏 + 自定义电台
+ * FM 网络电台（右栏卡片）：LIVE 状态胶囊 + 控制 + 胶囊标签 + 电台列表
  */
 const FmRadio: FC = () => {
   const dispatch = useAppDispatch()
@@ -64,7 +78,7 @@ const FmRadio: FC = () => {
   const cfgRef = useRef(cfg)
   cfgRef.current = cfg
 
-  const [tab, setTab] = useState<FmTab>('top')
+  const [tab, setTab] = useState<FmTab>('cnhk')
   const [topList, setTopList] = useState<RadioStation[]>([])
   const [cnhkList, setCnhkList] = useState<RadioStation[]>([])
   const [searchList, setSearchList] = useState<RadioStation[]>([])
@@ -96,7 +110,8 @@ const FmRadio: FC = () => {
       const chinaHk = list.filter((s) => s.country.includes('China') || s.country.includes('Hong Kong'))
       setCachedTop(list, chinaHk)
     } catch {
-      setTopList([])
+      // 全部镜像失败：回退内置精选台（清晨音乐台 + RTHK + 自定义），保证始终有台可听
+      setTopList(withBuiltinCnHk([], cfgRef.current.customStations))
     } finally {
       setLoading(false)
     }
@@ -105,7 +120,7 @@ const FmRadio: FC = () => {
   const loadCnhk = useCallback(async (force = false) => {
     const cached = force ? null : getCachedCnHk()
     if (cached) {
-      setCnhkList(cached.stations)
+      setCnhkList(withBuiltinCnHk(cached.stations, cfgRef.current.customStations))
       return
     }
     try {
@@ -113,7 +128,7 @@ const FmRadio: FC = () => {
       setCnhkList(list)
       setCachedCnHk(list)
     } catch {
-      setCnhkList([])
+      setCnhkList(withBuiltinCnHk([], cfgRef.current.customStations))
     }
   }, [])
 
@@ -201,118 +216,133 @@ const FmRadio: FC = () => {
     const url = customUrl.trim()
     if (!name) return setCustomError('请输入电台名称')
     if (!/^https?:\/\//i.test(url)) return setCustomError('流地址必须以 http:// 或 https:// 开头')
-    dispatch(
-      addCustomStation({ name, url, favicon: '', country: '自定义', tags: 'custom', bitrate: 0, codec: '', homepage: '' })
-    )
+    dispatch(addCustomStation({ name, url, favicon: '', country: '自定义', tags: 'custom', bitrate: 0, codec: '', homepage: '' }))
     setCustomOpen(false)
     setCustomName('')
     setCustomUrl('')
     setCustomError('')
   }
 
-  const statusLight = player.status === 'playing' ? 'playing' : player.status === 'connecting' ? 'connecting' : player.status === 'error' ? 'error' : 'idle'
+  const live = player.status === 'playing'
   const emptyText =
-    tab === 'search' && searchText.trim() ? '未找到匹配电台' : tab === 'favorites' ? '暂无收藏电台，点击列表中的 ☆ 收藏' : '暂无电台数据，请检查网络后点击 ↻ 重试'
+    tab === 'search' && searchText.trim() ? '没有找到电台' : tab === 'favorites' ? '还没有收藏电台' : '电台列表加载失败'
+  const emptyHint =
+    tab === 'search' ? '换个关键词，或切换名称 / 国家 / 标签模式' : tab === 'favorites' ? '点击电台旁的 ☆ 收藏，随时在这里找到它' : '检查网络后点右上 ↻ 重试；中港音乐 tab 始终有内置精选台'
 
   return (
-    <Panel data-no-dnd>
-      <StatusBar>
-        <Light className={statusLight} />
-        <StatusText>
-          {STATUS_TEXT[player.status]}
-          {player.currentStation ? ` · ${player.currentStation.name}` : ''}
-        </StatusText>
-        <Speed>{player.status === 'playing' ? `${player.kbps} KB/s` : ''}</Speed>
-      </StatusBar>
-      {player.errorMsg && <ErrorBar>{player.errorMsg}</ErrorBar>}
+    <MXCard data-no-dnd>
+      <LiveBar>
+        <LiveDot className={live ? 'on' : player.status === 'connecting' ? 'connecting' : ''} />
+        <LiveText>
+          {player.currentStation ? player.currentStation.name : STATUS_TEXT[player.status]}
+          {player.currentStation ? ` · ${STATUS_TEXT[player.status]}` : ''}
+        </LiveText>
+        {live && <KbpsChip>{player.kbps} KB/s</KbpsChip>}
+        {player.errorMsg && <ErrorText>{player.errorMsg}</ErrorText>}
+      </LiveBar>
       <ControlsRow>
-        <IconBtn onClick={player.prev} title="上一台">
+        <MXIconButton onClick={player.prev} title="上一台">
           <SkipBack size={16} />
-        </IconBtn>
-        <MainBtn onClick={player.toggle} title={player.status === 'playing' ? '暂停' : '播放'}>
-          {player.status === 'playing' ? <Pause size={18} /> : <Play size={18} />}
+        </MXIconButton>
+        <MainBtn onClick={player.toggle} title={live ? '暂停' : '播放'}>
+          {live ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: 2 }} />}
         </MainBtn>
-        <IconBtn onClick={() => player.next()} title="下一台">
+        <MXIconButton onClick={() => player.next()} title="下一台">
           <SkipForward size={16} />
-        </IconBtn>
+        </MXIconButton>
         <VolumeControl />
-        <IconBtn onClick={forceRefresh} title="强制刷新（清 7 天缓存）">
+        <MXIconButton onClick={forceRefresh} title="强制刷新（清 7 天缓存）">
           <RotateCw size={16} />
-        </IconBtn>
+        </MXIconButton>
       </ControlsRow>
       <TabsRow>
-        <Segmented
+        <MXTabs
           value={tab}
-          onChange={(v) => setTab(v as FmTab)}
+          onChange={(v) => setTab(v)}
           options={[
             { value: 'top', label: '热门' },
             { value: 'cnhk', label: '中港音乐' },
             { value: 'search', label: '搜索' },
-            { value: 'favorites', label: `收藏${favorites?.length ? ` ${favorites.length}` : ''}` }
+            { value: 'favorites', label: '收藏', badge: favorites?.length }
           ]}
         />
-        {tab === 'top' && (
-          <Tooltip title={`来源：${SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}（点击循环切换）`}>
-            <IconBtn onClick={cycleSource} title="切换来源">
-              <RotateCw size={14} />
-            </IconBtn>
-          </Tooltip>
-        )}
-        <IconBtn onClick={() => setCustomOpen(true)} title="添加自定义电台">
-          <Plus size={14} />
-        </IconBtn>
+        <TabsActions>
+          {tab === 'top' && (
+            <MXGhostPill onClick={cycleSource} title={`当前来源：${SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}，点击循环切换`}>
+              <RefreshCw size={12} /> {SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}
+            </MXGhostPill>
+          )}
+          <MXGhostPill onClick={() => setCustomOpen(true)} title="添加自定义电台">
+            <Plus size={12} /> 自定义
+          </MXGhostPill>
+        </TabsActions>
       </TabsRow>
       {tab === 'search' && (
         <SearchRow>
-          <Segmented
-            size="small"
+          <MXTabs
+            size="sm"
             value={searchMode}
-            onChange={(v) => setSearchMode(v as SearchMode)}
+            onChange={(v) => setSearchMode(v)}
             options={[
               { value: 'keyword', label: '名称' },
               { value: 'country', label: '国家' },
               { value: 'tag', label: '标签' }
             ]}
           />
-          <Input
-            size="small"
-            allowClear
-            placeholder={searchMode === 'keyword' ? '搜索电台名称…' : searchMode === 'country' ? '按国家搜索，如 China…' : '按标签搜索，如 jazz…'}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
+          <MXSearchInput>
+            <Search size={13} />
+            <input
+              placeholder={searchMode === 'keyword' ? '搜索电台名称…' : searchMode === 'country' ? '按国家搜索，如 China' : '按标签搜索，如 jazz'}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </MXSearchInput>
         </SearchRow>
       )}
       <ListArea>
         {loading && tab !== 'search' ? (
           <CenterTip>
-            <Spin size="small" />
+            <MXSpinner />
           </CenterTip>
         ) : stations.length === 0 ? (
-          <CenterTip>{emptyText}</CenterTip>
+          <Empty>
+            <EmptyIcon>
+              <Radio size={28} />
+            </EmptyIcon>
+            <EmptyTitle>{emptyText}</EmptyTitle>
+            <EmptyHint>{emptyHint}</EmptyHint>
+          </Empty>
         ) : (
           <StationList>
             {stations.map((s) => {
               const favored = (favorites || []).some((f) => f.url === s.url)
               const isCustom = customStations.some((c) => c.url === s.url)
+              const isCurrent = player.currentUrl === s.url
               return (
-                <StationItem key={s.url} className={player.currentUrl === s.url ? 'playing' : ''} onClick={() => player.play(s.url)}>
-                  <Favicon
-                    src={s.favicon || FAVICON_FALLBACK}
-                    onError={(e) => {
-                      const img = e.currentTarget
-                      if (!img.dataset.fb) {
-                        img.dataset.fb = '1'
-                        img.src = FAVICON_FALLBACK
-                      }
-                    }}
-                  />
+                <StationItem key={s.url} className={isCurrent ? 'playing' : ''} onClick={() => player.play(s.url)}>
+                  <FaviconWrap>
+                    <Favicon
+                      src={s.favicon || FAVICON_FALLBACK}
+                      onError={(e) => {
+                        const img = e.currentTarget
+                        if (!img.dataset.fb) {
+                          img.dataset.fb = '1'
+                          img.src = FAVICON_FALLBACK
+                        }
+                      }}
+                    />
+                    {isCurrent && <FaviconMask>{live ? <Eq /> : <Eq paused />}</FaviconMask>}
+                  </FaviconWrap>
                   <StationInfo>
                     <StationName>{s.name}</StationName>
-                    <StationMeta>{[s.country, s.bitrate > 0 ? `${s.bitrate} kbps` : '', s.codec].filter(Boolean).join(' · ')}</StationMeta>
+                    <StationMeta>
+                      {[s.country, s.bitrate > 0 ? `${s.bitrate} kbps` : '', s.codec].filter(Boolean).join(' · ')}
+                      {isCustom ? ' · 自定义' : ''}
+                    </StationMeta>
                   </StationInfo>
                   <FavBtn
                     className={favored ? 'favorited' : ''}
+                    title={favored ? '取消收藏' : '收藏'}
                     onClick={(e) => {
                       e.stopPropagation()
                       void toggleFavorite(s)
@@ -333,26 +363,25 @@ const FmRadio: FC = () => {
           </StationList>
         )}
       </ListArea>
-      <Modal
-        title="添加自定义电台"
+      <MXDialog
         open={customOpen}
-        onCancel={() => setCustomOpen(false)}
-        onOk={addCustom}
+        title="添加自定义电台"
         okText="添加"
-        cancelText="取消"
-        okButtonProps={{ disabled: !customName.trim() || !/^https?:\/\//i.test(customUrl.trim()) }}>
-        <Field>
-          <Label>名称</Label>
-          <Input value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="如：我的私人电台" />
-        </Field>
-        <Field>
-          <Label>流地址</Label>
-          <Input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} placeholder="http://…（Icecast/Shoutcast 直播流）" />
-        </Field>
+        okDisabled={!customName.trim() || !/^https?:\/\//i.test(customUrl.trim())}
+        onCancel={() => setCustomOpen(false)}
+        onOk={addCustom}>
+        <DialogField>
+          <DialogLabel>名称</DialogLabel>
+          <DialogInput value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="如：我的私人电台" />
+        </DialogField>
+        <DialogField>
+          <DialogLabel>流地址</DialogLabel>
+          <DialogInput value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} placeholder="http://…（Icecast / Shoutcast 直播流）" />
+        </DialogField>
         {customError && <ErrorText>{customError}</ErrorText>}
         {!customError && customUrl.trim() && !/^https?:\/\//i.test(customUrl.trim()) && <ErrorText>流地址必须以 http:// 或 https:// 开头</ErrorText>}
-      </Modal>
-    </Panel>
+      </MXDialog>
+    </MXCard>
   )
 }
 
@@ -368,82 +397,65 @@ function dedupMerge(chinaHk: RadioStation[], stations: RadioStation[]): RadioSta
   return out
 }
 
-const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-`
-const breathe = keyframes`
-  0%, 100% { box-shadow: 0 0 4px 1px currentColor; }
-  50% { box-shadow: 0 0 10px 2px currentColor; }
+const pulseDot = keyframes`
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
 `
 
-const Panel = styled.div`
-  flex: 1;
-  min-width: 0;
-  min-height: 240px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 12px;
-  overflow: hidden;
-`
-
-const StatusBar = styled.div`
+const LiveBar = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--color-border-soft);
-  border-radius: 6px;
-  background: var(--color-background-mute);
+  padding: 8px 14px;
+  border: 1px solid ${mx.border};
+  border-radius: 999px;
+  background: ${mx.soft2};
+  margin-bottom: 10px;
+  min-height: 36px;
 `
 
-const Light = styled.span`
+const LiveDot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-text-3);
+  background: ${mx.text3};
   flex-shrink: 0;
   &.connecting {
-    color: #f5a623;
-    background: #f5a623;
-    animation: ${pulse} 1s ease-in-out infinite;
+    background: ${mx.amber};
+    animation: ${pulseDot} 1s ease-in-out infinite;
   }
-  &.playing {
-    color: var(--color-primary);
-    background: var(--color-primary);
-    animation: ${breathe} 2s ease-in-out infinite;
+  &.on {
+    background: ${mx.live};
+    animation: ${pulseDot} 1.6s ease-in-out infinite;
   }
-  &.error {
-    background: var(--color-error);
-  }
+  ${reduceMotion}
 `
 
-const StatusText = styled.span`
+const LiveText = styled.span`
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  color: var(--color-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: ${mx.text};
 `
 
-const Speed = styled.span`
-  font-size: 11px;
-  color: var(--color-text-3);
+const KbpsChip = styled.span`
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: ${mx.accent};
+  background: ${mx.accentSoft};
+  border-radius: 999px;
+  padding: 2px 8px;
   flex-shrink: 0;
 `
 
-const ErrorBar = styled.div`
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--color-error);
-  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+const ErrorText = styled.span`
+  font-size: 11px;
+  color: ${mx.danger};
+  flex-shrink: 0;
 `
 
 const ControlsRow = styled.div`
@@ -452,72 +464,110 @@ const ControlsRow = styled.div`
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
-`
-
-const IconBtn = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background: var(--color-background);
-  color: var(--color-icon);
-  cursor: pointer;
-  transition: all 0.15s;
-  &:hover {
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-  }
+  margin-bottom: 10px;
 `
 
 const MainBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 46px;
+  height: 46px;
   border: none;
   border-radius: 50%;
   color: #fff;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 60%, #0066cc));
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  background: ${mx.gradient};
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+  transition: all 0.18s ease;
   &:hover {
-    filter: brightness(1.1);
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.5);
+  }
+  &:active {
+    transform: scale(0.97);
   }
 `
 
 const TabsRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+`
+
+const TabsActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `
 
 const SearchRow = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
 `
 
 const ListArea = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  border-top: 1px solid var(--color-border-soft);
-  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 2px;
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${mx.border};
+    border-radius: 3px;
+  }
 `
 
 const CenterTip = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  min-height: 80px;
-  color: var(--color-text-3);
+  padding: 32px 0;
+`
+
+const Empty = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+`
+
+const EmptyIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: ${mx.soft};
+  color: ${mx.accent};
+  margin-bottom: 4px;
+`
+
+const EmptyTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${mx.text};
+`
+
+const EmptyHint = styled.div`
   font-size: 12px;
+  color: ${mx.text3};
+  text-align: center;
+  max-width: 260px;
 `
 
 const StationList = styled.div`
@@ -529,28 +579,47 @@ const StationItem = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 52px 6px 6px;
-  border-radius: 6px;
+  gap: 10px;
+  padding: 6px 56px 6px 8px;
+  border-radius: 10px;
   cursor: pointer;
+  transition: background 0.15s ease;
   &:hover {
-    background: var(--color-background-mute);
+    background: ${mx.soft};
   }
   &.playing {
-    background: var(--color-primary-mute);
+    background: ${mx.accentSoft};
     .name {
-      color: var(--color-primary);
+      color: ${mx.accent};
+      font-weight: 600;
     }
   }
 `
 
-const Favicon = styled.img`
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  object-fit: cover;
+const FaviconWrap = styled.div`
+  position: relative;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
-  background: var(--color-background-mute);
+`
+
+const Favicon = styled.img`
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: ${mx.soft2};
+  border: 1px solid ${mx.border};
+`
+
+const FaviconMask = styled.span`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.85);
 `
 
 const StationInfo = styled.div`
@@ -560,7 +629,7 @@ const StationInfo = styled.div`
 
 const StationName = styled.div.attrs({ className: 'name' })`
   font-size: 13px;
-  color: var(--color-text);
+  color: ${mx.text};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -568,75 +637,68 @@ const StationName = styled.div.attrs({ className: 'name' })`
 
 const StationMeta = styled.div`
   font-size: 11px;
-  color: var(--color-text-3);
+  color: ${mx.text3};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-top: 1px;
 `
 
 const FavBtn = styled.button`
   position: absolute;
-  right: 28px;
+  right: 30px;
   top: 50%;
   transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: none;
-  color: var(--color-text-3);
-  font-size: 14px;
+  color: ${mx.text3};
+  font-size: 15px;
+  line-height: 1;
   cursor: pointer;
+  border-radius: 50%;
   opacity: 0;
-  transition: opacity 0.15s;
+  pointer-events: none;
+  transition: all 0.15s ease;
   ${StationItem}:hover & {
     opacity: 1;
+    pointer-events: auto;
   }
   &.favorited {
     opacity: 1;
-    color: #f5a623;
+    pointer-events: auto;
+    color: ${mx.amber};
+  }
+  &:hover {
+    transform: translateY(-50%) scale(1.15);
   }
 `
 
 const DeleteBtn = styled.button`
   position: absolute;
-  right: 4px;
+  right: 3px;
   top: 50%;
   transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: none;
-  color: var(--color-text-3);
+  color: ${mx.text3};
   font-size: 12px;
   cursor: pointer;
+  border-radius: 50%;
   opacity: 0;
-  transition: opacity 0.15s;
+  pointer-events: none;
+  transition: all 0.15s ease;
   &:hover {
-    color: var(--color-error);
+    color: ${mx.danger};
+    background: rgba(239, 83, 80, 0.08);
   }
   ${StationItem}:hover & {
     opacity: 1;
+    pointer-events: auto;
   }
-`
-
-const Field = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-`
-
-const Label = styled.span`
-  width: 48px;
-  flex-shrink: 0;
-  font-size: 13px;
-  color: var(--color-text-2);
-`
-
-const ErrorText = styled.div`
-  color: var(--color-error);
-  font-size: 12px;
-  margin-bottom: 8px;
 `
 
 export default FmRadio

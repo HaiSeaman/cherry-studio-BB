@@ -1,4 +1,4 @@
-import { Volume2, VolumeX } from 'lucide-react'
+import { Volume1, Volume2, VolumeX } from 'lucide-react'
 import { type FC, useEffect } from 'react'
 import styled from 'styled-components'
 
@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 
 import { audioEngine } from '../services/audioEngine'
 import { setLastVolumeBeforeMute, setVolume } from '../store/musicSettingsSlice'
+import { mx } from './mx'
 
 /** 本地音乐与 FM 电台共用的音量控制（值持久化在 musicSettings.volume） */
 const VolumeControl: FC = () => {
@@ -33,10 +34,12 @@ const VolumeControl: FC = () => {
     }
   }
 
+  const VolIcon = volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2
+
   return (
     <VolumeWrap>
       <VolIconBtn onClick={toggleMute} title={volume === 0 ? '取消静音' : '静音'}>
-        {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        <VolIcon size={16} />
       </VolIconBtn>
       <VolumeTrack>
         <VolumeFill style={{ width: `${volume}%` }} />
@@ -46,8 +49,8 @@ const VolumeControl: FC = () => {
           max={100}
           step={1}
           value={volume}
-          onChange={(e) => applyVolume(Number(e.target.value))}
           aria-label="音量"
+          onChange={(e) => applyVolume(Number(e.target.value))}
         />
       </VolumeTrack>
     </VolumeWrap>
@@ -65,26 +68,38 @@ const VolIconBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
   background: none;
   border: none;
-  color: var(--color-icon);
+  color: ${mx.text2};
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 50%;
+  transition: all 0.15s ease;
   &:hover {
-    background: var(--color-background-mute);
+    background: ${mx.soft};
+    color: ${mx.accent};
   }
 `
 
 const VolumeTrack = styled.div`
   position: relative;
   flex: 1;
-  height: 14px;
+  height: 18px;
   display: flex;
   align-items: center;
-  background: var(--color-border-soft);
-  border-radius: 2px;
   cursor: pointer;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 5px;
+    border-radius: 3px;
+    background: ${mx.border};
+  }
 
   input[type='range'] {
     position: absolute;
@@ -106,9 +121,9 @@ const VolumeFill = styled.div`
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-primary);
+  height: 5px;
+  border-radius: 3px;
+  background: ${mx.gradient};
   pointer-events: none;
 `
 

@@ -1,5 +1,4 @@
-import { FolderPlus, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
-import { Modal } from 'antd'
+import { FolderPlus, Music4, Plus, RefreshCw, Search, Sparkles, Trash2 } from 'lucide-react'
 import { type FC, useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import styled from 'styled-components'
@@ -11,12 +10,12 @@ import { addFilesToLibrary, addFolderToLibrary, reorderTracks, rescanFolders } f
 import type { MusicTrack } from '../types'
 import PlayerControls from './PlayerControls'
 import Playlist from './Playlist'
+import { MXCard, MXDialog, MXIconButton, MXPrimaryButton, MXSearchInput, mx } from './mx'
 
 const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'weba', 'webm']
 
 /**
- * 本地音乐播放器（音乐页左栏）
- * 工具栏（+文件/+文件夹/刷新/清空/搜索）+ 播放列表 + 底部控制条
+ * 本地音乐播放器（左栏卡片）：工具行 + 播放列表 + 播放舱
  */
 const LocalMusicPlayer: FC = () => {
   const allTracks = useLiveQuery(async () => (await db.music_tracks.orderBy('order').toArray()) ?? [], [], [])
@@ -24,6 +23,7 @@ const LocalMusicPlayer: FC = () => {
 
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [clearOpen, setClearOpen] = useState(false)
 
   const player = useLocalPlayer(tracks)
 
@@ -46,9 +46,7 @@ const LocalMusicPlayer: FC = () => {
     let view: MusicTrack[] = tracks
     if (player.favoritesActive) view = view.filter((t) => t.favorite === 1)
     if (searchQuery) {
-      view = view.filter((t) =>
-        [t.title, t.artist, t.album].some((f) => (f || '').toLowerCase().includes(searchQuery))
-      )
+      view = view.filter((t) => [t.title, t.artist, t.album].some((f) => (f || '').toLowerCase().includes(searchQuery)))
     }
     return view
   }, [tracks, player.favoritesActive, searchQuery])
@@ -90,19 +88,11 @@ const LocalMusicPlayer: FC = () => {
     }
   }
 
-  const onClear = () => {
-    Modal.confirm({
-      title: '清空播放列表',
-      content: `将移除全部 ${tracks.length} 首曲目（不会删除本地文件，收藏状态一并清除）`,
-      okText: '清空',
-      okButtonProps: { danger: true },
-      cancelText: '取消',
-      onOk: async () => {
-        player.stop()
-        await db.music_tracks.clear()
-        player.showTip('播放列表已清空')
-      }
-    })
+  const onClear = async () => {
+    setClearOpen(false)
+    player.stop()
+    await db.music_tracks.clear()
+    player.showTip('播放列表已清空')
   }
 
   const onToggleFavorite = async (track: MusicTrack) => {
@@ -119,41 +109,63 @@ const LocalMusicPlayer: FC = () => {
     if (wasCurrent) player.onCurrentTrackDeleted(track.id!)
   }
 
-  const emptyText = !tracks || tracks.length === 0
-    ? '点击「+文件」或「+文件夹」添加音乐'
+  const hasTracks = tracks.length > 0
+  const emptyText = !hasTracks
+    ? '曲库还是空的'
     : player.favoritesActive && visibleTracks.length === 0
-      ? '暂无收藏音乐，点击列表中的 ☆ 收藏'
+      ? '还没有收藏'
       : searchQuery && visibleTracks.length === 0
-        ? '未找到匹配曲目'
+        ? '没有匹配的曲目'
         : ''
+  const emptyHint = !hasTracks ? '添加几首喜欢的音乐，随时开听' : player.favoritesActive ? '点击曲目旁的 ☆，把喜欢的收进收藏夹' : '换个关键词试试'
 
   return (
-    <Panel data-no-dnd>
+    <MXCard data-no-dnd>
+      <Header>
+        <HeaderTitle>
+          <HeaderIcon>
+            <Music4 size={16} />
+          </HeaderIcon>
+          本地音乐
+          <CountChip>{tracks.length} 首</CountChip>
+        </HeaderTitle>
+      </Header>
       <Toolbar>
-        <ToolBtn onClick={onAddFiles} title="添加音频文件">
-          <Plus size={14} /> 文件
-        </ToolBtn>
-        <ToolBtn onClick={onAddFolder} title="添加文件夹（递归扫描）">
-          <FolderPlus size={14} /> 文件夹
-        </ToolBtn>
-        <ToolBtn onClick={onRefresh} title="重新扫描已添加的文件夹">
-          <RefreshCw size={14} /> 刷新
-        </ToolBtn>
-        <ToolBtn $danger onClick={onClear} title="清空播放列表">
-          <Trash2 size={14} /> 清空
-        </ToolBtn>
-        <SearchInput>
+        <MXPrimaryButton onClick={onAddFiles} title="选择音频文件加入曲库">
+          <Plus size={15} /> 添加音乐
+        </MXPrimaryButton>
+        <MXIconButton onClick={onAddFolder} title="添加整个文件夹（递归扫描）">
+          <FolderPlus size={16} />
+        </MXIconButton>
+        <MXIconButton onClick={onRefresh} title="重新扫描已添加的文件夹">
+          <RefreshCw size={16} />
+        </MXIconButton>
+        <MXIconButton $danger onClick={() => setClearOpen(true)} title="清空播放列表">
+          <Trash2 size={16} />
+        </MXIconButton>
+        <MXSearchInput>
           <Search size={13} />
-          <input
-            placeholder="搜索曲目/艺术家/专辑…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-        </SearchInput>
+          <input placeholder="搜索曲目 / 艺术家 / 专辑" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+        </MXSearchInput>
       </Toolbar>
-      {player.tip && <TipBar role="status">{player.tip}</TipBar>}
+      {player.tip && (
+        <TipBar role="status">
+          <Sparkles size={12} /> {player.tip}
+        </TipBar>
+      )}
       {emptyText ? (
-        <Empty>{emptyText}</Empty>
+        <Empty>
+          <EmptyIcon>
+            <Music4 size={28} />
+          </EmptyIcon>
+          <EmptyTitle>{emptyText}</EmptyTitle>
+          <EmptyHint>{emptyHint}</EmptyHint>
+          {!hasTracks && (
+            <MXPrimaryButton onClick={onAddFiles}>
+              <Plus size={14} /> 添加音乐文件
+            </MXPrimaryButton>
+          )}
+        </Empty>
       ) : (
         <Playlist
           tracks={visibleTracks}
@@ -182,89 +194,108 @@ const LocalMusicPlayer: FC = () => {
         onToggleFavorites={player.toggleFavoritesMode}
         onToggleFavoriteTrack={onToggleFavorite}
       />
-    </Panel>
+      <MXDialog
+        open={clearOpen}
+        title="清空播放列表"
+        okText="清空"
+        danger
+        onCancel={() => setClearOpen(false)}
+        onOk={() => void onClear()}>
+        将移除全部 {tracks.length} 首曲目（不会删除本地文件，收藏状态一并清除）。
+      </MXDialog>
+    </MXCard>
   )
 }
 
-const Panel = styled.div`
-  flex: 1;
-  min-width: 0;
-  min-height: 240px;
+const Header = styled.div`
   display: flex;
-  flex-direction: column;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 12px;
-  overflow: hidden;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+`
+
+const HeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: ${mx.text};
+`
+
+const HeaderIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: ${mx.accentSoft};
+  color: ${mx.accent};
+`
+
+const CountChip = styled.span`
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: ${mx.text3};
+  background: ${mx.soft};
+  border-radius: 999px;
+  padding: 2px 8px;
 `
 
 const Toolbar = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
-`
-
-const ToolBtn = styled.button<{ $danger?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: ${(p) => (p.$danger ? 'var(--color-error)' : 'var(--color-text-2)')};
-  border-radius: 6px;
-  font-size: 12px;
-  padding: 4px 8px;
-  cursor: pointer;
-  white-space: nowrap;
-  &:hover {
-    border-color: ${(p) => (p.$danger ? 'var(--color-error)' : 'var(--color-primary)')};
-    color: ${(p) => (p.$danger ? 'var(--color-error)' : 'var(--color-primary)')};
-  }
-`
-
-const SearchInput = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 140px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  color: var(--color-text-3);
-  background: var(--color-background);
-  input {
-    flex: 1;
-    min-width: 0;
-    border: none;
-    outline: none;
-    background: transparent;
-    color: var(--color-text);
-    font-size: 12px;
-    &::placeholder {
-      color: var(--color-text-3);
-    }
-  }
+  margin-bottom: 8px;
 `
 
 const TipBar = styled.div`
-  margin-top: 8px;
-  padding: 4px 10px;
-  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
   font-size: 12px;
-  color: var(--color-primary);
-  background: var(--color-primary-mute);
+  color: ${mx.accent};
+  background: ${mx.accentSoft};
 `
 
 const Empty = styled.div`
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-3);
-  font-size: 13px;
+  gap: 8px;
+  padding: 24px;
+`
+
+const EmptyIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: ${mx.soft};
+  color: ${mx.accent};
+  margin-bottom: 4px;
+`
+
+const EmptyTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${mx.text};
+`
+
+const EmptyHint = styled.div`
+  font-size: 12px;
+  color: ${mx.text3};
+  margin-bottom: 8px;
 `
 
 export default LocalMusicPlayer
