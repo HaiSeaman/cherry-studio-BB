@@ -13,7 +13,7 @@ import { getSidebarIconLabel, getThemeModeLabel } from '@renderer/i18n/label'
 import { ThemeMode } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
-import { Image as ImageIcon, LayoutGrid, MessageSquare, Monitor, Moon, Settings, Sun } from 'lucide-react'
+import { Image as ImageIcon, LayoutGrid, MessageSquare, Monitor, Moon, Music, Settings, Sun } from 'lucide-react'
 import type { FC } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -113,13 +113,15 @@ const MainMenus: FC = () => {
   const iconMap = {
     assistants: <MessageSquare size={18} className="icon" />,
     minapp: <LayoutGrid size={18} className="icon" />,
-    paint: <ImageIcon size={18} className="icon" />
+    paint: <ImageIcon size={18} className="icon" />,
+    music: <Music size={18} className="icon" />
   }
 
   const pathMap = {
     assistants: '/',
     minapp: '/apps',
-    paint: '/paint'
+    paint: '/paint',
+    music: '/music'
   }
 
   return sidebarIcons.visible.map((icon) => {

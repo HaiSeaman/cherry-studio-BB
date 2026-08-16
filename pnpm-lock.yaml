@@ -560,6 +560,9 @@ importers:
       motion:
         specifier: ^12.10.5
         version: 12.23.26(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      music-metadata:
+        specifier: ^7.14.0
+        version: 7.14.0
       nanoid:
         specifier: 3.3.11
         version: 3.3.11
@@ -7227,6 +7230,10 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  music-metadata@7.14.0:
+    resolution: {integrity: sha512-xrm3w7SV0Wk+OythZcSbaI8mcr/KHd0knJieu8bVpaPfMv/Agz5EooCAPz3OR5hbYMiUG6dgAPKZKnMzV+3amA==}
+    engines: {node: '>=10'}
 
   mute-stream@0.0.5:
     resolution: {integrity: sha512-EbrziT4s8cWPmzr47eYVW3wimS4HsvlnV5ri1xw1aR6JQo/OrJX5rkl32K/QQHdxeabJETtfeaROGhd8W7uBgg==}
@@ -17780,6 +17787,18 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
     optional: true
+
+  music-metadata@7.14.0:
+    dependencies:
+      '@tokenizer/token': 0.3.0
+      content-type: 1.0.5
+      debug: 4.4.3
+      file-type: 16.5.4
+      media-typer: 1.1.0
+      strtok3: 6.3.0
+      token-types: 4.2.1
+    transitivePeerDependencies:
+      - supports-color
 
   mute-stream@0.0.5: {}
 

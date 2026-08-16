@@ -3184,6 +3184,21 @@ const migrateConfig = {
       logger.error('migrate 213 error', error as Error)
       return state
     }
+  },
+  '214': (state: RootState) => {
+    try {
+      // 启用音乐 Tab 侧边栏入口：为已有持久化 sidebarIcons 的用户追加 music 图标
+      if (state.settings && state.settings.sidebarIcons) {
+        if (!state.settings.sidebarIcons.visible.includes('music' as any)) {
+          state.settings.sidebarIcons.visible = [...state.settings.sidebarIcons.visible, 'music' as any]
+        }
+      }
+      logger.info('migrate 214 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 214 error', error as Error)
+      return state
+    }
   }
 }
 

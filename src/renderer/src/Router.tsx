@@ -18,6 +18,7 @@ const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 const MinAppPage = lazy(() => import('./pages/minapps/MinAppPage'))
 const MinAppsPage = lazy(() => import('./pages/minapps/MinAppsPage'))
 const PaintPage = lazy(() => import('./pages/paint/PaintPage'))
+const MusicPage = lazy(() => import('./pages/music/MusicPage'))
 
 const Router: FC = () => {
   const { onboardingCompleted, completeOnboarding } = useOnboardingState()
@@ -32,6 +33,7 @@ const Router: FC = () => {
             <Route path="/apps/:appId" element={<MinAppPage />} />
             <Route path="/apps" element={<MinAppsPage />} />
             <Route path="/paint" element={<PaintPage />} />
+            <Route path="/music" element={<MusicPage />} />
             <Route path="/settings/*" element={<SettingsPage />} />
             <Route path="/launchpad" element={<LaunchpadPage />} />
           </Routes>

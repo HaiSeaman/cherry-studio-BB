@@ -465,7 +465,7 @@ export type TranslateLanguage = {
   emoji: string
 }
 
-export type SidebarIcon = 'assistants' | 'minapp' | 'paint'
+export type SidebarIcon = 'assistants' | 'minapp' | 'paint' | 'music'
 
 export type ExternalToolResult = {
   mcpTools?: MCPTool[]

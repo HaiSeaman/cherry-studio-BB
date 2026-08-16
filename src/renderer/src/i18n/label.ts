@@ -132,7 +132,8 @@ const titleKeyMap = {
   launchpad: '启动台',
   'mcp-servers': 'MCP 服务器',
   memories: '记忆',
-  settings: '设置'
+  settings: '设置',
+  music: '音乐'
 } as const
 
 export const getTitleLabel = (key: string): string => {
@@ -153,7 +154,8 @@ const sidebarIconKeyMap = {
   assistants: '助手',
   store: '助手库',
   minapp: '小程序',
-  paint: '图片生成'
+  paint: '图片生成',
+  music: '音乐'
 } as const
 
 export const getSidebarIconLabel = (key: string): string => {

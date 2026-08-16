@@ -1,7 +1,7 @@
 import App from '@renderer/components/MinApp/MinApp'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { Image as ImageIcon, LayoutGrid, MessageSquare } from 'lucide-react'
+import { Image as ImageIcon, LayoutGrid, MessageSquare, Music } from 'lucide-react'
 import type { FC } from 'react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -30,6 +30,12 @@ const LaunchpadPage: FC = () => {
       text: '小程序',
       path: '/apps',
       bgColor: 'linear-gradient(135deg, #8B5CF6, #A855F7)' // 小程序：紫色，代表多功能和灵活性
+    },
+    {
+      icon: <Music size={32} className="icon" />,
+      text: '音乐',
+      path: '/music',
+      bgColor: 'linear-gradient(135deg, #10B981, #34D399)' // 音乐：绿色，代表轻快与放松
     }
   ]
 
