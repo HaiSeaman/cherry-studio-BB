@@ -1,5 +1,5 @@
 import EmojiAvatar from '@renderer/components/Avatar/EmojiAvatar'
-import { isMac } from '@renderer/config/constant'
+import { isLinux, isMac, isWin } from '@renderer/config/constant'
 import { UserAvatar } from '@renderer/config/env'
 import useAvatar from '@renderer/hooks/useAvatar'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
@@ -10,12 +10,23 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import { getSidebarIconLabel } from '@renderer/i18n/label'
 import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
-import { Image as ImageIcon, LayoutGrid, MessageSquare, Music, Settings, StickyNote } from 'lucide-react'
-import type { FC } from 'react'
+import {
+  Image as ImageIcon,
+  LayoutGrid,
+  MessageSquare,
+  Minus,
+  Music,
+  Settings,
+  Square,
+  StickyNote,
+  X
+} from 'lucide-react'
+import { useEffect, useState, type FC } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import UserPopup from '../Popups/UserPopup'
+import { WindowRestoreIcon } from '../WindowControls'
 import { SidebarOpenedMinappTabs, SidebarPinnedApps } from './PinnedMinapps'
 
 const Sidebar: FC = () => {
@@ -75,10 +86,80 @@ const Sidebar: FC = () => {
             </Icon>
           </StyledLink>
         </Tooltip>
+        {!isMac && <SidebarWindowControls />}
       </Menus>
     </Container>
   )
 }
+
+/** 侧边栏底部窗口控制键（最小化/最大化/关闭，与设置键同列竖排） */
+const SidebarWindowControls: FC = () => {
+  const [isMaximized, setIsMaximized] = useState(false)
+
+  useEffect(() => {
+    void window.api.windowControls.isMaximized().then(setIsMaximized)
+    const unsubscribe = window.api.windowControls.onMaximizedChange(setIsMaximized)
+    return () => {
+      unsubscribe()
+    }
+  }, [])
+
+  if (!isWin && !isLinux) return null
+
+  return (
+    <WinControlGroup>
+      <Tooltip title={'最小化'} mouseEnterDelay={0.8} placement="right">
+        <WinBtn aria-label="最小化" onClick={() => void window.api.windowControls.minimize()}>
+          <Minus size={16} />
+        </WinBtn>
+      </Tooltip>
+      <Tooltip title={isMaximized ? '还原' : '最大化'} mouseEnterDelay={0.8} placement="right">
+        <WinBtn
+          aria-label={isMaximized ? '还原' : '最大化'}
+          onClick={() => {
+            if (isMaximized) void window.api.windowControls.unmaximize()
+            else void window.api.windowControls.maximize()
+          }}>
+          {isMaximized ? <WindowRestoreIcon size="14" /> : <Square size={13} />}
+        </WinBtn>
+      </Tooltip>
+      <Tooltip title={'关闭'} mouseEnterDelay={0.8} placement="right">
+        <WinBtn aria-label="关闭" $danger onClick={() => void window.api.windowControls.close()}>
+          <X size={16} />
+        </WinBtn>
+      </Tooltip>
+    </WinControlGroup>
+  )
+}
+
+const WinControlGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--color-border);
+`
+
+const WinBtn = styled.button<{ $danger?: boolean }>`
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--color-icon);
+  cursor: pointer;
+  -webkit-app-region: none;
+  transition: all 0.15s ease;
+  &:hover {
+    background: ${(p) => (p.$danger ? '#e81123' : 'var(--color-background-soft)')};
+    color: ${(p) => (p.$danger ? '#ffffff' : 'var(--color-icon-white)')};
+  }
+`
 
 const MainMenus: FC = () => {
   const { hideMinappPopup } = useMinappPopup()
@@ -153,8 +234,8 @@ const SidebarGlass = styled.div`
   z-index: -1;
   pointer-events: none;
   -webkit-app-region: none;
-  background: color-mix(in srgb, var(--color-background) 72%, transparent);
-  backdrop-filter: blur(16px) saturate(1.4);
+  background: color-mix(in srgb, var(--color-background) 50%, transparent);
+  backdrop-filter: blur(18px) saturate(1.45);
   border-right: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 `
