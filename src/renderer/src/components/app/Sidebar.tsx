@@ -1,7 +1,6 @@
 import EmojiAvatar from '@renderer/components/Avatar/EmojiAvatar'
 import { isMac } from '@renderer/config/constant'
 import { UserAvatar } from '@renderer/config/env'
-import { useTheme } from '@renderer/context/ThemeProvider'
 import useAvatar from '@renderer/hooks/useAvatar'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
@@ -9,21 +8,10 @@ import { useMinapps } from '@renderer/hooks/useMinapps'
 import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { getSidebarIconLabel, getThemeModeLabel } from '@renderer/i18n/label'
-import { ThemeMode } from '@renderer/types'
+import { getSidebarIconLabel } from '@renderer/i18n/label'
 import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
-import {
-  Image as ImageIcon,
-  LayoutGrid,
-  MessageSquare,
-  Monitor,
-  Moon,
-  Music,
-  Settings,
-  StickyNote,
-  Sun
-} from 'lucide-react'
+import { Image as ImageIcon, LayoutGrid, MessageSquare, Music, Settings, StickyNote } from 'lucide-react'
 import type { FC } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -40,7 +28,6 @@ const Sidebar: FC = () => {
   const { pathname } = useLocation()
   const navigate = useNavigate()
 
-  const { theme, settedTheme, toggleTheme } = useTheme()
   const avatar = useAvatar()
   const onEditUser = () => UserPopup.show()
 
@@ -82,24 +69,13 @@ const Sidebar: FC = () => {
         )}
       </MainMenusContainer>
       <Menus>
-        <Tooltip title={'主题' + ': ' + getThemeModeLabel(settedTheme)} placement="right">
-          <Icon theme={theme} onClick={toggleTheme}>
-            {settedTheme === ThemeMode.dark ? (
-              <Moon size={20} className="icon" />
-            ) : settedTheme === ThemeMode.light ? (
-              <Sun size={20} className="icon" />
-            ) : (
-              <Monitor size={20} className="icon" />
-            )}
-          </Icon>
-        </Tooltip>
         <Tooltip title={'设置'} mouseEnterDelay={0.8} placement="right">
           <StyledLink
             onClick={async () => {
               hideMinappPopup()
               await to('/settings/provider')
             }}>
-            <Icon theme={theme} className={pathname.startsWith('/settings') && !minappShow ? 'active' : ''}>
+            <Icon className={pathname.startsWith('/settings') && !minappShow ? 'active' : ''}>
               <Settings size={20} className="icon" />
             </Icon>
           </StyledLink>
@@ -115,7 +91,6 @@ const MainMenus: FC = () => {
   const { sidebarIcons } = useSettings()
   const { minappShow } = useRuntime()
   const navigate = useNavigate()
-  const { theme } = useTheme()
 
   const isRoute = (path: string): string => (pathname === path && !minappShow ? 'active' : '')
   const isRoutes = (path: string): string => (pathname.startsWith(path) && path !== '/' && !minappShow ? 'active' : '')
@@ -148,7 +123,7 @@ const MainMenus: FC = () => {
             await modelGenerating()
             navigate(path)
           }}>
-          <Icon theme={theme} className={isActive}>
+          <Icon className={isActive}>
             {iconMap[icon]}
           </Icon>
         </StyledLink>
@@ -200,7 +175,7 @@ const Menus = styled.div`
   gap: 5px;
 `
 
-const Icon = styled.div<{ theme: string }>`
+const Icon = styled.div`
   width: 35px;
   height: 35px;
   display: flex;
@@ -214,7 +189,7 @@ const Icon = styled.div<{ theme: string }>`
     color: var(--color-icon);
   }
   &:hover {
-    background-color: ${({ theme }) => (theme === 'dark' ? 'var(--color-black)' : 'var(--color-white)')};
+    background-color: var(--color-background-soft);
     opacity: 0.8;
     cursor: pointer;
     .icon {
@@ -222,7 +197,7 @@ const Icon = styled.div<{ theme: string }>`
     }
   }
   &.active {
-    background-color: ${({ theme }) => (theme === 'dark' ? 'var(--color-black)' : 'var(--color-white)')};
+    background-color: var(--color-white);
     border: 0.5px solid var(--color-border);
     .icon {
       color: var(--color-primary);

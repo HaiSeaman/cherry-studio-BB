@@ -4,32 +4,26 @@ import { Sortable, useDndReorder } from '@renderer/components/dnd'
 import HorizontalScrollContainer from '@renderer/components/HorizontalScrollContainer'
 import { isLinux, isMac } from '@renderer/config/constant'
 import { allMinApps } from '@renderer/config/minapps'
-import { useTheme } from '@renderer/context/ThemeProvider'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { getThemeModeLabel, getTitleLabel } from '@renderer/i18n/label'
+import { getTitleLabel } from '@renderer/i18n/label'
 import tabsService from '@renderer/services/TabsService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import type { Tab } from '@renderer/store/tabs'
 import { addTab, removeTab, setActiveTab, setTabs } from '@renderer/store/tabs'
 import type { MinAppType } from '@renderer/types'
-import { ThemeMode } from '@renderer/types'
 import { classNames } from '@renderer/utils'
-import { Tooltip } from 'antd'
 import type { LRUCache } from 'lru-cache'
 import {
   Home,
   LayoutGrid,
-  Monitor,
-  Moon,
   MousePointerClick,
   Music,
   Settings,
   Sparkle,
   StickyNote,
-  Sun,
   X
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo } from 'react'
@@ -111,7 +105,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
   const tabs = useAppSelector((state) => state.tabs.tabs)
   const activeTabId = useAppSelector((state) => state.tabs.activeTabId)
   const isFullscreen = useFullscreen()
-  const { settedTheme, toggleTheme } = useTheme()
   const { hideMinappPopup, minAppsCache } = useMinappPopup()
   const { minapps } = useMinapps()
   const { useSystemTitleBar } = useSettings()
@@ -263,17 +256,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
           </AddTabButton>
         </HorizontalScrollContainer>
         <RightButtonsContainer style={{ paddingRight: isLinux && useSystemTitleBar ? '12px' : undefined }}>
-          <Tooltip title={'主题' + ': ' + getThemeModeLabel(settedTheme)} mouseEnterDelay={0.8} placement="bottom">
-            <ThemeButton onClick={toggleTheme}>
-              {settedTheme === ThemeMode.dark ? (
-                <Moon size={16} />
-              ) : settedTheme === ThemeMode.light ? (
-                <Sun size={16} />
-              ) : (
-                <Monitor size={16} />
-              )}
-            </ThemeButton>
-          </Tooltip>
           <SettingsButton onClick={handleSettingsClick} $active={activeTabId === 'settings'}>
             <Settings size={16} />
           </SettingsButton>
@@ -408,21 +390,6 @@ const RightButtonsContainer = styled.div`
   margin-left: auto;
   padding-right: ${isMac ? '12px' : '0'};
   flex-shrink: 0;
-`
-
-const ThemeButton = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  cursor: pointer;
-  color: var(--color-text);
-
-  &:hover {
-    background: var(--color-list-item);
-    border-radius: 8px;
-  }
 `
 
 const SettingsButton = styled.div<{ $active: boolean }>`

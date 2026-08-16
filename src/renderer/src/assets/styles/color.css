@@ -71,74 +71,75 @@
 }
 
 [theme-mode='light'] {
+  /* 晨间绿洲色板（与音乐/闹钟页 mx 设计系统同源） */
   --color-white: #ffffff;
-  --color-white-soft: rgba(0, 0, 0, 0.04);
-  --color-white-mute: #eee;
+  --color-white-soft: #f0f7f2;
+  --color-white-mute: #edf5f0;
 
-  --color-black: #1b1b1f;
-  --color-black-soft: #262626;
-  --color-black-mute: #363636;
+  --color-black: #22312a;
+  --color-black-soft: #2c3d34;
+  --color-black-mute: #3a4d43;
 
-  --color-gray-1: #8e8e93;
-  --color-gray-2: #aeaeb2;
-  --color-gray-3: #c7c7cc;
+  --color-gray-1: #63746b;
+  --color-gray-2: #98a79f;
+  --color-gray-3: #c6d2cb;
 
-  --color-text-1: rgba(0, 0, 0, 1);
-  --color-text-2: rgba(0, 0, 0, 0.6);
-  --color-text-3: rgba(0, 0, 0, 0.38);
+  --color-text-1: #22312a;
+  --color-text-2: #63746b;
+  --color-text-3: #98a79f;
 
-  --color-background: var(--color-white);
-  --color-background-soft: var(--color-white-soft);
-  --color-background-mute: var(--color-white-mute);
-  --color-background-opacity: rgba(243, 243, 243, 1);
+  --color-background: #f5f9f6;
+  --color-background-soft: #edf5f0;
+  --color-background-mute: #e3ede7;
+  --color-background-opacity: rgba(245, 249, 246, 0.92);
   --inner-glow-opacity: 0.1;
 
-  --color-primary: #00b96b;
-  --color-primary-soft: #00b96b99;
-  --color-primary-mute: #00b96b33;
+  --color-primary: #10b981;
+  --color-primary-soft: #10b98199;
+  --color-primary-mute: #10b98133;
 
   --color-text: var(--color-text-1);
-  --color-text-secondary: rgba(0, 0, 0, 0.75);
-  --color-icon: #00000099;
-  --color-icon-white: #000000;
-  --color-border: #00000019;
-  --color-border-soft: #00000010;
-  --color-border-mute: #00000005;
-  --color-error: #ff4d50;
-  --color-link: #1677ff;
-  --color-code-background: #e3e3e3;
-  --color-inline-code-background: rgba(0, 0, 0, 0.06);
-  --color-inline-code-text: rgba(235, 87, 87);
+  --color-text-secondary: rgba(34, 49, 42, 0.75);
+  --color-icon: #63746b;
+  --color-icon-white: #22312a;
+  --color-border: #e3ede7;
+  --color-border-soft: rgba(227, 237, 231, 0.6);
+  --color-border-mute: rgba(227, 237, 231, 0.4);
+  --color-error: #ef5350;
+  --color-link: #0d9668;
+  --color-code-background: #edf5f0;
+  --color-inline-code-background: rgba(16, 185, 129, 0.08);
+  --color-inline-code-text: #c75757;
   --color-hover: var(--color-white-mute);
   --color-active: var(--color-white-soft);
-  --color-frame-border: #ddd;
-  --color-group-background: var(--color-white);
+  --color-frame-border: #e3ede7;
+  --color-group-background: #ffffff;
 
-  --color-reference: #cfe1ff;
-  --color-reference-text: #000000;
-  --color-reference-background: #f1f7ff;
+  --color-reference: #e3f5ec;
+  --color-reference-text: #22312a;
+  --color-reference-background: #f0faf5;
 
-  --color-list-item: #fff;
-  --color-list-item-hover: #fafafa;
+  --color-list-item: #ffffff;
+  --color-list-item-hover: #f0f7f2;
 
-  --modal-background: var(--color-white);
+  --modal-background: #ffffff;
 
   --color-highlight: initial;
   --color-background-highlight: rgba(255, 255, 0, 0.5);
   --color-background-highlight-accent: rgba(255, 150, 50, 0.5);
 
-  --navbar-background-mac: rgba(255, 255, 255, 0.55);
-  --navbar-background: rgba(244, 244, 244);
+  --navbar-background-mac: rgba(245, 249, 246, 0.55);
+  --navbar-background: rgba(245, 249, 246, 0.85);
 
   --chat-background: transparent;
-  --chat-background-user: rgba(0, 0, 0, 0.045);
+  --chat-background-user: rgba(16, 185, 129, 0.1);
   --chat-background-assistant: transparent;
   --chat-text-user: var(--color-text);
 }
 
 [navbar-position='left'][theme-mode='light'] {
-  --color-list-item: #eee;
-  --color-list-item-hover: #f5f5f5;
+  --color-list-item: #edf5f0;
+  --color-list-item-hover: #e3ede7;
 }
 
 [navbar-position='left'][theme-mode='dark'] {

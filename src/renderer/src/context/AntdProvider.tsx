@@ -15,14 +15,11 @@ import zhCN from 'antd/locale/zh_CN'
 import zhTW from 'antd/locale/zh_TW'
 import type { FC, PropsWithChildren } from 'react'
 
-import { useTheme } from './ThemeProvider'
-
 const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
   const {
     language,
     userTheme: { colorPrimary }
   } = useSettings()
-  const { theme: _theme } = useTheme()
 
   return (
     <ConfigProvider
@@ -30,7 +27,7 @@ const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
       theme={{
         cssVar: true,
         hashed: false,
-        algorithm: [_theme === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm],
+        algorithm: [theme.defaultAlgorithm],
         components: {
           Menu: {
             activeBarBorderWidth: 0,
@@ -112,7 +109,7 @@ const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
         token: {
           colorPrimary: colorPrimary,
           fontFamily: 'var(--font-family)',
-          colorBgMask: _theme === 'dark' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)',
+          colorBgMask: 'rgba(34,49,42,0.3)',
           motionDurationMid: '100ms'
         }
       }}>

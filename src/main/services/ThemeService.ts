@@ -2,21 +2,18 @@ import { IpcChannel } from '@shared/IpcChannel'
 import { ThemeMode } from '@types'
 import { BrowserWindow, nativeTheme } from 'electron'
 
-import { titleBarOverlayDark, titleBarOverlayLight } from '../config'
+import { titleBarOverlayLight } from '../config'
 import { configManager } from './ConfigManager'
 
+/**
+ * 晨间绿洲 UI：固定浅色主题。任何主题变更事件都保持 light，
+ * 不再向渲染进程发送深色状态。
+ */
 class ThemeService {
-  private theme: ThemeMode = ThemeMode.system
+  private theme: ThemeMode = ThemeMode.light
   constructor() {
-    this.theme = configManager.getTheme()
-
-    if (this.theme === ThemeMode.dark || this.theme === ThemeMode.light || this.theme === ThemeMode.system) {
-      nativeTheme.themeSource = this.theme
-    } else {
-      // 兼容旧版本
-      configManager.setTheme(ThemeMode.system)
-      nativeTheme.themeSource = ThemeMode.system
-    }
+    this.theme = ThemeMode.light
+    nativeTheme.themeSource = ThemeMode.light
     nativeTheme.on('updated', this.themeUpdatadHandler.bind(this))
   }
 
@@ -24,13 +21,13 @@ class ThemeService {
     BrowserWindow.getAllWindows().forEach((win) => {
       if (win && !win.isDestroyed() && win.setTitleBarOverlay) {
         try {
-          win.setTitleBarOverlay(nativeTheme.shouldUseDarkColors ? titleBarOverlayDark : titleBarOverlayLight)
+          win.setTitleBarOverlay(titleBarOverlayLight)
         } catch (error) {
           // don't throw error if setTitleBarOverlay failed
           // Because it may be called with some windows have some title bar
         }
       }
-      win.webContents.send(IpcChannel.ThemeUpdated, nativeTheme.shouldUseDarkColors ? ThemeMode.dark : ThemeMode.light)
+      win.webContents.send(IpcChannel.ThemeUpdated, ThemeMode.light)
     })
   }
 
@@ -39,9 +36,10 @@ class ThemeService {
       return
     }
 
-    this.theme = theme
-    nativeTheme.themeSource = theme
-    configManager.setTheme(theme)
+    // 固定浅色：忽略任何传入主题，仅保证 nativeTheme 处于 light
+    this.theme = ThemeMode.light
+    nativeTheme.themeSource = ThemeMode.light
+    configManager.setTheme(ThemeMode.light)
   }
 }
 

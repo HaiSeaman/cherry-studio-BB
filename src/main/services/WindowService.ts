@@ -8,12 +8,12 @@ import { getFilesDir } from '@main/utils/file'
 import { getWindowsBackgroundMaterial } from '@main/utils/windowUtil'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { IpcChannel } from '@shared/IpcChannel'
-import { app, BrowserWindow, nativeImage, nativeTheme, screen, shell } from 'electron'
+import { app, BrowserWindow, nativeImage, screen, shell } from 'electron'
 import windowStateKeeper from 'electron-window-state'
 import path, { join } from 'path'
 
 import iconPath from '../../../build/icon.png?asset'
-import { titleBarOverlayDark, titleBarOverlayLight } from '../config'
+import { titleBarOverlayLight } from '../config'
 import { configManager } from './ConfigManager'
 import { contextMenu } from './ContextMenu'
 import { isSafeExternalUrl } from './security'
@@ -59,11 +59,8 @@ export class WindowService {
       maximize: false
     })
     const windowsBackgroundMaterial = getWindowsBackgroundMaterial()
-    let mainWindowBackgroundColor: string | undefined
-
-    if (!isMac && !windowsBackgroundMaterial) {
-      mainWindowBackgroundColor = nativeTheme.shouldUseDarkColors ? '#181818' : '#FFFFFF'
-    }
+    // 晨间绿洲 UI 固定浅色：窗口背景恒为暖白（Mica 材质时由系统填充背景）
+    const mainWindowBackgroundColor = isMac || windowsBackgroundMaterial ? undefined : '#F5F9F6'
 
     this.mainWindow = new BrowserWindow({
       x: mainWindowState.x,
@@ -88,7 +85,7 @@ export class WindowService {
       ...(isMac
         ? {
             titleBarStyle: 'hidden',
-            titleBarOverlay: nativeTheme.shouldUseDarkColors ? titleBarOverlayDark : titleBarOverlayLight,
+            titleBarOverlay: titleBarOverlayLight,
             trafficLightPosition: { x: 13, y: 13 }
           }
         : {
@@ -97,7 +94,7 @@ export class WindowService {
           }),
       ...(windowsBackgroundMaterial ? { backgroundMaterial: windowsBackgroundMaterial } : {}),
       ...(mainWindowBackgroundColor ? { backgroundColor: mainWindowBackgroundColor } : {}),
-      darkTheme: nativeTheme.shouldUseDarkColors,
+      darkTheme: false,
       ...(isLinux ? { icon: linuxIcon } : {}),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),

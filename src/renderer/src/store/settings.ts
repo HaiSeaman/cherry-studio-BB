@@ -258,7 +258,7 @@ export const initialState: SettingsState = {
   tray: true,
   theme: ThemeMode.system,
   userTheme: {
-    colorPrimary: '#00b96b',
+    colorPrimary: '#10b981',
     userFontFamily: '',
     userCodeFontFamily: ''
   },

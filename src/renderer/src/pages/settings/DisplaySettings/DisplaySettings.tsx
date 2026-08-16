@@ -18,9 +18,8 @@ import {
   setShowTopicTime,
   setSidebarIcons
 } from '@renderer/store/settings'
-import { ThemeMode } from '@renderer/types'
 import { Button, ColorPicker, Segmented, Select, Switch, Tooltip } from 'antd'
-import { Minus, Monitor, Moon, Plus, Sun } from 'lucide-react'
+import { Minus, Plus } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
@@ -66,14 +65,13 @@ const DisplaySettings: FC = () => {
     pinTopicsToTop,
     customCss,
     sidebarIcons,
-    setTheme,
     assistantIconType,
     userTheme,
     useSystemTitleBar,
     setUseSystemTitleBar
   } = useSettings()
   const { navbarPosition, setNavbarPosition } = useNavbarPosition()
-  const { theme, settedTheme } = useTheme()
+  const { theme } = useTheme()
   const dispatch = useAppDispatch()
   const { setTimeoutTimer } = useTimer()
   const [currentZoom, setCurrentZoom] = useState(1.0)
@@ -125,39 +123,6 @@ const DisplaySettings: FC = () => {
     setDisabledIcons([])
     dispatch(setSidebarIcons({ visible: DEFAULT_SIDEBAR_ICONS, disabled: [] }))
   }, [dispatch])
-
-  const themeOptions = useMemo(
-    () => [
-      {
-        value: ThemeMode.light,
-        label: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Sun size={16} />
-            <span>{'浅色'}</span>
-          </div>
-        )
-      },
-      {
-        value: ThemeMode.dark,
-        label: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Moon size={16} />
-            <span>{'深色'}</span>
-          </div>
-        )
-      },
-      {
-        value: ThemeMode.system,
-        label: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Monitor size={16} />
-            <span>{'系统'}</span>
-          </div>
-        )
-      }
-    ],
-    []
-  )
 
   useEffect(() => {
     // 初始化获取所有系统字体
@@ -237,11 +202,6 @@ const DisplaySettings: FC = () => {
     <SettingContainer theme={theme}>
       <SettingGroup theme={theme}>
         <SettingTitle>{'显示设置'}</SettingTitle>
-        <SettingDivider />
-        <SettingRow>
-          <SettingRowTitle>{'主题'}</SettingRowTitle>
-          <Segmented value={settedTheme} shape="round" onChange={setTheme} options={themeOptions} />
-        </SettingRow>
         <SettingDivider />
         <SettingRow>
           <SettingRowTitle>{'主题颜色'}</SettingRowTitle>
