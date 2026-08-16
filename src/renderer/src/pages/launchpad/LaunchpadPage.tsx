@@ -1,7 +1,7 @@
 import App from '@renderer/components/MinApp/MinApp'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { Image as ImageIcon, LayoutGrid, MessageSquare, Music } from 'lucide-react'
+import { Image as ImageIcon, LayoutGrid, MessageSquare, Music, StickyNote } from 'lucide-react'
 import type { FC } from 'react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -36,6 +36,12 @@ const LaunchpadPage: FC = () => {
       text: '音乐',
       path: '/music',
       bgColor: 'linear-gradient(135deg, #10B981, #34D399)' // 音乐：绿色，代表轻快与放松
+    },
+    {
+      icon: <StickyNote size={32} className="icon" />,
+      text: '闹钟便签',
+      path: '/notes',
+      bgColor: 'linear-gradient(135deg, #F59E0B, #FBBF24)' // 闹钟便签：琥珀色，代表提醒与记录
     }
   ]
 

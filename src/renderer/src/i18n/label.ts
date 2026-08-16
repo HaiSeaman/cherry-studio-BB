@@ -133,7 +133,8 @@ const titleKeyMap = {
   'mcp-servers': 'MCP 服务器',
   memories: '记忆',
   settings: '设置',
-  music: '音乐'
+  music: '音乐',
+  notes: '闹钟便签'
 } as const
 
 export const getTitleLabel = (key: string): string => {
@@ -155,7 +156,8 @@ const sidebarIconKeyMap = {
   store: '助手库',
   minapp: '小程序',
   paint: '图片生成',
-  music: '音乐'
+  music: '音乐',
+  notes: '闹钟便签'
 } as const
 
 export const getSidebarIconLabel = (key: string): string => {

@@ -102,6 +102,7 @@ export enum IpcChannel {
   Windows_ResetMinimumSize = 'window:reset-minimum-size',
   Windows_SetMinimumSize = 'window:set-minimum-size',
   Windows_GetSize = 'window:get-size',
+  Windows_Focus = 'window:focus',
   Windows_Minimize = 'window:minimize',
   Windows_Maximize = 'window:maximize',
   Windows_Unmaximize = 'window:unmaximize',

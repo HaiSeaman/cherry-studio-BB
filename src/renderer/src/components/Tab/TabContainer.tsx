@@ -19,7 +19,19 @@ import { ThemeMode } from '@renderer/types'
 import { classNames } from '@renderer/utils'
 import { Tooltip } from 'antd'
 import type { LRUCache } from 'lru-cache'
-import { Home, LayoutGrid, Monitor, Moon, MousePointerClick, Music, Settings, Sparkle, Sun, X } from 'lucide-react'
+import {
+  Home,
+  LayoutGrid,
+  Monitor,
+  Moon,
+  MousePointerClick,
+  Music,
+  Settings,
+  Sparkle,
+  StickyNote,
+  Sun,
+  X
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -82,6 +94,8 @@ const getTabIcon = (
       return <Settings size={14} />
     case 'music':
       return <Music size={14} />
+    case 'notes':
+      return <StickyNote size={14} />
     default:
       return null
   }

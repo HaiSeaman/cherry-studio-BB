@@ -21,6 +21,7 @@ import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMes
 import { Dexie, type EntityTable } from 'dexie'
 
 import type { MusicTrack, RadioStation } from '../pages/music/types'
+import type { HubActivity, HubAlarm, HubDayNote, HubNote, HubNoteSnapshot, HubTodo } from '../pages/notes/types'
 import { upgradeToV5, upgradeToV7, upgradeToV8 } from './upgrades'
 
 // Database declaration (move this to its own module also)
@@ -37,6 +38,13 @@ export const db = new Dexie('CherryStudio', {
   music_tracks: EntityTable<MusicTrack, 'id'>
   music_folders: EntityTable<{ path: string; addedAt: number }, 'path'>
   radio_favorites: EntityTable<RadioStation & { addedAt: number }, 'url'>
+  // 闹钟便签 TAB（便签/待办/闹钟/日历当日待办/活跃度/历史快照）
+  hub_notes: EntityTable<HubNote, 'id'>
+  hub_todos: EntityTable<HubTodo, 'id'>
+  hub_alarms: EntityTable<HubAlarm, 'id'>
+  hub_day_notes: EntityTable<HubDayNote, 'id'>
+  hub_activity: EntityTable<HubActivity, 'date'>
+  hub_note_history: EntityTable<HubNoteSnapshot, 'id'>
 }
 
 db.version(1).stores({
@@ -140,6 +148,24 @@ db.version(11).stores({
   music_tracks: '++id, &filePath, order, favorite',
   music_folders: '&path',
   radio_favorites: '&url'
+})
+
+// --- NEW VERSION 12：闹钟便签 TAB 六张表 ---
+db.version(12).stores({
+  files: 'id, name, origin_name, path, size, ext, type, created_at, count',
+  topics: '&id',
+  settings: '&id, value',
+  quick_phrases: 'id',
+  message_blocks: 'id, messageId, file.id',
+  music_tracks: '++id, &filePath, order, favorite',
+  music_folders: '&path',
+  radio_favorites: '&url',
+  hub_notes: '++id, status',
+  hub_todos: '++id, status',
+  hub_alarms: '++id',
+  hub_day_notes: '++id, date',
+  hub_activity: '&date',
+  hub_note_history: '++id, noteId'
 })
 
 export default db

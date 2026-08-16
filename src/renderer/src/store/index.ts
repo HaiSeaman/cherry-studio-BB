@@ -23,6 +23,7 @@ import storage from 'redux-persist/lib/storage'
 
 import paint from '../pages/paint/store/paintSlice'
 import musicSettings from '../pages/music/store/musicSettingsSlice'
+import hubSettings from '../pages/notes/store/hubSettingsSlice'
 import storeSyncService from '../services/StoreSyncService'
 import assistants from './assistants'
 import backup from './backup'
@@ -61,6 +62,7 @@ const rootReducer = combineReducers({
   inputTools: inputToolsReducer,
   paint,
   musicSettings,
+  hubSettings,
   translate,
   toolPermissions
 })
@@ -69,7 +71,7 @@ const persistedReducer = persistReducer(
   {
     key: 'cherry-studio',
     storage,
-    version: 214,
+    version: 215,
     blacklist: ['runtime', 'messages', 'messageBlocks', 'tabs', 'toolPermissions', 'paint'],
     migrate
   },
