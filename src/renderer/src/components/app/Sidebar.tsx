@@ -8,6 +8,7 @@ import { useMinapps } from '@renderer/hooks/useMinapps'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { getSidebarIconLabel } from '@renderer/i18n/label'
+import type { SidebarIcon } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
 import {
@@ -53,28 +54,10 @@ const Sidebar: FC = () => {
   return (
     <Container $isFullscreen={isFullscreen} id="app-sidebar" style={{ zIndex: minappShow ? 10000 : 0 }}>
       <SidebarGlass />
-      {isEmoji(avatar) ? (
-        <EmojiAvatar onClick={onEditUser} className="sidebar-avatar" size={31} fontSize={18}>
-          {avatar}
-        </EmojiAvatar>
-      ) : (
-        <AvatarImg src={avatar || UserAvatar} draggable={false} className="nodrag" onClick={onEditUser} />
-      )}
-      <MainMenusContainer>
-        <Menus onClick={hideMinappPopup}>
-          <MainMenus />
-        </Menus>
-        <SidebarOpenedMinappTabs />
-        {showPinnedApps && (
-          <AppsContainer>
-            <Divider />
-            <Menus>
-              <SidebarPinnedApps />
-            </Menus>
-          </AppsContainer>
-        )}
-      </MainMenusContainer>
+      {/* 上段：窗口控制（关闭/最大化/最小化）+ 设置 */}
       <Menus>
+        {!isMac && <SidebarWindowControls />}
+        <Divider />
         <Tooltip title={'设置'} mouseEnterDelay={0.8} placement="right">
           <StyledLink
             onClick={async () => {
@@ -86,7 +69,29 @@ const Sidebar: FC = () => {
             </Icon>
           </StyledLink>
         </Tooltip>
-        {!isMac && <SidebarWindowControls />}
+      </Menus>
+      {/* 中段：小程序打开的详情页签 */}
+      <MainMenusContainer>
+        <SidebarOpenedMinappTabs />
+        {showPinnedApps && (
+          <AppsContainer>
+            <Divider />
+            <Menus>
+              <SidebarPinnedApps />
+            </Menus>
+          </AppsContainer>
+        )}
+      </MainMenusContainer>
+      {/* 下段：主菜单（从下往上：头像-聊天-便签闹钟-图片生成-音乐-小程序）+ 头像 */}
+      <Menus>
+        <MainMenus />
+        {isEmoji(avatar) ? (
+          <EmojiAvatar onClick={onEditUser} className="sidebar-avatar" size={31} fontSize={18}>
+            {avatar}
+          </EmojiAvatar>
+        ) : (
+          <AvatarImg src={avatar || UserAvatar} draggable={false} className="nodrag" onClick={onEditUser} />
+        )}
       </Menus>
     </Container>
   )
@@ -108,9 +113,9 @@ const SidebarWindowControls: FC = () => {
 
   return (
     <WinControlGroup>
-      <Tooltip title={'最小化'} mouseEnterDelay={0.8} placement="right">
-        <WinBtn aria-label="最小化" onClick={() => void window.api.windowControls.minimize()}>
-          <Minus size={16} />
+      <Tooltip title={'关闭'} mouseEnterDelay={0.8} placement="right">
+        <WinBtn aria-label="关闭" $danger onClick={() => void window.api.windowControls.close()}>
+          <X size={16} />
         </WinBtn>
       </Tooltip>
       <Tooltip title={isMaximized ? '还原' : '最大化'} mouseEnterDelay={0.8} placement="right">
@@ -123,9 +128,9 @@ const SidebarWindowControls: FC = () => {
           {isMaximized ? <WindowRestoreIcon size="14" /> : <Square size={13} />}
         </WinBtn>
       </Tooltip>
-      <Tooltip title={'关闭'} mouseEnterDelay={0.8} placement="right">
-        <WinBtn aria-label="关闭" $danger onClick={() => void window.api.windowControls.close()}>
-          <X size={16} />
+      <Tooltip title={'最小化'} mouseEnterDelay={0.8} placement="right">
+        <WinBtn aria-label="最小化" onClick={() => void window.api.windowControls.minimize()}>
+          <Minus size={16} />
         </WinBtn>
       </Tooltip>
     </WinControlGroup>
@@ -137,9 +142,6 @@ const WinControlGroup = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 0.5px solid var(--color-border);
 `
 
 const WinBtn = styled.button<{ $danger?: boolean }>`
@@ -187,23 +189,27 @@ const MainMenus: FC = () => {
     notes: '/notes'
   }
 
-  return sidebarIcons.visible.map((icon) => {
-    const path = pathMap[icon]
-    const isActive = path === '/' ? isRoute(path) : isRoutes(path)
+  // 右侧导航栏下段（从上往下）：小程序-音乐-图片生成-便签闹钟-聊天（头像在最底部）
+  const renderOrder: SidebarIcon[] = ['minapp', 'music', 'paint', 'notes', 'assistants']
+  return renderOrder
+    .filter((icon) => sidebarIcons.visible.includes(icon))
+    .map((icon) => {
+      const path = pathMap[icon]
+      const isActive = path === '/' ? isRoute(path) : isRoutes(path)
 
-    return (
-      <Tooltip key={icon} title={getSidebarIconLabel(icon)} mouseEnterDelay={0.8} placement="right">
-        <StyledLink
-          onClick={async () => {
-            hideMinappPopup()
-            await modelGenerating()
-            navigate(path)
-          }}>
-          <Icon className={isActive}>{iconMap[icon]}</Icon>
-        </StyledLink>
-      </Tooltip>
-    )
-  })
+      return (
+        <Tooltip key={icon} title={getSidebarIconLabel(icon)} mouseEnterDelay={0.8} placement="right">
+          <StyledLink
+            onClick={async () => {
+              hideMinappPopup()
+              await modelGenerating()
+              navigate(path)
+            }}>
+            <Icon className={isActive}>{iconMap[icon]}</Icon>
+          </StyledLink>
+        </Tooltip>
+      )
+    })
 }
 
 const Container = styled.div<{ $isFullscreen: boolean }>`
@@ -236,7 +242,7 @@ const SidebarGlass = styled.div`
   -webkit-app-region: none;
   background: color-mix(in srgb, var(--color-background) 50%, transparent);
   backdrop-filter: blur(18px) saturate(1.45);
-  border-right: 1px solid var(--glass-border);
+  border-left: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 `
 

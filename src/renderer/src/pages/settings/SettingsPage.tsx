@@ -1,4 +1,3 @@
-import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
 import { McpLogo } from '@renderer/components/Icons'
 import Scrollbar from '@renderer/components/Scrollbar'
 import ModelSettings from '@renderer/pages/settings/ModelSettings/ModelSettings'
@@ -36,9 +35,6 @@ const SettingsPage: FC = () => {
 
   return (
     <Container>
-      <Navbar>
-        <NavbarCenter style={{ borderRight: 'none' }}>{'设置'}</NavbarCenter>
-      </Navbar>
       <ContentContainer id="content-container">
         <SettingMenus>
           <MenuItemLink to="/settings/provider">

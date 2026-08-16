@@ -47,8 +47,8 @@ const Router: FC = () => {
 
   return (
     <HashRouter>
-      <Sidebar />
       {routes}
+      <Sidebar />
       <NavigationHandler />
     </HashRouter>
   )

@@ -1,21 +1,17 @@
-import { Navbar, NavbarMain } from '@renderer/components/app/Navbar'
 import App from '@renderer/components/MinApp/MinApp'
 import Scrollbar from '@renderer/components/Scrollbar'
 import { useMinapps } from '@renderer/hooks/useMinapps'
-import { useNavbarPosition } from '@renderer/hooks/useSettings'
-import { Button, Input } from 'antd'
-import { Search, SettingsIcon } from 'lucide-react'
+import { Input } from 'antd'
+import { Search } from 'lucide-react'
 import type { FC } from 'react'
 import React, { useState } from 'react'
 import styled from 'styled-components'
 
-import MinappSettingsPopup from './MiniappSettings/MinappSettingsPopup'
 import NewAppButton from './NewAppButton'
 
 const AppsPage: FC = () => {
   const [search, setSearch] = useState('')
   const { minapps } = useMinapps()
-  const { isTopNavbar } = useNavbarPosition()
 
   const filteredApps = search
     ? minapps.filter(
@@ -36,53 +32,20 @@ const AppsPage: FC = () => {
 
   return (
     <Container onContextMenu={handleContextMenu}>
-      <Navbar>
-        <NavbarMain>
-          {'小程序'}
-          <Input
-            placeholder={'搜索'}
-            className="nodrag"
-            style={{
-              width: '30%',
-              height: 28,
-              borderRadius: 15
-            }}
-            size="small"
-            variant="filled"
-            suffix={<Search size={18} />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Button
-            type="text"
-            className="nodrag"
-            icon={<SettingsIcon size={18} color="var(--color-text-2)" />}
-            onClick={MinappSettingsPopup.show}
-          />
-        </NavbarMain>
-      </Navbar>
       <ContentContainer id="content-container">
         <MainContainer>
           <RightContainer>
-            {isTopNavbar && (
-              <HeaderContainer>
-                <Input
-                  placeholder={'搜索'}
-                  className="nodrag"
-                  style={{ width: '30%', borderRadius: 15 }}
-                  variant="filled"
-                  suffix={<Search size={18} />}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <Button
-                  type="text"
-                  className="nodrag"
-                  icon={<SettingsIcon size={18} color="var(--color-text-2)" />}
-                  onClick={() => MinappSettingsPopup.show()}
-                />
-              </HeaderContainer>
-            )}
+            <HeaderContainer>
+              <Input
+                placeholder={'搜索'}
+                className="nodrag"
+                style={{ width: '30%', borderRadius: 15 }}
+                variant="filled"
+                suffix={<Search size={18} />}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </HeaderContainer>
             <AppsContainerWrapper>
               <AppsContainer style={{ height: containerHeight }}>
                 {filteredApps.map((app) => (

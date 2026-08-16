@@ -1,4 +1,3 @@
-import { Navbar, NavbarMain } from '@renderer/components/app/Navbar'
 import { type FC } from 'react'
 import styled from 'styled-components'
 
@@ -8,14 +7,11 @@ import { mx } from './components/mx'
 
 /**
  * 音乐工作台页面（晨间绿洲浅色主题）
- * 布局：顶部 Navbar + 双栏卡片（左：本地音乐 / 右：FM 电台），窄屏自动上下堆叠
+ * 布局：双栏卡片（左：本地音乐 / 右：FM 电台），内容顶满页面，窄屏自动上下堆叠
  */
 const MusicPage: FC = () => {
   return (
     <Container>
-      <Navbar>
-        <NavbarMain>{'音乐'}</NavbarMain>
-      </Navbar>
       <MainArea>
         <LocalMusicPlayer />
         <FmRadio />

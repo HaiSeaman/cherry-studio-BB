@@ -1,4 +1,3 @@
-import { Navbar, NavbarMain } from '@renderer/components/app/Navbar'
 import { db } from '@renderer/databases'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -34,9 +33,6 @@ const PaintPage: FC = () => {
 
   return (
     <Container>
-      <Navbar>
-        <NavbarMain>{'图片生成'}</NavbarMain>
-      </Navbar>
       <MainArea>
         <PaintSidebar topics={paintTopics ?? []} activeTopicId={activeTopicId} />
         <ContentArea>
