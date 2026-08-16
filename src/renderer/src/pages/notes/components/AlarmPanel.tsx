@@ -145,7 +145,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
                   max={it.max}
                   value={it.v}
                   onChange={(e) => it.set(e.target.value)}
-                  disabled={cd.running || timerRinging}
+                  disabled={cd.running}
                 />
                 <span>{it.label}</span>
               </NumInput>
