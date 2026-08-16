@@ -1,9 +1,8 @@
+import { db } from '@renderer/databases'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Archive, FileText, Plus, Search, Trash2 } from 'lucide-react'
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import styled from 'styled-components'
-
-import { db } from '@renderer/databases'
 
 import type { HubNote } from '../types'
 import FolderModal from './FolderModal'
@@ -166,6 +165,7 @@ const NotesPanel: FC = () => {
         onClose={() => setArchiveOpen(false)}
         onRestore={(id) => void db.hub_notes.update(id, { status: 'active', archivedAt: undefined })}
         onDelete={(id) => void db.hub_notes.delete(id)}
+        onClearAll={() => void db.hub_notes.where('status').equals('archived').delete()}
       />
       <FolderModal
         open={trashOpen}

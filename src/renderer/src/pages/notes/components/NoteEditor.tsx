@@ -1,15 +1,14 @@
+import { db } from '@renderer/databases'
 import DOMPurify from 'dompurify'
 import { Eye, History, ImagePlus, Pencil } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import { type FC, useCallback, useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import styled from 'styled-components'
 
-import { db } from '@renderer/databases'
-
-import { mx } from './mx'
 import { toISODate } from '../services/calendarUtils'
 import { exportNoteImage } from '../services/exportImage'
 import type { HubNote, HubNoteSnapshot } from '../types'
+import { mx } from './mx'
 import NoteHistoryPanel from './NoteHistoryPanel'
 
 const AUTOSAVE_DELAY = 500
@@ -91,7 +90,7 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
       const id = noteIdRef.current
       if (id != null && textRef.current) void db.hub_notes.update(id, { content: textRef.current, updatedAt: Date.now() })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   const handleInput = (value: string) => {

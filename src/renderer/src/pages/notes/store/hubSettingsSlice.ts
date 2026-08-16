@@ -1,14 +1,23 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
+/** 自定义闹钟声音（文件路径持久化；播放时经 IPC 读二进制解码缓存） */
+export type CustomSound = {
+  id: string
+  name: string
+  filePath: string
+}
+
 /** 闹钟便签页持久化偏好 */
 export type HubSettingsState = {
   alarmVolume: number // 0-300（>100 经 GainNode 增益放大）
   defaultSound: string
+  customSounds: CustomSound[]
 }
 
 const initialState: HubSettingsState = {
   alarmVolume: 100,
-  defaultSound: 'default'
+  defaultSound: 'default',
+  customSounds: []
 }
 
 const hubSettingsSlice = createSlice({
@@ -20,10 +29,18 @@ const hubSettingsSlice = createSlice({
     },
     setDefaultSound(state, action: PayloadAction<string>) {
       state.defaultSound = action.payload
+    },
+    addCustomSound(state, action: PayloadAction<CustomSound>) {
+      if (!state.customSounds.some((s) => s.filePath === action.payload.filePath)) {
+        state.customSounds.push(action.payload)
+      }
+    },
+    removeCustomSound(state, action: PayloadAction<string>) {
+      state.customSounds = state.customSounds.filter((s) => s.id !== action.payload)
     }
   }
 })
 
-export const { setAlarmVolume, setDefaultSound } = hubSettingsSlice.actions
+export const { setAlarmVolume, setDefaultSound, addCustomSound, removeCustomSound } = hubSettingsSlice.actions
 
 export default hubSettingsSlice.reducer

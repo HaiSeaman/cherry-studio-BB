@@ -211,7 +211,8 @@ const api = {
     readMetadata: (filePath: string) => ipcRenderer.invoke(IpcChannel.Music_ReadMetadata, { filePath }),
     scanFolder: (folderPath: string, recursive?: boolean) =>
       ipcRenderer.invoke(IpcChannel.Music_ScanFolder, { folderPath, recursive }),
-    ensureThumbs: () => ipcRenderer.invoke(IpcChannel.Music_EnsureThumbs)
+    ensureThumbs: () => ipcRenderer.invoke(IpcChannel.Music_EnsureThumbs),
+    readAudioFile: (filePath: string) => ipcRenderer.invoke(IpcChannel.Music_ReadAudioFile, { filePath })
   },
   fs: {
     read: (pathOrUrl: string, encoding?: BufferEncoding) => ipcRenderer.invoke(IpcChannel.Fs_Read, pathOrUrl, encoding),

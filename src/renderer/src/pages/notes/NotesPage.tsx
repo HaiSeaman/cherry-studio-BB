@@ -1,15 +1,14 @@
 import { Navbar, NavbarMain } from '@renderer/components/app/Navbar'
-import { type FC } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import styled from 'styled-components'
-
 import { db } from '@renderer/databases'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { type FC } from 'react'
+import styled from 'styled-components'
 
 import AlarmPanel from './components/AlarmPanel'
 import CalendarPanel from './components/CalendarPanel'
+import { mx } from './components/mx'
 import NotesPanel from './components/NotesPanel'
 import TodoPanel from './components/TodoPanel'
-import { mx } from './components/mx'
 import { useAlarmEngine } from './services/alarmScheduler'
 
 /**

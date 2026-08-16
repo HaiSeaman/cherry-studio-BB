@@ -1,20 +1,22 @@
+import { db } from '@renderer/databases'
+import { useAppSelector } from '@renderer/store'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Bell, CalendarDays, ChevronLeft, ChevronRight, Flame, Plus } from 'lucide-react'
 import { type FC, useMemo, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import styled from 'styled-components'
 
-import { db } from '@renderer/databases'
-
-import { alarmSounds, ALARM_SOUND_OPTIONS, type AlarmSoundType } from '../services/alarmSounds'
+import { ALARM_SOUND_OPTIONS } from '../services/alarmSounds'
 import { buildMonthCells, heatmapRange, hmLevel, toISODate } from '../services/calendarUtils'
 import type { HubAlarm } from '../types'
 import { mx, MXDialog } from './mx'
+import SoundPicker from './SoundPicker'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 const HM_LEVEL_COLORS = ['#EDF5F0', '#A7E3C8', '#6ED4A6', '#34C08B', '#0E9F6E']
 
 /** 右下卡片：365 天热力图 + 月历 + 当日闹钟（关联全局闹钟）/ 当日待办（独立数据） */
 const CalendarPanel: FC = () => {
+  const customSounds = useAppSelector((s) => s.hubSettings.customSounds)
   const alarms = useLiveQuery(async () => (await db.hub_alarms.toArray()) ?? [], [], [])
   const dayNotes = useLiveQuery(async () => (await db.hub_day_notes.toArray()) ?? [], [], [])
   const activity = useLiveQuery(async () => (await db.hub_activity.toArray()) ?? [], [], [])
@@ -23,12 +25,13 @@ const CalendarPanel: FC = () => {
   const [viewYear, setViewYear] = useState(() => today.getFullYear())
   const [viewMonth, setViewMonth] = useState(() => today.getMonth())
   const [selected, setSelected] = useState<string>(() => toISODate(today))
-  const [hmCollapsed, setHmCollapsed] = useState(false)
+  // 热力图默认收起：月历与当日详情优先保证完整可见；展开时与月历同宽对齐
+  const [hmCollapsed, setHmCollapsed] = useState(true)
 
   // 当日闹钟输入
   const [alarmTime, setAlarmTime] = useState('09:00')
   const [alarmLabel, setAlarmLabel] = useState('')
-  const [alarmSound, setAlarmSound] = useState<AlarmSoundType>('default')
+  const [alarmSound, setAlarmSound] = useState('default')
 
   // 当日待办输入
   const [dayText, setDayText] = useState('')
@@ -66,6 +69,14 @@ const CalendarPanel: FC = () => {
   // ---- 当日数据 ----
   const dayAlarms = (alarms ?? []).filter((a) => a.date === selected).sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
   const selectedDayNotes = (dayNotes ?? []).filter((n) => n.date === selected).sort((a, b) => b.createdAt - a.createdAt)
+
+  /** 铃声展示名：内置查表，自定义查自定义声音列表 */
+  const soundLabel = (sound: string) => {
+    if (sound.startsWith('custom:')) {
+      return customSounds.find((s) => `custom:${s.id}` === sound)?.name ?? '自定义声音'
+    }
+    return ALARM_SOUND_OPTIONS.find((o) => o.value === sound)?.label ?? sound
+  }
 
   const addDayAlarm = async () => {
     const [h, m] = alarmTime.split(':').map((x) => parseInt(x, 10) || 0)
@@ -118,43 +129,7 @@ const CalendarPanel: FC = () => {
 
   return (
     <Panel data-no-dnd>
-      {/* 热力图 */}
-      <HmSection>
-        <HmHeader>
-          <HmTitle>
-            <Flame size={13} /> 活跃度
-          </HmTitle>
-          <HmSummary>近一年共 {totalActive} 次活跃</HmSummary>
-          <CollapseBtn onClick={() => setHmCollapsed(!hmCollapsed)}>{hmCollapsed ? '展开' : '收起'}</CollapseBtn>
-        </HmHeader>
-        {!hmCollapsed && (
-          <>
-            <HmScroll>
-              {hm.map((week, wi) => (
-                <HmWeek key={wi}>
-                  {week.map((cell) => (
-                    <HmCell
-                      key={cell.iso}
-                      className={cell.future ? 'future' : ''}
-                      style={{ background: cell.future ? 'transparent' : HM_LEVEL_COLORS[cell.level] }}
-                      title={cell.future ? cell.iso : `${cell.iso}：完成 ${cell.todo} 个待办，编辑 ${cell.note} 次便签`}
-                    />
-                  ))}
-                </HmWeek>
-              ))}
-            </HmScroll>
-            <HmLegend>
-              <span>少</span>
-              {HM_LEVEL_COLORS.map((c) => (
-                <HmCell key={c} style={{ background: c }} />
-              ))}
-              <span>多</span>
-            </HmLegend>
-          </>
-        )}
-      </HmSection>
-
-      {/* 月历 */}
+      {/* 月历：紧凑固定行高，不再抢占高度挤压下方区域 */}
       <MonthHeader>
         <NavBtn onClick={prevMonth} title="上个月">
           <ChevronLeft size={15} />
@@ -185,7 +160,41 @@ const CalendarPanel: FC = () => {
         ))}
       </Grid>
 
-      {/* 当日详情 */}
+      {/* 热力图：位于月历正下方，宽度与月历一致左对齐 */}
+      <HmSection>
+        <HmHeader>
+          <HmTitle>
+            <Flame size={13} /> 活跃度
+          </HmTitle>
+          <HmSummary>近一年共 {totalActive} 次</HmSummary>
+          <HmLines>
+            <span>少</span>
+            {HM_LEVEL_COLORS.map((c) => (
+              <HmCell key={c} style={{ background: c }} />
+            ))}
+            <span>多</span>
+          </HmLines>
+          <CollapseBtn onClick={() => setHmCollapsed(!hmCollapsed)}>{hmCollapsed ? '展开' : '收起'}</CollapseBtn>
+        </HmHeader>
+        {!hmCollapsed && (
+          <HmScroll>
+            {hm.map((week, wi) => (
+              <HmWeek key={wi}>
+                {week.map((cell) => (
+                  <HmCell
+                    key={cell.iso}
+                    className={cell.future ? 'future' : ''}
+                    style={{ background: cell.future ? 'transparent' : HM_LEVEL_COLORS[cell.level] }}
+                    title={cell.future ? cell.iso : `${cell.iso}：完成 ${cell.todo} 个待办，编辑 ${cell.note} 次便签`}
+                  />
+                ))}
+              </HmWeek>
+            ))}
+          </HmScroll>
+        )}
+      </HmSection>
+
+      {/* 当日详情：占剩余空间 */}
       <DetailRow>
         <DetailLeft>
           <DetailTitle>
@@ -194,18 +203,9 @@ const CalendarPanel: FC = () => {
           <InputRow>
             <TimeInput type="time" value={alarmTime} onChange={(e) => setAlarmTime(e.target.value)} />
             <TextInput placeholder="标签" maxLength={50} value={alarmLabel} onChange={(e) => setAlarmLabel(e.target.value)} />
-            <select
-              value={alarmSound}
-              onChange={(e) => {
-                setAlarmSound(e.target.value as AlarmSoundType)
-                alarmSounds.preview(e.target.value as AlarmSoundType)
-              }}>
-              {ALARM_SOUND_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            <SoundWrap>
+              <SoundPicker value={alarmSound} onChange={setAlarmSound} />
+            </SoundWrap>
             <SmallAdd onClick={() => void addDayAlarm()}>
               <Plus size={11} /> 闹钟
             </SmallAdd>
@@ -218,7 +218,7 @@ const CalendarPanel: FC = () => {
                 <DetailItem key={a.id}>
                   <span className="time">{`${String(a.h).padStart(2, '0')}:${String(a.m).padStart(2, '0')}`}</span>
                   <span className="label">{a.label || '闹钟'}</span>
-                  <span className="meta">{ALARM_SOUND_OPTIONS.find((o) => o.value === a.sound)?.label ?? a.sound}</span>
+                  <span className="meta">{soundLabel(a.sound)}</span>
                   <Del onClick={() => a.id != null && void db.hub_alarms.delete(a.id)}>✕</Del>
                 </DetailItem>
               ))
@@ -290,7 +290,7 @@ const Panel = styled.div`
 const HmSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex-shrink: 0;
 `
 
@@ -315,6 +315,14 @@ const HmSummary = styled.span`
   color: ${mx.text3};
 `
 
+const HmLines = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: ${mx.text3};
+`
+
 const CollapseBtn = styled.button`
   border: 1px solid ${mx.border};
   border-radius: 999px;
@@ -331,7 +339,8 @@ const CollapseBtn = styled.button`
 
 const HmScroll = styled.div`
   display: flex;
-  gap: 3px;
+  gap: 2px;
+  width: 100%;
   overflow-x: auto;
   padding-bottom: 2px;
   &::-webkit-scrollbar {
@@ -346,28 +355,19 @@ const HmScroll = styled.div`
 const HmWeek = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex-shrink: 0;
 `
 
 const HmCell = styled.span`
-  width: 10px;
-  height: 10px;
-  border-radius: 2.5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   flex-shrink: 0;
   transition: transform 0.12s ease;
   &:hover {
     transform: scale(1.5);
   }
-`
-
-const HmLegend = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  color: ${mx.text3};
-  padding-left: 2px;
 `
 
 const MonthHeader = styled.div`
@@ -423,9 +423,9 @@ const WeekdayRow = styled.div`
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 22px);
   gap: 2px;
-  flex: 1;
-  min-height: 120px;
+  flex-shrink: 0;
 `
 
 const Cell = styled.button`
@@ -436,13 +436,14 @@ const Cell = styled.button`
   justify-content: center;
   gap: 1px;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   background: none;
-  font-size: 11.5px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: ${mx.text};
   cursor: pointer;
   transition: background 0.15s ease;
+  padding: 0;
   &:hover {
     background: ${mx.soft};
   }
@@ -480,9 +481,18 @@ const Dot = styled.span`
 const DetailRow = styled.div`
   display: flex;
   gap: 10px;
+  flex: 1;
   min-height: 0;
-  flex-shrink: 0;
-  max-height: 34%;
+  border-top: 1px dashed ${mx.border};
+  padding-top: 6px;
+  overflow-y: auto;
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${mx.border};
+    border-radius: 3px;
+  }
 `
 
 const DetailLeft = styled.div`
@@ -515,16 +525,12 @@ const InputRow = styled.div`
   align-items: center;
   gap: 5px;
   flex-wrap: wrap;
-  select {
-    border: 1px solid ${mx.border};
-    border-radius: 8px;
-    padding: 4px 6px;
-    font-size: 11px;
-    color: ${mx.text2};
-    background: ${mx.soft2};
-    outline: none;
-    cursor: pointer;
-  }
+`
+
+const SoundWrap = styled.div`
+  min-width: 120px;
+  max-width: 170px;
+  flex: 1;
 `
 
 const TimeInput = styled.input`

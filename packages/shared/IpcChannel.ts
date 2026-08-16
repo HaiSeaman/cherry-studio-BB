@@ -268,6 +268,7 @@ export enum IpcChannel {
   Music_ReadMetadata = 'music:read-metadata',
   Music_ScanFolder = 'music:scan-folder',
   Music_EnsureThumbs = 'music:ensure-thumbs',
+  Music_ReadAudioFile = 'music:read-audio-file',
 
   // CherryAI
   Cherryai_GetSignature = 'cherryai:get-signature'

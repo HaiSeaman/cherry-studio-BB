@@ -1,28 +1,36 @@
-import { Pause, Play, Plus, RotateCcw, Volume2 } from 'lucide-react'
-import { type FC, useEffect, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import styled, { keyframes } from 'styled-components'
-
 import { db } from '@renderer/databases'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { Pause, Play, Plus, RotateCcw, Volume2 } from 'lucide-react'
+import { type FC, useEffect, useState } from 'react'
+import styled, { keyframes } from 'styled-components'
 
 import { useCountdown } from '../hooks/useCountdown'
-import { alarmSounds, ALARM_SOUND_OPTIONS, type AlarmSoundType } from '../services/alarmSounds'
+import { ALARM_SOUND_OPTIONS, alarmSounds } from '../services/alarmSounds'
 import { alarmScheduler } from '../services/alarmScheduler'
 import { nextRingInfo } from '../services/schedule'
-import { setAlarmVolume } from '../store/hubSettingsSlice'
+import { setAlarmVolume, type CustomSound } from '../store/hubSettingsSlice'
 import type { HubAlarm } from '../types'
 import { mx, MXGhostPill, MXTabs, reduceMotion } from './mx'
+import SoundPicker from './SoundPicker'
 
 const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const RING_CIRCUMFERENCE = 2 * Math.PI * 52
 
-type AlarmTab = 'timer' | 'alarm'
+type AlarmTab = 'timer' | 'alarm' | 'calendar'
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 const clampNum = (v: string, max: number) => Math.min(Math.max(parseInt(v, 10) || 0, 0), max)
 const fmtHMS = (s: number) => `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor((s % 3600) / 60))}:${pad2(s % 60)}`
 const fmtRingInfo = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)} 分 ${sec % 60} 秒后` : `${sec} 秒后`)
+
+/** 铃声展示名：内置选项查表，自定义声音查自定义列表 */
+const soundLabel = (sound: string, customs: CustomSound[]): string => {
+  if (sound.startsWith('custom:')) {
+    return customs.find((s) => `custom:${s.id}` === sound)?.name ?? '自定义声音'
+  }
+  return ALARM_SOUND_OPTIONS.find((o) => o.value === sound)?.label ?? sound
+}
 
 interface AlarmPanelProps {
   ringing: { label: string; sound: string; fromTimer?: boolean } | null
@@ -50,10 +58,12 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
 
   // ---- 倒计时 ----
   const [timerLabel, setTimerLabel] = useState('')
-  const [timerSound, setTimerSound] = useState<AlarmSoundType>('default')
+  const [timerSound, setTimerSound] = useState('default')
   const [timerH, setTimerH] = useState('0')
   const [timerM, setTimerM] = useState('5')
   const [timerS, setTimerS] = useState('0')
+
+  const customSounds = useAppSelector((s) => s.hubSettings.customSounds)
 
   // 结束时走全局调度器：响铃 + 系统通知 + 后台唤起主窗口（与闹钟同一引擎）
   const cd = useCountdown(() => alarmScheduler.fireExternal(timerLabel, timerSound))
@@ -89,7 +99,12 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
     await db.hub_alarms.delete(a.id!)
   }
 
-  const sortedAlarms = (alarms ?? []).slice().sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
+  // 定时闹钟（无 date）与日历闹钟（带 date）分组：互不混排
+  const regularAlarms = (alarms ?? []).filter((a) => !a.date)
+  const calAlarms = (alarms ?? [])
+    .filter((a) => !!a.date)
+    .sort((a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0) || a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
+  const sortedAlarms = regularAlarms.slice().sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
   const anyRinging = ringing != null
   const timerProgress = cd.totalSec > 0 ? cd.remainSec / cd.totalSec : 0
 
@@ -107,7 +122,8 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
         onChange={(v) => setTab(v)}
         options={[
           { value: 'timer', label: '倒计时' },
-          { value: 'alarm', label: `定时闹钟${alarms?.length ? ` ${alarms.length}` : ''}` }
+          { value: 'alarm', label: '定时闹钟', badge: regularAlarms.length },
+          { value: 'calendar', label: '日历闹钟', badge: calAlarms.length }
         ]}
       />
 
@@ -153,7 +169,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
           </InputsRow>
           <ExtraRow>
             <input className="mx-text" placeholder="文字说明（可选）" maxLength={50} value={timerLabel} onChange={(e) => setTimerLabel(e.target.value)} />
-            <SoundSelect value={timerSound} onChange={(v) => setTimerSound(v as AlarmSoundType)} />
+            <SoundPicker value={timerSound} onChange={setTimerSound} />
           </ExtraRow>
           <ActionsRow>
             {cd.running ? (
@@ -180,7 +196,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
             </MXGhostPill>
           </ActionsRow>
         </TimerBody>
-      ) : (
+      ) : tab === 'alarm' ? (
         <AlarmBody>
           <AddRow>
             <NumInput small>
@@ -198,7 +214,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
           </AddRow>
           <AlarmList>
             {sortedAlarms.length === 0 ? (
-              <EmptyHint>还没有闹钟，设一个叫醒自己</EmptyHint>
+              <EmptyHint>还没有定时闹钟，设一个叫醒自己</EmptyHint>
             ) : (
               sortedAlarms.map((a) => {
                 const info = nextRingInfo(a, now)
@@ -211,9 +227,8 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
                       <AlarmTime>{`${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`}</AlarmTime>
                       <AlarmMeta>
                         {[
-                          a.date ? `📅 ${a.date}` : null,
                           a.label || '闹钟',
-                          ALARM_SOUND_OPTIONS.find((o) => o.value === a.sound)?.label ?? a.sound,
+                          soundLabel(a.sound, customSounds),
                           a.enabled && info != null ? fmtRingInfo(info) : null
                         ]
                           .filter(Boolean)
@@ -221,6 +236,42 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
                       </AlarmMeta>
                     </AlarmInfo>
                     <DelBtn onClick={() => void deleteAlarm(a)} title="删除闹钟">
+                      ✕
+                    </DelBtn>
+                  </AlarmItem>
+                )
+              })
+            )}
+          </AlarmList>
+        </AlarmBody>
+      ) : (
+        <AlarmBody>
+          <AlarmList>
+            {calAlarms.length === 0 ? (
+              <EmptyHint>日历闹钟会显示在这里，在日历页选中日期即可添加</EmptyHint>
+            ) : (
+              calAlarms.map((a) => {
+                const info = nextRingInfo(a, now)
+                return (
+                  <AlarmItem key={a.id} className={!a.enabled ? 'off' : ''}>
+                    <Toggle className={a.enabled ? 'on' : ''} onClick={() => void toggleAlarm(a)} role="switch" aria-checked={a.enabled}>
+                      <span />
+                    </Toggle>
+                    <AlarmInfo>
+                      <AlarmTime>
+                        📅 {a.date} {`${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`}
+                      </AlarmTime>
+                      <AlarmMeta>
+                        {[
+                          a.label || '闹钟',
+                          soundLabel(a.sound, customSounds),
+                          a.enabled && info != null ? fmtRingInfo(info) : null
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </AlarmMeta>
+                    </AlarmInfo>
+                    <DelBtn onClick={() => void deleteAlarm(a)} title="删除日历闹钟">
                       ✕
                     </DelBtn>
                   </AlarmItem>
@@ -251,36 +302,6 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
     </Panel>
   )
 }
-
-/** 铃声下拉（浅色样式，选择即试听 1.5 秒） */
-const SoundSelect: FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => (
-  <StyledSelect
-    value={value}
-    onChange={(e) => {
-      onChange(e.target.value)
-      alarmSounds.preview(e.target.value as AlarmSoundType)
-    }}>
-    {ALARM_SOUND_OPTIONS.map((o) => (
-      <option key={o.value} value={o.value}>
-        {o.label}
-      </option>
-    ))}
-  </StyledSelect>
-)
-
-const StyledSelect = styled.select`
-  border: 1px solid ${mx.border};
-  border-radius: 10px;
-  padding: 6px 8px;
-  font-size: 12px;
-  color: ${mx.text2};
-  background: ${mx.soft2};
-  outline: none;
-  cursor: pointer;
-  &:focus {
-    border-color: ${mx.accent};
-  }
-`
 
 const ringPulse = keyframes`
   0%, 100% { color: ${mx.accent}; }
@@ -368,18 +389,17 @@ const InputsRow = styled.div`
 `
 
 const NumInput = styled.label<{ small?: boolean }>`
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
   font-size: 11px;
   color: ${mx.text3};
   input {
-    width: ${(p) => (p.small ? '46px' : '58px')};
+    width: ${(p) => (p.small ? '60px' : '72px')};
     text-align: center;
     border: 1px solid ${mx.border};
     border-radius: 10px;
-    padding: 6px 4px;
+    padding: 6px 24px 6px 6px;
     font-size: 14px;
     font-variant-numeric: tabular-nums;
     color: ${mx.text};
@@ -396,6 +416,15 @@ const NumInput = styled.label<{ small?: boolean }>`
     &::-webkit-inner-spin-button {
       -webkit-appearance: none;
     }
+  }
+  > span {
+    position: absolute;
+    right: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: ${mx.text3};
+    pointer-events: none;
   }
 `
 
@@ -435,7 +464,7 @@ const AlarmBody = styled.div`
 
 const AddRow = styled.div`
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   .mx-text {

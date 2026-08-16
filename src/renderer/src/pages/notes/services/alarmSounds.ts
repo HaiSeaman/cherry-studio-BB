@@ -121,19 +121,62 @@ const SOUND_FNS: Record<AlarmSoundType, SoundFn> = {
 }
 
 class AlarmSounds {
-  /** 开始循环响铃（重入保护） */
-  start(type: AlarmSoundType): void {
+  /** 自定义声音缓存（id → 解码后的 AudioBuffer），经 setCustomBuffer 注入 */
+  private customBuffers = new Map<string, AudioBuffer>()
+  private customSource: AudioBufferSourceNode | null = null
+
+  /** 解码自定义声音文件（IPC 读出的二进制） */
+  async decodeCustom(data: Uint8Array): Promise<AudioBuffer | null> {
+    try {
+      const ctx = ensureCtx()
+      const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+      return await ctx.decodeAudioData(buf)
+    } catch {
+      return null
+    }
+  }
+
+  setCustomBuffer(id: string, buffer: AudioBuffer): void {
+    this.customBuffers.set(id, buffer)
+  }
+
+  hasCustomBuffer(id: string): boolean {
+    return this.customBuffers.has(id)
+  }
+
+  removeCustomBuffer(id: string): void {
+    this.customBuffers.delete(id)
+  }
+
+  /** 开始循环响铃；sound 形如 'custom:<id>' 时走自定义 buffer（未缓存回退默认叮咚） */
+  start(sound: string): void {
     if (ringing) return
+    const customId = sound.startsWith('custom:') ? sound.slice(7) : null
+    const buffer = customId ? this.customBuffers.get(customId) : null
     const ctx = ensureCtx()
     ringing = true
+    if (buffer) {
+      this.playCustomLoop(ctx, buffer)
+      return
+    }
     const tick = () => {
       if (!ringing) return
       if (ctx.state === 'suspended') ctx.resume().catch(() => {})
-      const fn = SOUND_FNS[type] ?? SOUND_FNS.default
+      const fn = SOUND_FNS[(sound as AlarmSoundType) in SOUND_FNS ? (sound as AlarmSoundType) : 'default']
       const interval = fn(ctx)
       tickTimer = setTimeout(tick, interval)
     }
     tick()
+  }
+
+  /** 自定义声音循环播放（loop=true 单节点，stop 时断开） */
+  private playCustomLoop(ctx: AudioContext, buffer: AudioBuffer): void {
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    source.connect(masterGain ?? ctx.destination)
+    source.start()
+    this.customSource = source
   }
 
   stop(): void {
@@ -142,6 +185,15 @@ class AlarmSounds {
     tickTimer = null
     if (previewTimer) clearTimeout(previewTimer)
     previewTimer = null
+    if (this.customSource) {
+      try {
+        this.customSource.stop()
+      } catch {
+        // 已停止的节点 stop 抛错，忽略
+      }
+      this.customSource.disconnect()
+      this.customSource = null
+    }
   }
 
   isRinging(): boolean {
@@ -149,9 +201,9 @@ class AlarmSounds {
   }
 
   /** 选择铃声时试听：响 1.5 秒自动停 */
-  preview(type: AlarmSoundType): void {
+  preview(sound: string): void {
     this.stop()
-    this.start(type)
+    this.start(sound)
     previewTimer = setTimeout(() => {
       previewTimer = null
       this.stop()

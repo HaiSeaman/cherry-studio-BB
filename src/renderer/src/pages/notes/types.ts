@@ -15,8 +15,9 @@ export type HubTodo = {
   createdAt: number
   updatedAt: number
   completedAt?: number
-  status: 'active' | 'archived'
+  status: 'active' | 'archived' | 'trashed'
   archivedAt?: number
+  trashedAt?: number
 }
 
 /** 单一闹钟数据源：定时闹钟无 date（每天可响）；日历闹钟带 date（仅指定日期触发） */

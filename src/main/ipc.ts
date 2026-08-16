@@ -528,6 +528,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.Music_ReadMetadata, musicService.readMetadata)
   ipcMain.handle(IpcChannel.Music_ScanFolder, musicService.scanFolder)
   ipcMain.handle(IpcChannel.Music_EnsureThumbs, musicService.ensureThumbs)
+  ipcMain.handle(IpcChannel.Music_ReadAudioFile, musicService.readAudioFile)
 
   // pdf
   ipcMain.handle(IpcChannel.Pdf_ExtractText, (_, data: Uint8Array | ArrayBuffer | string) => extractPdfText(data))

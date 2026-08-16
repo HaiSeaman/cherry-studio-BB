@@ -1,9 +1,8 @@
+import { db } from '@renderer/databases'
 import { useEffect, useSyncExternalStore } from 'react'
 
-import { db } from '@renderer/databases'
-
 import type { HubAlarm } from '../types'
-import { alarmSounds, type AlarmSoundType } from './alarmSounds'
+import { alarmSounds } from './alarmSounds'
 import { computeDueAlarms, pad2 } from './schedule'
 
 export type RingingInfo = { label: string; sound: string; fromTimer?: boolean }
@@ -50,7 +49,7 @@ class AlarmScheduler {
 
   private startRinging(info: RingingInfo, title: string, body: string): void {
     this.currentRinging = info
-    alarmSounds.start((info.sound || 'default') as AlarmSoundType)
+    alarmSounds.start(info.sound || 'default')
     try {
       new Notification(title, { body, silent: true })
     } catch {

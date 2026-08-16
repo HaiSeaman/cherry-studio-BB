@@ -1,23 +1,23 @@
-import { Archive, CheckSquare, Plus } from 'lucide-react'
-import { type FC, useMemo, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import styled from 'styled-components'
-
 import { db } from '@renderer/databases'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { Archive, CheckSquare, Plus, Trash2 } from 'lucide-react'
+import { type FC, useMemo, useState } from 'react'
+import styled from 'styled-components'
 
 import { toISODate } from '../services/calendarUtils'
 import type { HubTodo } from '../types'
 import FolderModal from './FolderModal'
-import { mx, MXDialog } from './mx'
+import { mx } from './mx'
 
 /** 左下卡片：待办事项（与便签/日历当日待办完全独立） */
 const TodoPanel: FC = () => {
   const todos = useLiveQuery(async () => (await db.hub_todos.where('status').equals('active').toArray()) ?? [], [], [])
   const archived = useLiveQuery(async () => (await db.hub_todos.where('status').equals('archived').toArray()) ?? [], [], [])
+  const trashed = useLiveQuery(async () => (await db.hub_todos.where('status').equals('trashed').toArray()) ?? [], [], [])
 
   const [input, setInput] = useState('')
   const [archiveOpen, setArchiveOpen] = useState(false)
-  const [deleting, setDeleting] = useState<HubTodo | null>(null)
+  const [trashOpen, setTrashOpen] = useState(false)
 
   // 未完成在前、已完成在后；同状态按创建时间倒序
   const sorted = useMemo(
@@ -63,6 +63,12 @@ const TodoPanel: FC = () => {
     await db.hub_todos.update(t.id, { status: 'archived', archivedAt: Date.now() })
   }
 
+  /** 删除 → 移入垃圾桶（可还原/永久删除），与便签一致 */
+  const trashTodo = async (t: HubTodo) => {
+    if (t.id == null) return
+    await db.hub_todos.update(t.id, { status: 'trashed', trashedAt: Date.now() })
+  }
+
   const previewText = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, 60)
   const fmtTime = (t: number) => {
     const d = new Date(t)
@@ -70,6 +76,7 @@ const TodoPanel: FC = () => {
   }
 
   const archiveItems = (archived ?? []).slice().sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0))
+  const trashItems = (trashed ?? []).slice().sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0))
 
   return (
     <Panel data-no-dnd>
@@ -81,9 +88,14 @@ const TodoPanel: FC = () => {
           待办事项
           <CountChip>{undone} 项待完成</CountChip>
         </Title>
-        <IconBtn title="待办归档文件夹" onClick={() => setArchiveOpen(true)}>
-          <Archive size={14} />
-        </IconBtn>
+        <HeaderBtns>
+          <IconBtn title="待办归档文件夹" onClick={() => setArchiveOpen(true)}>
+            <Archive size={14} />
+          </IconBtn>
+          <IconBtn title="垃圾桶（可还原/永久删除）" onClick={() => setTrashOpen(true)}>
+            <Trash2 size={14} />
+          </IconBtn>
+        </HeaderBtns>
       </Header>
       <List>
         {sorted.length === 0 ? (
@@ -100,7 +112,9 @@ const TodoPanel: FC = () => {
               </Info>
               <RowActions>
                 <MiniBtn title="归档" onClick={() => void archiveTodo(t)}>📦</MiniBtn>
-                <MiniBtn $danger title="永久删除" onClick={() => setDeleting(t)}>✕</MiniBtn>
+                <MiniBtn $danger title="移入垃圾桶" onClick={() => void trashTodo(t)}>
+                  <Trash2 size={12} />
+                </MiniBtn>
               </RowActions>
             </Row>
           ))
@@ -128,20 +142,18 @@ const TodoPanel: FC = () => {
         onClose={() => setArchiveOpen(false)}
         onRestore={(id) => void db.hub_todos.update(id, { status: 'active', archivedAt: undefined })}
         onDelete={(id) => void db.hub_todos.delete(id)}
+        onClearAll={() => void db.hub_todos.where('status').equals('archived').delete()}
       />
-
-      <MXDialog
-        open={deleting != null}
-        title="永久删除这条待办？"
-        okText="删除"
-        danger
-        onCancel={() => setDeleting(null)}
-        onOk={() => {
-          if (deleting?.id != null) void db.hub_todos.delete(deleting.id)
-          setDeleting(null)
-        }}>
-        「{previewText(deleting?.text ?? '')}」将被永久删除，无法恢复。
-      </MXDialog>
+      <FolderModal
+        open={trashOpen}
+        title="待办垃圾桶"
+        emptyHint="垃圾桶是空的"
+        items={trashItems.map((t) => ({ id: t.id!, preview: previewText(t.text), time: t.trashedAt ?? t.updatedAt }))}
+        onClose={() => setTrashOpen(false)}
+        onRestore={(id) => void db.hub_todos.update(id, { status: 'active', trashedAt: undefined })}
+        onDelete={(id) => void db.hub_todos.delete(id)}
+        onClearAll={() => void db.hub_todos.where('status').equals('trashed').delete()}
+      />
     </Panel>
   )
 }
@@ -196,6 +208,11 @@ const CountChip = styled.span`
   border-radius: 999px;
   padding: 1px 7px;
   white-space: nowrap;
+`
+
+const HeaderBtns = styled.div`
+  display: flex;
+  gap: 4px;
 `
 
 const IconBtn = styled.button`

@@ -28,6 +28,11 @@ export type MusicMetadata = {
 export type MusicMetadataResponse = { success: true; metadata: MusicMetadata } | { success: false; error: string }
 export type MusicScanResponse = { success: boolean; files: { filePath: string; size: number }[]; truncated: boolean }
 export type MusicThumbsResponse = { success: boolean; generated: number }
+export type MusicAudioFileResponse = { success: true; data: Uint8Array } | { success: false; error: string }
+
+/** 自定义闹钟声音允许的扩展名与大小上限（MP3 等解码需要完整文件） */
+const CUSTOM_SOUND_EXTS = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac']
+const CUSTOM_SOUND_MAX_BYTES = 20 * 1024 * 1024
 
 /**
  * 音乐 TAB 主进程服务：
@@ -137,6 +142,22 @@ export class MusicService {
     } catch (err) {
       logger.error('scanFolder failed', err instanceof Error ? err : new Error(String(err)))
       return { success: false, files: [], truncated: false }
+    }
+  }
+
+  /** 读取自定义闹钟声音文件（二进制，≤20MB，扩展名白名单） */
+  public readAudioFile = async (_: IpcMainInvokeEvent, { filePath }: { filePath: string }): Promise<MusicAudioFileResponse> => {
+    try {
+      if (!path.isAbsolute(filePath)) throw new Error('path must be absolute')
+      if (!CUSTOM_SOUND_EXTS.includes(path.extname(filePath).toLowerCase())) throw new Error('unsupported audio extension')
+      const stat = await fs.promises.stat(filePath)
+      if (!stat.isFile()) throw new Error('not a file')
+      if (stat.size > CUSTOM_SOUND_MAX_BYTES) throw new Error('file too large (max 20MB)')
+      const buf = await fs.promises.readFile(filePath)
+      return { success: true, data: new Uint8Array(buf) }
+    } catch (err) {
+      logger.error('readAudioFile failed', err instanceof Error ? err : new Error(String(err)))
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
   }
 
