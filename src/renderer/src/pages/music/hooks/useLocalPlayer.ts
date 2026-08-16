@@ -1,6 +1,7 @@
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { registerAutoAdvance } from '../services/autoAdvance'
 import { audioEngine } from '../services/audioEngine'
 import { nextIndexInPool, prevIndexInPool, pushShuffleHistory, toFileUrl } from '../services/playLogic'
 import { setFavoritesActive, setPlayMode } from '../store/musicSettingsSlice'
@@ -117,6 +118,29 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
   const nextRef = useRef(next)
   nextRef.current = next
 
+  /** 播放结束：单曲循环原地重播，否则自动切下一首（注册到模块级单例，页面卸载后依然生效） */
+  const onEnded = useCallback(() => {
+    if (playModeRef.current === 'single' && currentIdRef.current != null) {
+      audioEngine.seek(0)
+      audioEngine.play().catch(() => {})
+      return
+    }
+    nextRef.current(true)
+  }, [])
+
+  /** 加载失败：计数累计，全列表失败则停止，否则自动跳下一首 */
+  const onError = useCallback(() => {
+    if (currentIdRef.current == null) return
+    loadErrorCount.current += 1
+    if (loadErrorCount.current >= tracksRef.current.length) {
+      loadErrorCount.current = 0
+      stopPlayback()
+      showTip('全部曲目均无法播放')
+      return
+    }
+    nextRef.current(true)
+  }, [showTip, stopPlayback])
+
   const prev = useCallback(() => {
     const list = tracksRef.current
     if (list.length === 0) return
@@ -231,6 +255,9 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       }
     }
 
+    // 后台自动切歌：注册到模块级单例，卸载（切走 TAB）后继续生效，重新挂载时刷新
+    registerAutoAdvance({ onEnded, onError })
+
     const offs = [
       audioEngine.on('local', 'loadedmetadata', () => {
         setDuration(audioEngine.duration)
@@ -242,25 +269,6 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       audioEngine.on('local', 'pause', () => setIsPlaying(false)),
       audioEngine.on('local', 'playing', () => {
         loadErrorCount.current = 0
-      }),
-      audioEngine.on('local', 'ended', () => {
-        if (playModeRef.current === 'single' && currentIdRef.current != null) {
-          audioEngine.seek(0)
-          audioEngine.play().catch(() => {})
-          return
-        }
-        nextRef.current(true)
-      }),
-      audioEngine.on('local', 'error', () => {
-        if (currentIdRef.current == null) return
-        loadErrorCount.current += 1
-        if (loadErrorCount.current >= tracksRef.current.length) {
-          loadErrorCount.current = 0
-          stopPlayback()
-          showTip('全部曲目均无法播放')
-          return
-        }
-        nextRef.current(true)
       })
     ]
     audioEngine.onStop('local', () => {
@@ -274,7 +282,7 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       audioEngine.onStop('local', null)
       if (tipTimer.current) clearTimeout(tipTimer.current)
     }
-  }, [showTip, stopPlayback])
+  }, [onEnded, onError, showTip, stopPlayback])
 
   const currentTrack = currentId != null ? (tracks.find((t) => t.id === currentId) ?? null) : null
 

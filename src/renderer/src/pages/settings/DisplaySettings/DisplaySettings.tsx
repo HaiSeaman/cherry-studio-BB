@@ -1,9 +1,9 @@
 import CodeEditor from '@renderer/components/CodeEditor'
 import { ResetIcon } from '@renderer/components/Icons'
-import { HStack } from '@renderer/components/Layout'
 import TextBadge from '@renderer/components/TextBadge'
-import { isLinux, isMac, THEME_COLOR_PRESETS } from '@renderer/config/constant'
+import { isLinux, isMac } from '@renderer/config/constant'
 import { DEFAULT_SIDEBAR_ICONS } from '@renderer/config/sidebar'
+import { THEMES } from '@renderer/config/themes'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
@@ -16,9 +16,10 @@ import {
   setCustomCss,
   setPinTopicsToTop,
   setShowTopicTime,
-  setSidebarIcons
+  setSidebarIcons,
+  setThemeId
 } from '@renderer/store/settings'
-import { Button, ColorPicker, Segmented, Select, Switch, Tooltip } from 'antd'
+import { Button, Segmented, Select, Switch, Tooltip } from 'antd'
 import { Minus, Plus } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -27,31 +28,36 @@ import styled from 'styled-components'
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
 import SidebarIconsManager from './SidebarIconsManager'
 
-const ColorCircleWrapper = styled.div`
-  width: 24px;
-  height: 24px;
-  position: relative;
+/** 主题选择：胶囊色块 + 名称，选中描边高亮 */
+const ThemePicker = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
 `
 
-const ColorCircle = styled.div<{ color: string; isActive?: boolean }>`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background-color: ${(props) => props.color};
+const ThemeOption = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid ${(p) => (p.$active ? 'var(--color-primary)' : 'var(--color-border)')};
+  border-radius: 999px;
+  padding: 4px 12px 4px 8px;
+  font-size: 12px;
+  color: ${(p) => (p.$active ? 'var(--color-text)' : 'var(--color-text-2)')};
+  background: ${(p) => (p.$active ? 'var(--color-primary-mute)' : 'transparent')};
   cursor: pointer;
-  transform: translate(-50%, -50%);
-  border: 2px solid ${(props) => (props.isActive ? 'var(--color-border)' : 'transparent')};
-  transition: opacity 0.2s;
-
+  transition: all 0.18s ease;
   &:hover {
-    opacity: 0.8;
+    border-color: var(--color-primary);
+    color: var(--color-text);
   }
+`
+
+const ThemeDot = styled.span`
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 `
 
 const DisplaySettings: FC = () => {
@@ -65,6 +71,7 @@ const DisplaySettings: FC = () => {
     pinTopicsToTop,
     customCss,
     sidebarIcons,
+    themeId,
     assistantIconType,
     userTheme,
     useSystemTitleBar,
@@ -107,16 +114,6 @@ const DisplaySettings: FC = () => {
       }
     })
   }
-
-  const handleColorPrimaryChange = useCallback(
-    (colorHex: string) => {
-      setUserTheme({
-        ...userTheme,
-        colorPrimary: colorHex
-      })
-    },
-    [setUserTheme, userTheme]
-  )
 
   const handleReset = useCallback(() => {
     setVisibleIcons([...DEFAULT_SIDEBAR_ICONS])
@@ -204,34 +201,15 @@ const DisplaySettings: FC = () => {
         <SettingTitle>{'显示设置'}</SettingTitle>
         <SettingDivider />
         <SettingRow>
-          <SettingRowTitle>{'主题颜色'}</SettingRowTitle>
-          <HStack gap="12px" alignItems="center">
-            <HStack gap="12px">
-              {THEME_COLOR_PRESETS.map((color) => (
-                <ColorCircleWrapper key={color}>
-                  <ColorCircle
-                    color={color}
-                    isActive={userTheme.colorPrimary === color}
-                    onClick={() => handleColorPrimaryChange(color)}
-                  />
-                </ColorCircleWrapper>
-              ))}
-            </HStack>
-            <ColorPicker
-              style={{ fontFamily: 'inherit' }}
-              className="color-picker"
-              value={userTheme.colorPrimary}
-              onChange={(color) => handleColorPrimaryChange(color.toHexString())}
-              showText
-              size="small"
-              presets={[
-                {
-                  label: 'Presets',
-                  colors: THEME_COLOR_PRESETS
-                }
-              ]}
-            />
-          </HStack>
+          <SettingRowTitle>{'主题'}</SettingRowTitle>
+          <ThemePicker>
+            {THEMES.map((t) => (
+              <ThemeOption key={t.id} $active={themeId === t.id} onClick={() => dispatch(setThemeId(t.id))}>
+                <ThemeDot style={{ background: t.gradient }} />
+                {t.name}
+              </ThemeOption>
+            ))}
+          </ThemePicker>
         </SettingRow>
         {isMac && (
           <>

@@ -400,7 +400,7 @@ const EditorSurface = styled.div`
   overflow: hidden;
   border: 0.5px solid var(--color-border);
   border-radius: 10px;
-  background: var(--color-background);
+  background: color-mix(in srgb, var(--color-background) 82%, transparent);
   box-shadow: 0 0 0 1px transparent;
   transition:
     border-color 0.2s ease,

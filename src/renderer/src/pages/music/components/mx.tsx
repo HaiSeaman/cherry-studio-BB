@@ -3,27 +3,29 @@ import { type FC, type ReactNode, useEffect } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
 /**
- * 音乐页专属浅色主题「晨间绿洲」：固定浅色不随应用深色主题切换（用户明确不要深色）。
- * 全部 UI 组件自绘（不依赖 antd），保证任何应用主题下页面观感一致。
+ * 音乐/闹钟便签页设计系统：全部颜色取自全局主题 CSS 变量，
+ * 跟随 6 款主题（4 浅 + 2 深）自动变色（accent = 当前主题主色）。
+ * 组件自绘（不依赖 antd），深色主题下观感同样成立。
  */
 
 export const mx = {
-  paper: '#F5F9F6',
-  card: '#FFFFFF',
-  soft: '#EDF5F0',
-  soft2: '#F7FBF9',
-  border: '#E3EDE7',
-  text: '#22312A',
-  text2: '#63746B',
-  text3: '#98A79F',
-  accent: '#10B981',
-  accent2: '#6EE7B7',
-  accentSoft: 'rgba(16, 185, 129, 0.10)',
+  paper: 'color-mix(in srgb, var(--color-background) 86%, transparent)',
+  card: 'var(--color-list-item)',
+  soft: 'var(--color-background-soft)',
+  soft2: 'var(--color-background-mute)',
+  border: 'var(--color-border)',
+  text: 'var(--color-text)',
+  text2: 'var(--color-text-2)',
+  text3: 'var(--color-text-3)',
+  accent: 'var(--color-primary)',
+  accent2: 'color-mix(in srgb, var(--color-primary) 55%, var(--color-white))',
+  accentSoft: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
   amber: '#F5A623',
   live: '#F0594B',
-  danger: '#EF5350',
-  gradient: 'linear-gradient(135deg, #34D399 0%, #10B981 100%)',
-  shadow: '0 1px 2px rgba(34, 49, 42, 0.04), 0 10px 30px rgba(16, 185, 129, 0.07)'
+  danger: 'var(--color-error)',
+  gradient:
+    'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 80%, var(--color-white)), var(--color-primary))',
+  shadow: '0 1px 2px rgba(0, 0, 0, 0.05), 0 10px 30px color-mix(in srgb, var(--color-primary) 9%, transparent)'
 }
 
 /** 动效降级：系统开启"减少动态效果"时关闭所有装饰动画 */
@@ -318,16 +320,17 @@ const DialogOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(34, 49, 42, 0.28);
-  backdrop-filter: blur(2px);
+  background: color-mix(in srgb, #000 32%, transparent);
+  backdrop-filter: blur(3px);
 `
 
 const DialogCard = styled.div`
   width: min(400px, calc(100vw - 48px));
-  background: ${mx.card};
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px) saturate(1.3);
   border-radius: 16px;
-  border: 1px solid ${mx.border};
-  box-shadow: 0 20px 60px rgba(34, 49, 42, 0.18);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
   padding: 18px;
 `
 

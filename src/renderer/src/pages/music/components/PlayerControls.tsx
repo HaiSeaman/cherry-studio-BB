@@ -168,8 +168,8 @@ const spinDisc = keyframes`
   to { transform: rotate(360deg); }
 `
 const breatheGlow = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.30); }
-  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 30%, transparent); }
+  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary) 0%, transparent); }
 `
 
 const Dock = styled.div`
@@ -367,11 +367,11 @@ const MainBtn = styled.button`
   color: #fff;
   cursor: pointer;
   background: ${mx.gradient};
-  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 40%, transparent);
   transition: all 0.18s ease;
   &:hover {
     transform: translateY(-1px) scale(1.04);
-    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.5);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--color-primary) 50%, transparent);
   }
   &:active {
     transform: scale(0.97);

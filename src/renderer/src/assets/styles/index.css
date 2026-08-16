@@ -56,7 +56,12 @@ body {
   font-family: var(--font-family);
   text-rendering: optimizeLegibility;
   transition: background-color 0.3s linear;
-  background-color: unset;
+  /* 晨雾丙烯酸背景：主题色渐变雾团 + 底色（变量见 color.css），内容透出磨砂质感 */
+  background:
+    radial-gradient(1100px 750px at 12% -8%, var(--acrylic-1), transparent 62%),
+    radial-gradient(950px 700px at 108% 18%, var(--acrylic-2), transparent 58%),
+    radial-gradient(850px 900px at 45% 118%, var(--acrylic-3), transparent 62%),
+    var(--color-background);
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -206,4 +211,32 @@ ul {
 
 textarea::-webkit-resizer {
   display: none;
+}
+
+/* ===== 磨砂玻璃：antd 弹层统一毛玻璃质感（背景色由 AntdProvider token 提供） ===== */
+.ant-modal-content,
+.ant-dropdown-menu,
+.ant-popover-inner,
+.ant-message-notice-content,
+.ant-notification-notice {
+  backdrop-filter: blur(20px) saturate(1.3);
+}
+
+/* 通用玻璃面：半透明 + 模糊 + 细白边（外壳面板用） */
+.glass-surface {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(1.35);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* 丙烯酸噪点颗粒层（伪磨砂质感；body 背景见上方 radial-gradient） */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }

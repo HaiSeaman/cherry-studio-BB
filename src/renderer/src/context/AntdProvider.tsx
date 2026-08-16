@@ -1,4 +1,6 @@
+import { getThemeInfo } from '@renderer/config/themes'
 import { useSettings } from '@renderer/hooks/useSettings'
+import { useTheme } from '@renderer/context/ThemeProvider'
 import type { LanguageVarious } from '@renderer/types'
 import { ConfigProvider, theme } from 'antd'
 import deDE from 'antd/locale/de_DE'
@@ -16,10 +18,9 @@ import zhTW from 'antd/locale/zh_TW'
 import type { FC, PropsWithChildren } from 'react'
 
 const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
-  const {
-    language,
-    userTheme: { colorPrimary }
-  } = useSettings()
+  const { language, themeId } = useSettings()
+  const { theme: _theme } = useTheme()
+  const themeInfo = getThemeInfo(themeId)
 
   return (
     <ConfigProvider
@@ -27,7 +28,7 @@ const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
       theme={{
         cssVar: true,
         hashed: false,
-        algorithm: [theme.defaultAlgorithm],
+        algorithm: [_theme === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm],
         components: {
           Menu: {
             activeBarBorderWidth: 0,
@@ -81,10 +82,12 @@ const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
             controlPaddingHorizontal: 8,
             borderRadiusLG: 10,
             borderRadiusSM: 8,
-            paddingXS: 4
+            paddingXS: 4,
+            colorBgElevated: 'var(--glass-bg-strong)'
           },
           Popover: {
-            borderRadiusLG: 10
+            borderRadiusLG: 10,
+            colorBgElevated: 'var(--glass-bg-strong)'
           },
           Slider: {
             handleLineWidth: 1.5,
@@ -107,9 +110,9 @@ const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
           }
         },
         token: {
-          colorPrimary: colorPrimary,
+          colorPrimary: themeInfo.color,
           fontFamily: 'var(--font-family)',
-          colorBgMask: 'rgba(34,49,42,0.3)',
+          colorBgMask: _theme === 'dark' ? 'rgba(0,0,0,0.55)' : 'rgba(34,49,42,0.3)',
           motionDurationMid: '100ms'
         }
       }}>

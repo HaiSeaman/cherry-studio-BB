@@ -77,6 +77,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
   const [alarmH, setAlarmH] = useState('7')
   const [alarmM, setAlarmM] = useState('30')
   const [alarmLabel, setAlarmLabel] = useState('')
+  const [alarmSound, setAlarmSound] = useState(defaultSound)
 
   const addAlarm = async () => {
     await db.hub_alarms.add({
@@ -86,7 +87,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
       enabled: true,
       triggered: false,
       label: alarmLabel.trim(),
-      sound: defaultSound
+      sound: alarmSound
     })
     setAlarmLabel('')
   }
@@ -225,6 +226,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
               value={alarmLabel}
               onChange={(e) => setAlarmLabel(e.target.value)}
             />
+            <SoundPicker value={alarmSound} onChange={setAlarmSound} />
             <AddBtn onClick={() => void addAlarm()}>
               <Plus size={13} /> 添加
             </AddBtn>

@@ -406,7 +406,7 @@ const AddBtn = styled.button`
   transition: all 0.18s ease;
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
   }
   &:disabled {
     opacity: 0.4;

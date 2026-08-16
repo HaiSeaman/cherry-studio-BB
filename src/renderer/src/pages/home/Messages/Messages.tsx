@@ -363,7 +363,7 @@ const LoaderContainer = styled.div`
   justify-content: center;
   padding: 10px;
   width: 100%;
-  background: var(--color-background);
+  background: color-mix(in srgb, var(--color-background) 82%, transparent);
   pointer-events: none;
 `
 

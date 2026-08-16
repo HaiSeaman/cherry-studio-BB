@@ -1,4 +1,5 @@
 import { isMac, isWin } from '@renderer/config/constant'
+import { getThemeMode } from '@renderer/config/themes'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import useUserTheme from '@renderer/hooks/useUserTheme'
 import { ThemeMode } from '@renderer/types'
@@ -24,59 +25,62 @@ interface ThemeProviderProps extends PropsWithChildren {
   defaultTheme?: ThemeMode
 }
 
-const tailwindThemeChange = (theme: ThemeMode) => {
+const tailwindThemeChange = (mode: 'light' | 'dark') => {
   const root = window.document.documentElement
   root.classList.remove('light', 'dark')
-  root.classList.add(theme)
+  root.classList.add(mode)
 }
 
 /**
- * 晨间绿洲 UI：固定浅色主题，不随系统/用户设置切换深色。
- * 保留 Context API 形状以兼容既有调用点，theme 恒为 light。
+ * 主题系统：由 settings.themeId 驱动（4 款浅色 + 2 款深色，见 config/themes.ts）。
+ * body 上设置 theme-mode / theme-id 两个属性，配合 color.css 分支切换整套色板。
  */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const { language } = useSettings()
-  const [actualTheme] = useState<ThemeMode>(ThemeMode.light)
+  const { themeId, language } = useSettings()
   const { initUserTheme } = useUserTheme()
   const { navbarPosition } = useNavbarPosition()
 
-  // 固定浅色：toggle/setTheme 均为 no-op（深色模式已移除）
+  const mode = getThemeMode(themeId)
+  const [theme, setThemeState] = useState<ThemeMode>(mode === 'dark' ? ThemeMode.dark : ThemeMode.light)
+
+  useEffect(() => {
+    setThemeState(mode === 'dark' ? ThemeMode.dark : ThemeMode.light)
+  }, [mode])
+
+  // toggle/setTheme 兼容保留：无 UI 入口，直接切换到默认浅色主题
   const toggleTheme = () => {}
   const setTheme = () => {}
 
   useEffect(() => {
     // Set initial theme and OS attributes on body
     document.body.setAttribute('os', isMac ? 'mac' : isWin ? 'windows' : 'linux')
-    document.body.setAttribute('theme-mode', actualTheme)
-    document.body.classList.remove('dark')
-    document.body.classList.add('light')
+    document.body.setAttribute('theme-mode', mode)
+    document.body.setAttribute('theme-id', themeId)
+    document.body.classList.remove('dark', 'light')
+    document.body.classList.add(mode)
     document.body.setAttribute('navbar-position', navbarPosition)
     document.documentElement.lang = language
 
     initUserTheme()
 
-    // listen for theme updates from main process
+    // main 进程的主题事件：渲染进程以 themeId 为准，仅重放当前主题属性
     return window.electron.ipcRenderer.on(IpcChannel.ThemeUpdated, () => {
-      // 固定浅色：收到任何主题事件都保持 light
-      document.body.setAttribute('theme-mode', ThemeMode.light)
-      document.body.classList.remove('dark')
-      document.body.classList.add('light')
+      document.body.setAttribute('theme-mode', mode)
+      document.body.setAttribute('theme-id', themeId)
+      document.body.classList.remove('dark', 'light')
+      document.body.classList.add(mode)
     })
-  }, [actualTheme, initUserTheme, language, navbarPosition])
+  }, [themeId, mode, initUserTheme, language, navbarPosition])
 
   useEffect(() => {
-    tailwindThemeChange(actualTheme)
-  }, [actualTheme])
+    tailwindThemeChange(mode)
+  }, [mode])
 
   useEffect(() => {
-    void window.api.setTheme(ThemeMode.light)
-  }, [])
+    void window.api.setTheme(mode === 'dark' ? ThemeMode.dark : ThemeMode.light)
+  }, [mode])
 
-  return (
-    <ThemeContext value={{ theme: actualTheme, settedTheme: actualTheme, toggleTheme, setTheme }}>
-      {children}
-    </ThemeContext>
-  )
+  return <ThemeContext value={{ theme, settedTheme: theme, toggleTheme, setTheme }}>{children}</ThemeContext>
 }
 
 export const useTheme = () => use(ThemeContext)

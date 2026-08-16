@@ -13,7 +13,7 @@ import windowStateKeeper from 'electron-window-state'
 import path, { join } from 'path'
 
 import iconPath from '../../../build/icon.png?asset'
-import { titleBarOverlayLight } from '../config'
+import { titleBarOverlayDark, titleBarOverlayLight } from '../config'
 import { configManager } from './ConfigManager'
 import { contextMenu } from './ContextMenu'
 import { isSafeExternalUrl } from './security'
@@ -59,8 +59,11 @@ export class WindowService {
       maximize: false
     })
     const windowsBackgroundMaterial = getWindowsBackgroundMaterial()
-    // 晨间绿洲 UI 固定浅色：窗口背景恒为暖白（Mica 材质时由系统填充背景）
-    const mainWindowBackgroundColor = isMac || windowsBackgroundMaterial ? undefined : '#F5F9F6'
+    // 窗口 chrome 跟随当前主题模式（渲染进程 themeId 决定 light/dark）
+    const isDarkTheme = configManager.getTheme() === 'dark'
+    // Mica 材质时由系统填充背景，无需显式背景色
+    const mainWindowBackgroundColor =
+      isMac || windowsBackgroundMaterial ? undefined : isDarkTheme ? '#23262B' : '#F5F9F6'
 
     this.mainWindow = new BrowserWindow({
       x: mainWindowState.x,
@@ -85,7 +88,7 @@ export class WindowService {
       ...(isMac
         ? {
             titleBarStyle: 'hidden',
-            titleBarOverlay: titleBarOverlayLight,
+            titleBarOverlay: isDarkTheme ? titleBarOverlayDark : titleBarOverlayLight,
             trafficLightPosition: { x: 13, y: 13 }
           }
         : {
@@ -94,7 +97,7 @@ export class WindowService {
           }),
       ...(windowsBackgroundMaterial ? { backgroundMaterial: windowsBackgroundMaterial } : {}),
       ...(mainWindowBackgroundColor ? { backgroundColor: mainWindowBackgroundColor } : {}),
-      darkTheme: false,
+      darkTheme: isDarkTheme,
       ...(isLinux ? { icon: linuxIcon } : {}),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),

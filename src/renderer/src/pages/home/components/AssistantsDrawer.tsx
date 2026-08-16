@@ -51,7 +51,8 @@ const PopupContainer: React.FC<Props> = ({
           paddingTop: isMac ? 'var(--navbar-height)' : 0,
           height: 'calc(100vh - var(--navbar-height))',
           overflow: 'hidden',
-          backgroundColor: 'var(--color-background-opacity)'
+          backgroundColor: 'var(--color-background-opacity)',
+          backdropFilter: 'blur(16px) saturate(1.3)'
         },
         wrapper: {
           width: 'var(--assistants-width)'

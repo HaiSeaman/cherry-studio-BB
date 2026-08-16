@@ -5,7 +5,6 @@ import useAvatar from '@renderer/hooks/useAvatar'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
-import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { getSidebarIconLabel } from '@renderer/i18n/label'
@@ -31,8 +30,6 @@ const Sidebar: FC = () => {
   const avatar = useAvatar()
   const onEditUser = () => UserPopup.show()
 
-  const backgroundColor = useNavBackgroundColor()
-
   const showPinnedApps = pinned.length > 0 && sidebarIcons.visible.includes('minapp')
 
   const to = async (path: string) => {
@@ -43,10 +40,8 @@ const Sidebar: FC = () => {
   const isFullscreen = useFullscreen()
 
   return (
-    <Container
-      $isFullscreen={isFullscreen}
-      id="app-sidebar"
-      style={{ backgroundColor, zIndex: minappShow ? 10000 : 'initial' }}>
+    <Container $isFullscreen={isFullscreen} id="app-sidebar" style={{ zIndex: minappShow ? 10000 : 0 }}>
+      <SidebarGlass />
       {isEmoji(avatar) ? (
         <EmojiAvatar onClick={onEditUser} className="sidebar-avatar" size={31} fontSize={18}>
           {avatar}
@@ -123,9 +118,7 @@ const MainMenus: FC = () => {
             await modelGenerating()
             navigate(path)
           }}>
-          <Icon className={isActive}>
-            {iconMap[icon]}
-          </Icon>
+          <Icon className={isActive}>{iconMap[icon]}</Icon>
         </StyledLink>
       </Tooltip>
     )
@@ -133,6 +126,8 @@ const MainMenus: FC = () => {
 }
 
 const Container = styled.div<{ $isFullscreen: boolean }>`
+  position: relative;
+  z-index: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,6 +144,19 @@ const Container = styled.div<{ $isFullscreen: boolean }>`
     margin-top: ${isMac ? '0px' : '2px'};
     -webkit-app-region: none;
   }
+`
+
+/** 磨砂玻璃背景层：blur 放在非拖拽元素上（Electron drag region + backdrop-filter 兼容） */
+const SidebarGlass = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-app-region: none;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(1.35);
+  border-right: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 `
 
 const AvatarImg = styled(Avatar)`

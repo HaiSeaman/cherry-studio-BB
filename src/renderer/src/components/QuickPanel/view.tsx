@@ -2,7 +2,6 @@ import { RightOutlined } from '@ant-design/icons'
 import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
 import { isMac } from '@renderer/config/constant'
 import { useTimer } from '@renderer/hooks/useTimer'
-import useUserTheme from '@renderer/hooks/useUserTheme'
 import { classNames } from '@renderer/utils'
 import { Flex } from 'antd'
 import { debounce } from 'lodash'
@@ -40,9 +39,9 @@ export const QuickPanelView: React.FC<Props> = ({ setInputText }) => {
     throw new Error('QuickPanel must be used within a QuickPanelProvider')
   }
 
-  const { colorPrimary } = useUserTheme()
-  const selectedColor = colorPrimary.alpha(0.15).toString()
-  const selectedColorHover = colorPrimary.alpha(0.2).toString()
+  // 选中色跟随当前主题主色
+  const selectedColor = 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
+  const selectedColorHover = 'color-mix(in srgb, var(--color-primary) 22%, transparent)'
 
   const ASSISTIVE_KEY = isMac ? '⌘' : 'Ctrl'
   const [isAssistiveKeyPressed, setIsAssistiveKeyPressed] = useState(false)

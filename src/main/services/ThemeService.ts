@@ -2,18 +2,22 @@ import { IpcChannel } from '@shared/IpcChannel'
 import { ThemeMode } from '@types'
 import { BrowserWindow, nativeTheme } from 'electron'
 
-import { titleBarOverlayLight } from '../config'
+import { titleBarOverlayDark, titleBarOverlayLight } from '../config'
 import { configManager } from './ConfigManager'
 
 /**
- * 晨间绿洲 UI：固定浅色主题。任何主题变更事件都保持 light，
- * 不再向渲染进程发送深色状态。
+ * 主题同步：渲染进程选择主题（themeId → mode）后调用 setTheme，
+ * 本服务负责窗口 chrome（标题栏覆盖/原生主题）与渲染进程属性保持一致。
  */
 class ThemeService {
   private theme: ThemeMode = ThemeMode.light
   constructor() {
-    this.theme = ThemeMode.light
-    nativeTheme.themeSource = ThemeMode.light
+    this.theme = configManager.getTheme()
+    if (this.theme !== ThemeMode.dark && this.theme !== ThemeMode.light) {
+      // 旧版本兼容：system/其他一律落到浅色（渲染进程 themeId 才是真正来源）
+      this.theme = ThemeMode.light
+    }
+    nativeTheme.themeSource = this.theme
     nativeTheme.on('updated', this.themeUpdatadHandler.bind(this))
   }
 
@@ -21,25 +25,27 @@ class ThemeService {
     BrowserWindow.getAllWindows().forEach((win) => {
       if (win && !win.isDestroyed() && win.setTitleBarOverlay) {
         try {
-          win.setTitleBarOverlay(titleBarOverlayLight)
+          win.setTitleBarOverlay(nativeTheme.shouldUseDarkColors ? titleBarOverlayDark : titleBarOverlayLight)
         } catch (error) {
           // don't throw error if setTitleBarOverlay failed
           // Because it may be called with some windows have some title bar
         }
       }
-      win.webContents.send(IpcChannel.ThemeUpdated, ThemeMode.light)
+      win.webContents.send(IpcChannel.ThemeUpdated, nativeTheme.shouldUseDarkColors ? ThemeMode.dark : ThemeMode.light)
     })
   }
 
   setTheme(theme: ThemeMode) {
+    if (theme !== ThemeMode.dark && theme !== ThemeMode.light) {
+      return
+    }
     if (theme === this.theme) {
       return
     }
 
-    // 固定浅色：忽略任何传入主题，仅保证 nativeTheme 处于 light
-    this.theme = ThemeMode.light
-    nativeTheme.themeSource = ThemeMode.light
-    configManager.setTheme(ThemeMode.light)
+    this.theme = theme
+    nativeTheme.themeSource = theme
+    configManager.setTheme(theme)
   }
 }
 

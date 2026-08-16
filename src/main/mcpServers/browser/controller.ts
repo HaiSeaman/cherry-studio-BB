@@ -1,4 +1,4 @@
-import { titleBarOverlayLight } from '@main/config'
+import { titleBarOverlayDark, titleBarOverlayLight } from '@main/config'
 import { isMac } from '@main/constant'
 import { randomUUID } from 'crypto'
 import { app, BrowserView, BrowserWindow, nativeTheme } from 'electron'
@@ -27,10 +27,10 @@ export class CdpBrowserController {
 
     // Listen for theme changes and update all tab bars
     nativeTheme.on('updated', () => {
-      // 晨间绿洲固定浅色
+      const isDark = nativeTheme.shouldUseDarkColors
       for (const windowInfo of this.windows.values()) {
         if (windowInfo.tabBarView && !windowInfo.tabBarView.webContents.isDestroyed()) {
-          windowInfo.tabBarView.webContents.executeJavaScript(`window.setTheme(false)`).catch(() => {
+          windowInfo.tabBarView.webContents.executeJavaScript(`window.setTheme(${isDark})`).catch(() => {
             // Ignore errors if tab bar is not ready
           })
         }
@@ -321,8 +321,9 @@ export class CdpBrowserController {
       tabBarView.webContents.executeJavaScript(`window.initPlatform('${platform}')`).catch((error) => {
         logger.debug('Platform init failed', { error, windowKey: windowInfo.windowKey })
       })
-      // Initialize theme (晨间绿洲固定浅色)
-      tabBarView.webContents.executeJavaScript(`window.setTheme(false)`).catch((error) => {
+      // Initialize theme
+      const isDark = nativeTheme.shouldUseDarkColors
+      tabBarView.webContents.executeJavaScript(`window.setTheme(${isDark})`).catch((error) => {
         logger.debug('Theme init failed', { error, windowKey: windowInfo.windowKey })
       })
       this.setupTabBarMessageHandler(windowInfo)
@@ -348,7 +349,7 @@ export class CdpBrowserController {
       ...(isMac
         ? {
             titleBarStyle: 'hidden',
-            titleBarOverlay: titleBarOverlayLight,
+            titleBarOverlay: nativeTheme.shouldUseDarkColors ? titleBarOverlayDark : titleBarOverlayLight,
             trafficLightPosition: { x: 13, y: 13 }
           }
         : {

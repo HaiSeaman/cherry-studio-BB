@@ -1,6 +1,5 @@
 import { isLinux, isMac, isWin } from '@renderer/config/constant'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
-import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useNavbarPosition } from '@renderer/hooks/useSettings'
 import type { FC, PropsWithChildren } from 'react'
@@ -12,7 +11,6 @@ import WindowControls from '../WindowControls'
 type Props = PropsWithChildren & HTMLAttributes<HTMLDivElement>
 
 export const Navbar: FC<Props> = ({ children, ...props }) => {
-  const backgroundColor = useNavBackgroundColor()
   const isFullscreen = useFullscreen()
   const { isTopNavbar } = useNavbarPosition()
   const { minappShow } = useRuntime()
@@ -22,7 +20,8 @@ export const Navbar: FC<Props> = ({ children, ...props }) => {
   }
 
   return (
-    <NavbarContainer {...props} style={{ backgroundColor }} $isFullScreen={isFullscreen}>
+    <NavbarContainer {...props} $isFullScreen={isFullscreen}>
+      <NavbarGlass />
       {children}
       {!minappShow && <WindowControls />}
     </NavbarContainer>
@@ -60,6 +59,8 @@ export const NavbarHeader: FC<Props> = ({ children, ...props }) => {
 }
 
 const NavbarContainer = styled.div<{ $isFullScreen: boolean }>`
+  position: relative;
+  z-index: 1;
   min-width: 100%;
   display: flex;
   flex-direction: row;
@@ -69,6 +70,19 @@ const NavbarContainer = styled.div<{ $isFullScreen: boolean }>`
   padding-left: ${({ $isFullScreen }) =>
     isMac ? ($isFullScreen ? 'var(--sidebar-width)' : 'env(titlebar-area-x)') : 0};
   -webkit-app-region: drag;
+`
+
+/** 磨砂玻璃背景层（blur 不放在拖拽元素本体上） */
+const NavbarGlass = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-app-region: none;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(1.35);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 `
 
 const NavbarLeftContainer = styled.div`

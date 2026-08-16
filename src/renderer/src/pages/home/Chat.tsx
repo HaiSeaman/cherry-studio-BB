@@ -233,7 +233,7 @@ const Container = styled.div`
   overflow: hidden;
   [navbar-position='top'] & {
     height: calc(100vh - var(--navbar-height) - 6px);
-    background-color: var(--color-background);
+    background-color: color-mix(in srgb, var(--color-background) 82%, transparent);
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
   }

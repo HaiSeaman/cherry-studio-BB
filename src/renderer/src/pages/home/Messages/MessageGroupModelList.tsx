@@ -181,7 +181,7 @@ const AvatarWrapper = styled.div<{ $isSelected: boolean }>`
   cursor: pointer;
   display: inline-flex;
   border-radius: 50%;
-  background: var(--color-background);
+  background: color-mix(in srgb, var(--color-background) 82%, transparent);
   transition:
     transform 0.18s ease-out,
     margin 0.18s ease-out,

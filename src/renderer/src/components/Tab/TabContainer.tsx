@@ -16,16 +16,7 @@ import { addTab, removeTab, setActiveTab, setTabs } from '@renderer/store/tabs'
 import type { MinAppType } from '@renderer/types'
 import { classNames } from '@renderer/utils'
 import type { LRUCache } from 'lru-cache'
-import {
-  Home,
-  LayoutGrid,
-  MousePointerClick,
-  Music,
-  Settings,
-  Sparkle,
-  StickyNote,
-  X
-} from 'lucide-react'
+import { Home, LayoutGrid, MousePointerClick, Music, Settings, Sparkle, StickyNote, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -209,6 +200,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
   return (
     <Container>
       <TabsBar $isFullscreen={isFullscreen}>
+        <div className="tabs-glass" />
         <HorizontalScrollContainer dependencies={[tabs]} gap="6px" className="tab-scroll-container">
           <Sortable
             items={visibleTabs}
@@ -289,6 +281,19 @@ const TabsBar = styled.div<{ $isFullscreen: boolean }>`
   min-height: ${({ $isFullscreen }) => (!$isFullscreen && isMac ? 'env(titlebar-area-height)' : '')};
   position: relative;
   -webkit-app-region: drag;
+
+  /* 磨砂玻璃背景层：blur 不放在拖拽元素本体（Electron 兼容），pointer-events 穿透保证可拖拽 */
+  .tabs-glass {
+    position: absolute;
+    inset: 0;
+    z-index: 0 !important;
+    pointer-events: none;
+    -webkit-app-region: none;
+    background: var(--glass-bg);
+    backdrop-filter: blur(14px) saturate(1.35);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
 
   /* 确保交互元素在拖拽区域之上 */
   > * {

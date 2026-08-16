@@ -171,7 +171,7 @@ const MessageOutlineBody = styled(Scrollbar)<{ $count: number }>`
   &:hover {
     padding: 10px 10px 10px 10px;
     overflow-y: auto;
-    background: var(--color-background);
+    background: color-mix(in srgb, var(--color-background) 82%, transparent);
     box-shadow: 0 0 10px 0 rgba(128, 128, 128, 0.2);
     ${MessageOutlineItemText} {
       opacity: 1;

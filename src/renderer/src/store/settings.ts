@@ -30,6 +30,8 @@ import type {
   SidebarIcon,
   TranslateLanguageCode
 } from '@renderer/types'
+import { getThemeMode } from '@renderer/config/themes'
+import type { ThemeId } from '@renderer/config/themes'
 import { ThemeMode } from '@renderer/types'
 import type {
   OpenAICompletionsStreamOptions,
@@ -72,6 +74,8 @@ export interface SettingsState {
   trayOnClose: boolean
   tray: boolean
   theme: ThemeMode
+  /** 主题 ID（晨间绿洲/浅蓝晴空/…）；theme 字段兼容保留，实际以 themeId 为准 */
+  themeId: ThemeId
   userTheme: UserTheme
   windowStyle: 'transparent' | 'opaque'
   fontSize: number
@@ -257,6 +261,7 @@ export const initialState: SettingsState = {
   trayOnClose: true,
   tray: true,
   theme: ThemeMode.system,
+  themeId: 'oasis',
   userTheme: {
     colorPrimary: '#10b981',
     userFontFamily: '',
@@ -488,6 +493,10 @@ const settingsSlice = createSlice({
     },
     setTheme: (state, action: PayloadAction<ThemeMode>) => {
       state.theme = action.payload
+    },
+    setThemeId: (state, action: PayloadAction<ThemeId>) => {
+      state.themeId = action.payload
+      state.theme = getThemeMode(action.payload) === 'dark' ? ThemeMode.dark : ThemeMode.light
     },
     setCustomCss: (state, action: PayloadAction<string>) => {
       state.customCss = action.payload
@@ -864,6 +873,7 @@ export const {
   setTrayOnClose,
   setTray,
   setTheme,
+  setThemeId,
   setUserTheme,
   setFontSize,
   setWindowStyle,

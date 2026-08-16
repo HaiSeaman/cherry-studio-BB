@@ -1,77 +1,5 @@
 :root {
-  --color-white: #ffffff;
-  --color-white-soft: rgba(255, 255, 255, 0.8);
-  --color-white-mute: rgba(255, 255, 255, 0.94);
-
-  --color-black: #181818;
-  --color-black-soft: #222222;
-  --color-black-mute: #333333;
-
-  --color-gray-1: #515c67;
-  --color-gray-2: #414853;
-  --color-gray-3: #32363f;
-
-  --color-text-1: rgba(255, 255, 245, 0.9);
-  --color-text-2: rgba(235, 235, 245, 0.6);
-  --color-text-3: rgba(235, 235, 245, 0.38);
-
-  --color-background: var(--color-black);
-  --color-background-soft: var(--color-black-soft);
-  --color-background-mute: var(--color-black-mute);
-  --color-background-opacity: rgba(34, 34, 34, 0.7);
-  --inner-glow-opacity: 0.3; /* For the glassmorphism effect in the dropdown menu */
-
-  --color-primary: #00b96b;
-  --color-primary-soft: #00b96b99;
-  --color-primary-mute: #00b96b33;
-
-  --color-text: var(--color-text-1);
-  --color-text-secondary: rgba(235, 235, 245, 0.7);
-  --color-icon: #ffffff99;
-  --color-icon-white: #ffffff;
-  --color-border: #ffffff19;
-  --color-border-soft: #ffffff10;
-  --color-border-mute: #ffffff05;
-  --color-error: #ff4d50;
-  --color-link: #338cff;
-  --color-code-background: #323232;
-  --color-inline-code-background: #323232;
-  --color-inline-code-text: rgb(218, 97, 92);
-  --color-hover: rgba(40, 40, 40, 1);
-  --color-active: rgba(55, 55, 55, 1);
-  --color-frame-border: #333;
-  --color-group-background: var(--color-background-soft);
-
-  --color-reference: #404040;
-  --color-reference-text: #ffffff;
-  --color-reference-background: #0b0e12;
-
-  --color-list-item: rgba(255, 255, 255, 0.1);
-  --color-list-item-hover: rgba(255, 255, 255, 0.05);
-
-  --modal-background: #111111;
-
-  --color-highlight: rgba(0, 0, 0, 1);
-  --color-background-highlight: rgba(255, 255, 0, 0.9);
-  --color-background-highlight-accent: rgba(255, 150, 50, 0.9);
-
-  --navbar-background-mac: rgba(20, 20, 20, 0.55);
-  --navbar-background: #1f1f1f;
-
-  --chat-background: transparent;
-  --chat-background-user: rgba(255, 255, 255, 0.08);
-  --chat-background-assistant: transparent;
-  --chat-text-user: var(--color-black);
-
-  --list-item-border-radius: 10px;
-
-  --color-status-success: green;
-  --color-status-error: var(--color-error);
-  --color-status-warning: #faad14;
-}
-
-[theme-mode='light'] {
-  /* 晨间绿洲色板（与音乐/闹钟页 mx 设计系统同源） */
+  /* ===== 晨间绿洲（默认浅色）===== */
   --color-white: #ffffff;
   --color-white-soft: #f0f7f2;
   --color-white-mute: #edf5f0;
@@ -91,7 +19,7 @@
   --color-background: #f5f9f6;
   --color-background-soft: #edf5f0;
   --color-background-mute: #e3ede7;
-  --color-background-opacity: rgba(245, 249, 246, 0.92);
+  --color-background-opacity: rgba(245, 249, 246, 0.72);
   --inner-glow-opacity: 0.1;
 
   --color-primary: #10b981;
@@ -122,19 +50,342 @@
   --color-list-item: #ffffff;
   --color-list-item-hover: #f0f7f2;
 
-  --modal-background: #ffffff;
+  --modal-background: rgba(255, 255, 255, 0.88);
 
   --color-highlight: initial;
   --color-background-highlight: rgba(255, 255, 0, 0.5);
   --color-background-highlight-accent: rgba(255, 150, 50, 0.5);
 
   --navbar-background-mac: rgba(245, 249, 246, 0.55);
-  --navbar-background: rgba(245, 249, 246, 0.85);
+  --navbar-background: rgba(245, 249, 246, 0.6);
 
   --chat-background: transparent;
   --chat-background-user: rgba(16, 185, 129, 0.1);
   --chat-background-assistant: transparent;
   --chat-text-user: var(--color-text);
+
+  /* ===== 玻璃面板 ===== */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-shadow: 0 8px 32px rgba(34, 49, 42, 0.08);
+
+  /* ===== 晨雾丙烯酸背景 ===== */
+  --acrylic-1: #d8f0e6;
+  --acrylic-2: #eaf6f0;
+  --acrylic-3: #f6fbf8;
+  --acrylic-mask: rgba(245, 249, 246, 0.35);
+}
+
+/* ===== 浅蓝晴空 ===== */
+[theme-id='sky'] {
+  --color-white-soft: #e6f0f8;
+  --color-white-mute: #ddebf5;
+
+  --color-black: #20303d;
+  --color-black-soft: #293b4a;
+  --color-black-mute: #374b5c;
+
+  --color-gray-1: #5e7488;
+  --color-gray-2: #8fa6b9;
+  --color-gray-3: #c2d2de;
+
+  --color-text-1: #20303d;
+  --color-text-2: #5e7488;
+  --color-text-3: #8fa6b9;
+
+  --color-background: #f1f7fb;
+  --color-background-soft: #e6f0f8;
+  --color-background-mute: #d8e8f2;
+  --color-background-opacity: rgba(241, 247, 251, 0.72);
+
+  --color-primary: #2e9bd6;
+  --color-primary-soft: #2e9bd699;
+  --color-primary-mute: #2e9bd633;
+
+  --color-text-secondary: rgba(32, 48, 61, 0.75);
+  --color-icon: #5e7488;
+  --color-icon-white: #20303d;
+  --color-border: #d8e8f2;
+  --color-border-soft: rgba(216, 232, 242, 0.6);
+  --color-border-mute: rgba(216, 232, 242, 0.4);
+  --color-link: #1f7fb8;
+  --color-code-background: #e6f0f8;
+  --color-inline-code-background: rgba(46, 155, 214, 0.09);
+  --color-inline-code-text: #c05c5c;
+  --color-frame-border: #d8e8f2;
+  --color-group-background: #ffffff;
+
+  --color-reference: #dcedf7;
+  --color-reference-text: #20303d;
+  --color-reference-background: #eff7fc;
+
+  --color-list-item: #ffffff;
+  --color-list-item-hover: #e6f0f8;
+
+  --navbar-background-mac: rgba(241, 247, 251, 0.55);
+  --navbar-background: rgba(241, 247, 251, 0.6);
+
+  --chat-background-user: rgba(46, 155, 214, 0.1);
+
+  --acrylic-1: #cfe6f5;
+  --acrylic-2: #e3f0f9;
+  --acrylic-3: #f3f9fd;
+  --acrylic-mask: rgba(241, 247, 251, 0.35);
+}
+
+/* ===== 浅粉蔷薇 ===== */
+[theme-id='pink'] {
+  --color-white-soft: #f6e9ee;
+  --color-white-mute: #f1dfe7;
+
+  --color-black: #3a2a31;
+  --color-black-soft: #48343d;
+  --color-black-mute: #573f4a;
+
+  --color-gray-1: #8a6e79;
+  --color-gray-2: #b29aa4;
+  --color-gray-3: #d6c3cb;
+
+  --color-text-1: #3a2a31;
+  --color-text-2: #8a6e79;
+  --color-text-3: #b29aa4;
+
+  --color-background: #faf4f6;
+  --color-background-soft: #f6e9ee;
+  --color-background-mute: #eedbe3;
+  --color-background-opacity: rgba(250, 244, 246, 0.72);
+
+  --color-primary: #cf7c9f;
+  --color-primary-soft: #cf7c9f99;
+  --color-primary-mute: #cf7c9f33;
+
+  --color-text-secondary: rgba(58, 42, 49, 0.75);
+  --color-icon: #8a6e79;
+  --color-icon-white: #3a2a31;
+  --color-border: #eedbe3;
+  --color-border-soft: rgba(238, 219, 227, 0.6);
+  --color-border-mute: rgba(238, 219, 227, 0.4);
+  --color-link: #b45f85;
+  --color-code-background: #f6e9ee;
+  --color-inline-code-background: rgba(207, 124, 159, 0.09);
+  --color-inline-code-text: #c05c5c;
+  --color-frame-border: #eedbe3;
+  --color-group-background: #ffffff;
+
+  --color-reference: #f6e3ec;
+  --color-reference-text: #3a2a31;
+  --color-reference-background: #fcf2f6;
+
+  --color-list-item: #ffffff;
+  --color-list-item-hover: #f6e9ee;
+
+  --navbar-background-mac: rgba(250, 244, 246, 0.55);
+  --navbar-background: rgba(250, 244, 246, 0.6);
+
+  --chat-background-user: rgba(207, 124, 159, 0.1);
+
+  --acrylic-1: #f2dde6;
+  --acrylic-2: #f9edf2;
+  --acrylic-3: #fdf7f9;
+  --acrylic-mask: rgba(250, 244, 246, 0.35);
+}
+
+/* ===== 浅黄晨光 ===== */
+[theme-id='butter'] {
+  --color-white-soft: #f5edda;
+  --color-white-mute: #f0e5cc;
+
+  --color-black: #3a3123;
+  --color-black-soft: #4a3f2d;
+  --color-black-mute: #5b4f38;
+
+  --color-gray-1: #8a7a5c;
+  --color-gray-2: #b2a488;
+  --color-gray-3: #d6cab1;
+
+  --color-text-1: #3a3123;
+  --color-text-2: #8a7a5c;
+  --color-text-3: #b2a488;
+
+  --color-background: #faf6ec;
+  --color-background-soft: #f5edda;
+  --color-background-mute: #ede1c3;
+  --color-background-opacity: rgba(250, 246, 236, 0.72);
+
+  --color-primary: #c9973f;
+  --color-primary-soft: #c9973f99;
+  --color-primary-mute: #c9973f33;
+
+  --color-text-secondary: rgba(58, 49, 35, 0.75);
+  --color-icon: #8a7a5c;
+  --color-icon-white: #3a3123;
+  --color-border: #ede1c3;
+  --color-border-soft: rgba(237, 225, 195, 0.6);
+  --color-border-mute: rgba(237, 225, 195, 0.4);
+  --color-link: #a87a2a;
+  --color-code-background: #f5edda;
+  --color-inline-code-background: rgba(201, 151, 63, 0.1);
+  --color-inline-code-text: #c05c5c;
+  --color-frame-border: #ede1c3;
+  --color-group-background: #ffffff;
+
+  --color-reference: #f3e8cc;
+  --color-reference-text: #3a3123;
+  --color-reference-background: #fbf5e8;
+
+  --color-list-item: #ffffff;
+  --color-list-item-hover: #f5edda;
+
+  --navbar-background-mac: rgba(250, 246, 236, 0.55);
+  --navbar-background: rgba(250, 246, 236, 0.6);
+
+  --chat-background-user: rgba(201, 151, 63, 0.12);
+
+  --acrylic-1: #f2e7c9;
+  --acrylic-2: #f9f1dd;
+  --acrylic-3: #fdfaf1;
+  --acrylic-mask: rgba(250, 246, 236, 0.35);
+}
+
+/* ===== 深灰暮色（默认深色，低亮不刺眼） ===== */
+[theme-mode='dark'] {
+  --color-white: #ffffff;
+  --color-white-soft: #2f343b;
+  --color-white-mute: #33383f;
+
+  --color-black: #e3e6ea;
+  --color-black-soft: #c9cfd6;
+  --color-black-mute: #aab2bb;
+
+  --color-gray-1: #9aa3ad;
+  --color-gray-2: #6e7680;
+  --color-gray-3: #4a5058;
+
+  --color-text-1: #e3e6ea;
+  --color-text-2: #9aa3ad;
+  --color-text-3: #6e7680;
+
+  --color-background: #23262b;
+  --color-background-soft: #2b2f35;
+  --color-background-mute: #33383f;
+  --color-background-opacity: rgba(35, 38, 43, 0.72);
+  --inner-glow-opacity: 0.3;
+
+  --color-primary: #6fbf9b;
+  --color-primary-soft: #6fbf9b99;
+  --color-primary-mute: #6fbf9b33;
+
+  --color-text: var(--color-text-1);
+  --color-text-secondary: rgba(227, 230, 234, 0.75);
+  --color-icon: #aeb6bf;
+  --color-icon-white: #e3e6ea;
+  --color-border: #3a4048;
+  --color-border-soft: rgba(58, 64, 72, 0.6);
+  --color-border-mute: rgba(58, 64, 72, 0.4);
+  --color-error: #e57373;
+  --color-link: #7cb6e8;
+  --color-code-background: #2f343b;
+  --color-inline-code-background: rgba(111, 191, 155, 0.12);
+  --color-inline-code-text: #e08a8a;
+  --color-hover: var(--color-white-mute);
+  --color-active: var(--color-white-soft);
+  --color-frame-border: #3a4048;
+  --color-group-background: #2b2f35;
+
+  --color-reference: #2c3a33;
+  --color-reference-text: #d8e6de;
+  --color-reference-background: #1c221e;
+
+  --color-list-item: #2b2f35;
+  --color-list-item-hover: #33383f;
+
+  --modal-background: rgba(43, 47, 53, 0.9);
+
+  --color-highlight: initial;
+  --color-background-highlight: rgba(255, 255, 0, 0.5);
+  --color-background-highlight-accent: rgba(255, 150, 50, 0.5);
+
+  --navbar-background-mac: rgba(35, 38, 43, 0.55);
+  --navbar-background: rgba(35, 38, 43, 0.6);
+
+  --chat-background: transparent;
+  --chat-background-user: rgba(111, 191, 155, 0.12);
+  --chat-background-assistant: transparent;
+  --chat-text-user: var(--color-text);
+
+  --glass-bg: rgba(43, 47, 53, 0.55);
+  --glass-bg-strong: rgba(43, 47, 53, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+
+  --acrylic-1: #2c3f38;
+  --acrylic-2: #2e333b;
+  --acrylic-3: #25282e;
+  --acrylic-mask: rgba(35, 38, 43, 0.5);
+}
+
+/* ===== 深蓝夜色（深色覆写） ===== */
+[theme-mode='dark'][theme-id='deepblue'] {
+  --color-white-soft: #293343;
+  --color-white-mute: #2e3a4a;
+
+  --color-black: #dce3ec;
+  --color-black-soft: #c2ccd9;
+  --color-black-mute: #a5b2c2;
+
+  --color-gray-1: #93a0b3;
+  --color-gray-2: #6c7a8f;
+  --color-gray-3: #47536a;
+
+  --color-text-1: #dce3ec;
+  --color-text-2: #93a0b3;
+  --color-text-3: #6c7a8f;
+
+  --color-background: #1e2530;
+  --color-background-soft: #252e3b;
+  --color-background-mute: #2d3846;
+  --color-background-opacity: rgba(30, 37, 48, 0.72);
+
+  --color-primary: #6fa8dc;
+  --color-primary-soft: #6fa8dc99;
+  --color-primary-mute: #6fa8dc33;
+
+  --color-text-secondary: rgba(220, 227, 236, 0.75);
+  --color-icon: #a4b1c3;
+  --color-icon-white: #dce3ec;
+  --color-border: #36445c;
+  --color-border-soft: rgba(54, 68, 92, 0.6);
+  --color-border-mute: rgba(54, 68, 92, 0.4);
+  --color-error: #e07a7a;
+  --color-link: #8ab8e8;
+  --color-code-background: #293343;
+  --color-inline-code-background: rgba(111, 168, 220, 0.12);
+  --color-inline-code-text: #e08a8a;
+  --color-frame-border: #36445c;
+  --color-group-background: #252e3b;
+
+  --color-reference: #263650;
+  --color-reference-text: #d6e2f0;
+  --color-reference-background: #1a2230;
+
+  --color-list-item: #252e3b;
+  --color-list-item-hover: #2d3846;
+
+  --modal-background: rgba(37, 46, 59, 0.9);
+
+  --navbar-background-mac: rgba(30, 37, 48, 0.55);
+  --navbar-background: rgba(30, 37, 48, 0.6);
+
+  --chat-background-user: rgba(111, 168, 220, 0.12);
+
+  --glass-bg: rgba(37, 46, 59, 0.55);
+  --glass-bg-strong: rgba(37, 46, 59, 0.88);
+
+  --acrylic-1: #243649;
+  --acrylic-2: #232d3d;
+  --acrylic-3: #1c2430;
+  --acrylic-mask: rgba(30, 37, 48, 0.5);
 }
 
 [navbar-position='left'][theme-mode='light'] {
