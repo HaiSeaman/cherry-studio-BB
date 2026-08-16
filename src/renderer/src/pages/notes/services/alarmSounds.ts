@@ -207,9 +207,9 @@ class AlarmSounds {
     return ringing
   }
 
-  /** 选择铃声时试听：响 1.5 秒自动停 */
+  /** 选择铃声时试听：响 1.5 秒自动停；闹钟响铃中直接忽略，避免掐断正在响的闹钟 */
   preview(sound: string): void {
-    this.stop()
+    if (ringing) return
     this.start(sound)
     previewTimer = setTimeout(() => {
       previewTimer = null

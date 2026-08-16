@@ -339,6 +339,18 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
 
     return { topicId: currentTopicId, images }
   } catch (error) {
+    if (isAbortError(error)) {
+      // 用户主动中止 ≠ 失败：落 PAUSED 状态（不渲染红色错误卡），由调用方提示"已停止生成"
+      try {
+        await db.message_blocks.update(imageBlock.id, { status: MessageBlockStatus.PAUSED })
+        await dbService.updateMessage(currentTopicId, assistantMessage.id, {
+          status: AssistantMessageStatus.PAUSED
+        })
+      } catch {
+        // 忽略错误处理本身的失败
+      }
+      throw error
+    }
     logger.error('图片生成失败:', error as Error)
     try {
       await db.message_blocks.update(imageBlock.id, {

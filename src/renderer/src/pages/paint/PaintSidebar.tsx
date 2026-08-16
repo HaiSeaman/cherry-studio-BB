@@ -60,8 +60,12 @@ const PaintSidebar: FC<Props> = ({ topics, activeTopicId }) => {
   }, [renamingId])
 
   const handleNewTopic = async () => {
-    const id = await createPaintTopic()
-    dispatch(setActiveTopicId(id))
+    try {
+      const id = await createPaintTopic()
+      dispatch(setActiveTopicId(id))
+    } catch {
+      window.toast.error('创建绘画会话失败')
+    }
   }
 
   const handleDelete = (topic: PaintTopicRow) => {

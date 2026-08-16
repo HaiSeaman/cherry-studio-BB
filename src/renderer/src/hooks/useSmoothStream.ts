@@ -10,7 +10,14 @@ interface UseSmoothStreamOptions {
 const languages = ['en-US', 'de-DE', 'es-ES', 'zh-CN', 'zh-TW', 'ja-JP', 'ru-RU', 'el-GR', 'fr-FR', 'pt-PT', 'ro-RO']
 const segmenter = new Intl.Segmenter(languages)
 
-export const useSmoothStream = ({ onUpdate, streamDone, minDelay = 10, initialText = '' }: UseSmoothStreamOptions) => {
+/**
+ * 流式文本平滑渲染：
+ * - 按 minDelay 节流合并（默认 66ms ≈ 15fps），避免每帧把全文交给下游（Markdown）重解析——
+ *   60fps 全量重解析是流式卡顿主因
+ * - 每次渲染排空整个队列：队列不积压，内存占用有界（不会随长回复增长）
+ * - 队列空时不空转 rAF，由 addChunk 重新调度
+ */
+export const useSmoothStream = ({ onUpdate, streamDone, minDelay = 66, initialText = '' }: UseSmoothStreamOptions) => {
   const chunkQueueRef = useRef<string[]>([])
   const animationFrameRef = useRef<number | null>(null)
   const displayedTextRef = useRef<string>(initialText)
@@ -18,13 +25,15 @@ export const useSmoothStream = ({ onUpdate, streamDone, minDelay = 10, initialTe
 
   const addChunk = useCallback((chunk: string) => {
     const chars = Array.from(segmenter.segment(chunk)).map((s) => s.segment)
-    chunkQueueRef.current = [...chunkQueueRef.current, ...(chars || [])]
+    chunkQueueRef.current.push(...chars)
+    schedule()
   }, [])
 
   const reset = useCallback(
     (newText = '') => {
-      if (animationFrameRef.current) {
+      if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
       }
       chunkQueueRef.current = []
       displayedTextRef.current = newText
@@ -33,64 +42,53 @@ export const useSmoothStream = ({ onUpdate, streamDone, minDelay = 10, initialTe
     [onUpdate]
   )
 
-  const renderLoop = useCallback(
-    (currentTime: number) => {
-      // 1. 如果队列为空
-      if (chunkQueueRef.current.length === 0) {
-        // 如果流已结束，确保显示最终状态并停止循环
-        if (streamDone) {
-          const finalText = displayedTextRef.current
-          onUpdate(finalText)
-          return
-        }
-        // 如果流还没结束但队列空了，等待下一帧
-        animationFrameRef.current = requestAnimationFrame(renderLoop)
-        return
-      }
+  const renderLoopRef = useRef<(currentTime: number) => void>(() => {})
 
-      // 2. 时间控制，确保最小延迟
-      if (currentTime - lastUpdateTimeRef.current < minDelay) {
-        animationFrameRef.current = requestAnimationFrame(renderLoop)
-        return
-      }
-      lastUpdateTimeRef.current = currentTime
+  const schedule = useCallback(() => {
+    if (animationFrameRef.current === null) {
+      animationFrameRef.current = requestAnimationFrame((t) => renderLoopRef.current(t))
+    }
+  }, [])
 
-      // 3. 动态计算本次渲染的字符数
-      let charsToRenderCount = Math.max(1, Math.floor(chunkQueueRef.current.length / 5))
-
-      // 如果流已结束，一次性渲染所有剩余字符
+  renderLoopRef.current = (currentTime: number) => {
+    animationFrameRef.current = null
+    if (chunkQueueRef.current.length === 0) {
+      // 队列空：不空转；流结束且内容已全部渲染时保证最终状态
       if (streamDone) {
-        charsToRenderCount = chunkQueueRef.current.length
+        onUpdate(displayedTextRef.current)
       }
-
-      const charsToRender = chunkQueueRef.current.slice(0, charsToRenderCount)
-      displayedTextRef.current += charsToRender.join('')
-
-      // 4. 立即更新UI
-      onUpdate(displayedTextRef.current)
-
-      // 5. 更新队列
-      chunkQueueRef.current = chunkQueueRef.current.slice(charsToRenderCount)
-
-      // 6. 如果还有内容需要渲染，继续下一帧
-      if (chunkQueueRef.current.length > 0) {
-        animationFrameRef.current = requestAnimationFrame(renderLoop)
-      }
-    },
-    [streamDone, onUpdate, minDelay]
-  )
+      return
+    }
+    // 节流：距上次渲染不足 minDelay 则等下一帧
+    if (currentTime - lastUpdateTimeRef.current < minDelay) {
+      schedule()
+      return
+    }
+    lastUpdateTimeRef.current = currentTime
+    // 排空整个队列：合并窗口内到达的所有内容，一次渲染
+    const charsToRender = chunkQueueRef.current
+    chunkQueueRef.current = []
+    displayedTextRef.current += charsToRender.join('')
+    onUpdate(displayedTextRef.current)
+    if (chunkQueueRef.current.length > 0) {
+      schedule()
+    }
+  }
 
   useEffect(() => {
-    // 启动渲染循环
-    animationFrameRef.current = requestAnimationFrame(renderLoop)
+    // 流结束时若仍有排队内容（如最后一批尚未到渲染窗口），立即排空
+    if (streamDone && chunkQueueRef.current.length > 0) {
+      schedule()
+    }
+  }, [streamDone])
 
-    // 组件卸载时清理
+  useEffect(() => {
     return () => {
-      if (animationFrameRef.current) {
+      if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [renderLoop])
+  }, [])
 
   return { addChunk, reset }
 }

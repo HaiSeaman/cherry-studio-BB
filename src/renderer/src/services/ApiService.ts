@@ -96,6 +96,25 @@ export async function fetchAllActiveServerTools(): Promise<MCPTool[]> {
   }
 }
 
+/** IPC 调用超时包装：主进程 MCP 客户端挂起时 listTools 永不返回，会让生成任务永久卡死 */
+const MCP_TOOLS_TIMEOUT_MS = 15_000
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+}
+
 export async function fetchMcpTools(assistant: Assistant) {
   let mcpTools: MCPTool[] = []
   const enabledMCPs = getMcpServersForAssistant(assistant)
@@ -104,7 +123,11 @@ export async function fetchMcpTools(assistant: Assistant) {
     try {
       const toolPromises = enabledMCPs.map(async (mcpServer: MCPServer) => {
         try {
-          const tools = await window.api.mcp.listTools(mcpServer)
+          const tools = await withTimeout(
+            window.api.mcp.listTools(mcpServer),
+            MCP_TOOLS_TIMEOUT_MS,
+            `MCP 工具列表获取超时（${MCP_TOOLS_TIMEOUT_MS / 1000}s）：${mcpServer.name}`
+          )
           return tools.filter((tool: any) => !mcpServer.disabledTools?.includes(tool.name))
         } catch (error) {
           logger.error(`Error fetching tools from MCP server ${mcpServer.name}:`, error as Error)

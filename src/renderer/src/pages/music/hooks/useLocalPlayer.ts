@@ -226,6 +226,8 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     (deletedId: number, prevIndex: number) => {
       audioEngine.stop()
       setIsPlaying(false)
+      // 随机历史清掉被删曲，避免「上一首」回溯到已删除曲目
+      shuffleHistoryRef.current = shuffleHistoryRef.current.filter((id) => id !== deletedId)
       const list = tracksRef.current.filter((t) => t.id !== deletedId)
       if (list.length === 0) {
         stopPlayback()
@@ -256,20 +258,23 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     [playIndex, stopPlayback]
   )
 
+  // 重新挂载（切回音乐页）时恢复播放状态：tracks 由 useLiveQuery 异步加载，首帧为空数组，
+  // 必须等曲库就绪后才能按 trackId 匹配——本 effect 依赖 tracks 重跑，避免恢复被竞态吞掉
+  // （修复前：恢复只在挂载瞬间执行一次，tracks 未就绪时被跳过，播放舱空白但声音继续）
   useEffect(() => {
-    // 页面卸载后引擎继续播放（后台播放特性），重新挂载时恢复 UI 状态
+    if (currentId != null || tracks.length === 0) return
     const snap = audioEngine.snapshot()
-    if (snap.owner === 'local' && !snap.paused && snap.url) {
-      const meta = snap.meta as { trackId?: number } | null
-      const track = meta?.trackId ? tracksRef.current.find((t) => t.id === meta.trackId) : null
-      if (track) {
-        setCurrentId(track.id ?? null)
-        setIsPlaying(true)
-        setDuration(audioEngine.duration)
-        setCurrentTime(audioEngine.currentTime)
-      }
-    }
+    if (snap.owner !== 'local' || !snap.url) return
+    const meta = snap.meta as { trackId?: number } | null
+    const track = meta?.trackId != null ? tracks.find((t) => t.id === meta.trackId) : null
+    if (!track) return
+    setCurrentId(track.id ?? null)
+    setIsPlaying(!snap.paused)
+    setDuration(audioEngine.duration)
+    setCurrentTime(audioEngine.currentTime)
+  }, [tracks, currentId])
 
+  useEffect(() => {
     // 后台自动切歌：注册到模块级单例，卸载（切走 TAB）后继续生效，重新挂载时刷新
     registerAutoAdvance({ onEnded, onError })
 

@@ -44,9 +44,16 @@ const Sidebar: FC = () => {
 
   const showPinnedApps = pinned.length > 0 && sidebarIcons.visible.includes('minapp')
 
+  // 生成中禁止切换（modelGenerating 拒绝）：静默拦截，弹窗保持打开，
+  // 避免"弹窗关了却没跳转"的困惑，也不产生未处理的 Promise 拒绝
   const to = async (path: string) => {
-    await modelGenerating()
-    navigate(path)
+    try {
+      await modelGenerating()
+      hideMinappPopup()
+      navigate(path)
+    } catch {
+      // 生成进行中：不导航
+    }
   }
 
   const isFullscreen = useFullscreen()
@@ -59,11 +66,7 @@ const Sidebar: FC = () => {
         {!isMac && <SidebarWindowControls />}
         <Divider />
         <Tooltip title={'设置'} mouseEnterDelay={0.8} placement="right">
-          <StyledLink
-            onClick={async () => {
-              hideMinappPopup()
-              await to('/settings/provider')
-            }}>
+          <StyledLink onClick={() => void to('/settings/provider')}>
             <Icon className={pathname.startsWith('/settings') && !minappShow ? 'active' : ''}>
               <Settings size={20} className="icon" />
             </Icon>
@@ -170,6 +173,17 @@ const MainMenus: FC = () => {
   const { minappShow } = useRuntime()
   const navigate = useNavigate()
 
+  // 生成中禁止切换（modelGenerating 拒绝）：静默拦截，弹窗保持打开，不产生未处理拒绝
+  const to = async (path: string) => {
+    try {
+      await modelGenerating()
+      hideMinappPopup()
+      navigate(path)
+    } catch {
+      // 生成进行中：不导航
+    }
+  }
+
   const isRoute = (path: string): string => (pathname === path && !minappShow ? 'active' : '')
   const isRoutes = (path: string): string => (pathname.startsWith(path) && path !== '/' && !minappShow ? 'active' : '')
 
@@ -189,27 +203,24 @@ const MainMenus: FC = () => {
     notes: '/notes'
   }
 
-  // 右侧导航栏下段（从上往下）：小程序-音乐-图片生成-便签闹钟-聊天（头像在最底部）
-  const renderOrder: SidebarIcon[] = ['minapp', 'music', 'paint', 'notes', 'assistants']
-  return renderOrder
-    .filter((icon) => sidebarIcons.visible.includes(icon))
-    .map((icon) => {
-      const path = pathMap[icon]
-      const isActive = path === '/' ? isRoute(path) : isRoutes(path)
+  // 右侧导航栏下段（从上往下）：顺序以「显示设置→侧边栏设置」的拖拽排序为准，
+  // 聊天（assistants）固定在底部（迁移 216 已把持久化顺序归一化为设计顺序）
+  const renderOrder: SidebarIcon[] = [
+    ...sidebarIcons.visible.filter((icon) => icon !== 'assistants' && icon in pathMap),
+    'assistants'
+  ]
+  return renderOrder.map((icon) => {
+    const path = pathMap[icon]
+    const isActive = path === '/' ? isRoute(path) : isRoutes(path)
 
-      return (
-        <Tooltip key={icon} title={getSidebarIconLabel(icon)} mouseEnterDelay={0.8} placement="right">
-          <StyledLink
-            onClick={async () => {
-              hideMinappPopup()
-              await modelGenerating()
-              navigate(path)
-            }}>
-            <Icon className={isActive}>{iconMap[icon]}</Icon>
-          </StyledLink>
-        </Tooltip>
-      )
-    })
+    return (
+      <Tooltip key={icon} title={getSidebarIconLabel(icon)} mouseEnterDelay={0.8} placement="right">
+        <StyledLink onClick={() => void to(path)}>
+          <Icon className={isActive}>{iconMap[icon]}</Icon>
+        </StyledLink>
+      </Tooltip>
+    )
+  })
 }
 
 const Container = styled.div<{ $isFullscreen: boolean }>`

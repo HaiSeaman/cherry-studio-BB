@@ -168,3 +168,48 @@ describe('store migrations', () => {
     })
   })
 })
+
+describe('migration 216: sidebar normalization + theme backfill', () => {
+  it('cleans dead icons, dedupes visible/disabled, normalizes to design order', async () => {
+    const state = {
+      llm: { providers: [] },
+      settings: {
+        sidebarIcons: {
+          visible: ['knowledge', 'assistants', 'topics', 'music', 'notes', 'notes'],
+          disabled: ['store', 'music']
+        },
+        theme: 'light'
+      },
+      _persist: { version: 215, rehydrated: false }
+    }
+
+    const migrated: any = await migrate(state as any, 216)
+
+    expect(migrated.settings.sidebarIcons.visible).toEqual(['assistants', 'music', 'notes'])
+    expect(migrated.settings.sidebarIcons.disabled).toEqual([])
+  })
+
+  it('backfills themeId: dark → slate (老用户深色主题不被切成浅色)', async () => {
+    const state = {
+      llm: { providers: [] },
+      settings: { theme: 'dark' },
+      _persist: { version: 215, rehydrated: false }
+    }
+
+    const migrated: any = await migrate(state as any, 216)
+
+    expect(migrated.settings.themeId).toBe('slate')
+  })
+
+  it('keeps existing themeId untouched (1.1+ 用户已有 themeId)', async () => {
+    const state = {
+      llm: { providers: [] },
+      settings: { theme: 'light', themeId: 'sky' },
+      _persist: { version: 215, rehydrated: false }
+    }
+
+    const migrated: any = await migrate(state as any, 216)
+
+    expect(migrated.settings.themeId).toBe('sky')
+  })
+})

@@ -577,12 +577,13 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   // window
-  // 闹钟响铃时把主窗口唤起到前台
+  // 闹钟响铃时把主窗口唤起到前台（用 windowService 实时取窗口，避免闭包持有已销毁的旧窗口引用）
   ipcMain.handle(IpcChannel.Windows_Focus, () => {
-    checkMainWindow()
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    else if (!mainWindow.isVisible()) mainWindow.show()
-    mainWindow.focus()
+    const mw = windowService.getMainWindow()
+    if (!mw || mw.isDestroyed()) return
+    if (mw.isMinimized()) mw.restore()
+    else if (!mw.isVisible()) mw.show()
+    mw.focus()
   })
 
   ipcMain.handle(IpcChannel.Windows_SetMinimumSize, (_, width: number, height: number) => {

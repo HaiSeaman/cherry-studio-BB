@@ -58,9 +58,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const { containerRef: scrollContainerRef, handleScroll: handleScrollPosition } = useScrollPosition(
     `topic-${topic.id}`
   )
-  const [displayMessages, setDisplayMessages] = useState<Message[]>([])
-  const [messageCursor, setMessageCursor] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
 
@@ -88,19 +85,27 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     }
   }, [])
 
-  // 分页状态只在消息 id 集合变化时重置：流式期间块转换/状态更新会改变 messages 引用，
-  // 若按引用重置，用户向上翻页加载的历史会被反复清掉、滚动位置跳动
+  // 分页状态只在消息 id 集合或显示条数变化时重置：流式期间块/状态更新会改变 messages 引用，
+  // 若按引用重置，用户向上翻页加载的历史会被反复清掉、滚动位置跳动。
+  // 注意：只重置「已加载组数」，展示内容始终从最新 messages 派生——
+  // 否则流式回复会永远停留在创建时的空快照（blocks: []），生成内容一个字都不显示。
   const messagesKey = useMemo(() => messages.map((m) => m.id).join(','), [messages])
-  const messagesKeyRef = useRef<string>('')
+  const lastResetRef = useRef<{ key: string; displayCount: number }>({ key: '', displayCount: -1 })
+  const [loadedGroups, setLoadedGroups] = useState(displayCount)
 
   useEffect(() => {
-    if (messagesKey === messagesKeyRef.current) return
-    messagesKeyRef.current = messagesKey
-    const page = paginateMessages(messages, 0, displayCount)
-    setDisplayMessages(page.messages)
-    setMessageCursor(page.nextCursor)
-    setHasMore(page.hasMore)
+    const last = lastResetRef.current
+    if (messagesKey === last.key && displayCount === last.displayCount) return
+    lastResetRef.current = { key: messagesKey, displayCount }
+    setLoadedGroups(displayCount)
   }, [messagesKey, messages, displayCount])
+
+  // 展示内容派生自最新 messages：流式更新（内容增长/状态变化）立即可见，
+  // 消息对象引用稳定（未更新的消息引用不变，React.memo 可跳过）
+  const { messages: displayMessages, hasMore } = useMemo(() => {
+    const page = paginateMessages(messages, 0, loadedGroups)
+    return { messages: page.messages, hasMore: page.hasMore }
+  }, [messages, loadedGroups])
 
   // NOTE: 如果设置为平滑滚动会导致滚动条无法跟随生成的新消息保持在底部位置
   const scrollToBottom = useCallback(() => {
@@ -121,7 +126,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       }
 
       await clearTopicMessages()
-      setDisplayMessages([])
     },
     [clearTopicMessages, topic.id]
   )
@@ -265,16 +269,13 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     setTimeoutTimer(
       'loadMoreMessages',
       () => {
-        const page = paginateMessages(messages, messageCursor, LOAD_MORE_COUNT)
-
-        setDisplayMessages((prev) => [...prev, ...page.messages])
-        setMessageCursor(page.nextCursor)
-        setHasMore(page.hasMore)
+        // 只增加已加载组数：展示内容由上面的派生 memo 自动补齐
+        setLoadedGroups((prev) => prev + LOAD_MORE_COUNT)
         setIsLoadingMore(false)
       },
       300
     )
-  }, [hasMore, isLoadingMore, messageCursor, messages, setTimeoutTimer])
+  }, [hasMore, isLoadingMore, setTimeoutTimer])
 
   useAutoLoadMore({
     containerRef: scrollContainerRef,

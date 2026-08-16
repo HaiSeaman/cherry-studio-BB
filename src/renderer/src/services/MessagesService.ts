@@ -258,7 +258,13 @@ export function checkRateLimit(assistant: Assistant): boolean {
     return false
   }
 
-  const topicId = assistant.topics[0].id
+  // 防御：topics 可能为空数组（useAssistant 对缺失/非数组归一化为 []），
+  // 直接取 [0].id 会抛 TypeError 且调用点在 try 外 → 每次发送静默失败
+  const topicId = assistant.topics?.[0]?.id
+  if (!topicId) {
+    return false
+  }
+
   const messages = selectMessagesForTopic(store.getState(), topicId)
 
   if (!messages || messages.length <= 1) {

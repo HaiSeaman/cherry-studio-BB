@@ -2,7 +2,7 @@ import { db } from '@renderer/databases'
 import { useAppSelector } from '@renderer/store'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Bell, CalendarDays, ChevronLeft, ChevronRight, Flame, Plus } from 'lucide-react'
-import { type FC, useMemo, useState } from 'react'
+import { type FC, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 import { ALARM_SOUND_OPTIONS } from '../services/alarmSounds'
@@ -21,7 +21,14 @@ const CalendarPanel: FC = () => {
   const dayNotes = useLiveQuery(async () => (await db.hub_day_notes.toArray()) ?? [], [], [])
   const activity = useLiveQuery(async () => (await db.hub_activity.toArray()) ?? [], [], [])
 
-  const [today] = useState(() => new Date())
+  const [today, setToday] = useState(() => new Date())
+  // 应用跨零点常开：每分钟检查一次，日期变了才刷新（否则"今天"高亮/热力图范围停在昨天）
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setToday((prev) => (toISODate(prev) === toISODate(new Date()) ? prev : new Date()))
+    }, 60_000)
+    return () => clearInterval(timer)
+  }, [])
   const [viewYear, setViewYear] = useState(() => today.getFullYear())
   const [viewMonth, setViewMonth] = useState(() => today.getMonth())
   const [selected, setSelected] = useState<string>(() => toISODate(today))
@@ -84,6 +91,8 @@ const CalendarPanel: FC = () => {
   }
 
   const addDayAlarm = async () => {
+    // 清空时间字段会得到空串：直接忽略，避免误建 00:00:00 的午夜闹钟
+    if (!alarmTime) return
     const [h, m] = alarmTime.split(':').map((x) => parseInt(x, 10) || 0)
     await db.hub_alarms.add({
       h: Math.min(Math.max(h, 0), 23),

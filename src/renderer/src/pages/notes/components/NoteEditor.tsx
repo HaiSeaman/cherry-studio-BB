@@ -43,15 +43,18 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
 
   // 切换便签：载入内容（父组件保证切换前已落盘上一条）
   useEffect(() => {
+    const noteId = note?.id ?? null
     setText(note?.content ?? '')
     textRef.current = note?.content ?? ''
-    noteIdRef.current = note?.id ?? null
-    if (note?.id != null) {
+    noteIdRef.current = noteId
+    if (noteId != null) {
       void db.hub_note_history
         .where('noteId')
-        .equals(note.id)
+        .equals(noteId)
         .toArray()
         .then((list) => {
+          // 查询期间又切走了便签 → 丢弃过期结果，避免覆盖新便签的快照状态
+          if (noteIdRef.current !== noteId) return
           const latest = list.filter((s) => s.locked !== 1).sort((a, b) => b.ts - a.ts)[0]
           lastSnapshotRef.current = latest ? { ts: latest.ts, content: latest.content } : { ts: 0, content: '' }
         })
@@ -96,6 +99,9 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
   const handleInput = (value: string) => {
     setText(value)
     textRef.current = value
+    // 同步通知父组件最新内容：切换便签时 switchNote 用其兜底落盘
+    // （仅防抖保存完成后才更新的话，500ms 窗口内切走会丢最后一次输入）
+    if (noteIdRef.current != null) onContentChange(noteIdRef.current, value)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     // 捕获调度时的便签 id：防抖期间切换便签，避免旧内容写入新便签
     const scheduledId = noteIdRef.current

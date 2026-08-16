@@ -39,6 +39,14 @@ const PaintContent: FC<Props> = ({ topicId }) => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 卸载时清理复制提示词的定时器
+  useEffect(() => {
+    return () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current)
+    }
+  }, [])
 
   const data = useLiveQuery(async () => {
     if (!topicId) return null
@@ -60,7 +68,12 @@ const PaintContent: FC<Props> = ({ topicId }) => {
     try {
       await navigator.clipboard.writeText(text)
       setCopiedId(messageId)
-      setTimeout(() => setCopiedId(null), 1500)
+      // 先清掉上一个定时器：快速连续复制时对勾不被提前清掉
+      if (copiedTimer.current) clearTimeout(copiedTimer.current)
+      copiedTimer.current = setTimeout(() => {
+        copiedTimer.current = null
+        setCopiedId(null)
+      }, 1500)
     } catch {
       window.toast.error('复制失败')
     }

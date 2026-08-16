@@ -83,4 +83,16 @@ describe('nextRingInfo', () => {
     expect(nextRingInfo(alarm({ date: '2026-08-10', h: 9 }), at('2026-08-16', 9, 0, 0))).toBeNull()
     expect(nextRingInfo(alarm({ date: '2026-08-16', h: 12 }), at('2026-08-16', 11, 0, 0))).toBe(3600)
   })
+
+  it('日历闹钟当天已过到点 → null（单日闹钟明天不会响，不显示误导性"明天"倒计时）', () => {
+    expect(nextRingInfo(alarm({ date: '2026-08-16', h: 9, m: 0 }), at('2026-08-16', 9, 0, 30))).toBeNull()
+    expect(nextRingInfo(alarm({ date: '2026-08-16', h: 9, m: 0 }), at('2026-08-16', 10, 0, 0))).toBeNull()
+  })
+
+  it('同一 tick 内窗口同时命中多个到期闹钟（调度器排队逐个响的依据）', () => {
+    const a1 = alarm({ id: 1, h: 7, m: 30, s: 0 })
+    const a2 = alarm({ id: 2, h: 7, m: 31, s: 0 })
+    const r = computeDueAlarms([a1, a2], at('2026-08-16', 7, 31, 30), '2026-08-15')
+    expect(r.toFire.map((x) => x.id).sort()).toEqual([1, 2])
+  })
 })

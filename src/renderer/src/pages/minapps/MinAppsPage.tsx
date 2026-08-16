@@ -98,7 +98,8 @@ const MainContainer = styled.div`
   display: flex;
   flex: 1;
   flex-direction: row;
-  height: calc(100vh - var(--navbar-height));
+  /* 顶部导航已移除：页面顶满窗口（否则底部留 42px 空隙） */
+  height: 100vh;
   width: 100%;
 `
 
@@ -109,7 +110,7 @@ const RightContainer = styled(Scrollbar)`
   flex-direction: column;
   height: 100%;
   align-items: center;
-  height: calc(100vh - var(--navbar-height));
+  height: 100vh;
 `
 
 const AppsContainerWrapper = styled(Scrollbar)`

@@ -1616,12 +1616,18 @@ class FileStorage {
       if (response.body) {
         const writeStream = fs.createWriteStream(destPath)
         let total = 0
-        // 流错误必须有监听，否则 destroy(err) 触发 unhandled 'error' 事件使主进程崩溃
+        // 流错误必须有监听，否则 destroy(err) 触发 unhandled 'error' 事件使主进程崩溃。
+        // 注意：destroy(err) 的 'error' 事件在下一个 tick 才发出，必须等流真正 close 后才能移除监听，
+        // 否则 finally 里同步 removeListener 会让事件落到无监听状态（1.2.1 修复因此失效）。
+        let drainWaiter: { resolve: () => void; reject: (err: Error) => void } | null = null
         const onStreamError = (err: Error) => {
           logger.error('downloadFile stream error:', err)
+          drainWaiter?.reject(err)
+          drainWaiter = null
           fs.promises.unlink(destPath).catch(() => {})
         }
         writeStream.on('error', onStreamError)
+        writeStream.once('close', () => writeStream.removeListener('error', onStreamError))
         try {
           for await (const chunk of response.body) {
             total += chunk.byteLength
@@ -1630,12 +1636,17 @@ class FileStorage {
               throw new Error(`Download exceeds the maximum allowed size (${MAX_DOWNLOAD_BYTES / MB} MB)`)
             }
             if (!writeStream.write(Buffer.from(chunk))) {
-              await new Promise<void>((resolve) => writeStream.once('drain', () => resolve()))
+              await new Promise<void>((resolve, reject) => {
+                drainWaiter = { resolve, reject }
+                writeStream.once('drain', () => {
+                  drainWaiter = null
+                  resolve()
+                })
+              })
             }
           }
         } finally {
           writeStream.end()
-          writeStream.removeListener('error', onStreamError)
         }
       }
 

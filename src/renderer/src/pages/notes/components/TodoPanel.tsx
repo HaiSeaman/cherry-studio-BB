@@ -140,7 +140,8 @@ const TodoPanel: FC = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') void addTodo()
+            // 中文输入法组词确认的 Enter 不新增待办
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) void addTodo()
           }}
         />
         <AddBtn onClick={() => void addTodo()} disabled={!input.trim()}>

@@ -138,7 +138,8 @@ const ContentContainer = styled.div`
   display: flex;
   flex: 1;
   flex-direction: row;
-  height: calc(100vh - var(--navbar-height));
+  /* 顶部导航已移除：页面顶满窗口，不再减去不存在的 --navbar-height（否则底部留 42px 空隙） */
+  height: 100vh;
   padding: 1px 0;
 `
 

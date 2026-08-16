@@ -15,7 +15,7 @@ import { classNames, runAsyncFunction } from '@renderer/utils'
 import { Button, Divider, Empty } from 'antd'
 import { Forward } from 'lucide-react'
 import type { FC } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 
 import { default as MessageItem } from '../../home/Messages/Message'
@@ -31,13 +31,18 @@ const TopicMessages: FC<Props> = ({ topic: _topic, ...props }) => {
   const { setTimeoutTimer } = useTimer()
 
   const [topic, setTopic] = useState<Topic | undefined>(_topic)
+  // 查询序号守卫：快速切换话题时丢弃过期结果，避免旧话题内容覆盖新话题
+  const querySeq = useRef(0)
 
   useEffect(() => {
-    if (!_topic) return
-
+    const targetId = _topic?.id
+    if (!targetId) return
+    const seq = ++querySeq.current
+    // 立即让位：避免切换后仍渲染上一个话题的内容（查询未完成时先空白）
+    setTopic(undefined)
     void runAsyncFunction(async () => {
-      const topic = await getTopicById(_topic.id)
-      setTopic(topic)
+      const loaded = await getTopicById(targetId)
+      if (querySeq.current === seq) setTopic(loaded)
     })
   }, [_topic])
 

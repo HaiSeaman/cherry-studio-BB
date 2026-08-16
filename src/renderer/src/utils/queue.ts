@@ -8,10 +8,14 @@ const requestQueues: { [topicId: string]: PQueue } = {}
  * @param topicId The ID of the topic
  * @param options
  * @returns A PQueue instance for the topic
+ *
+ * 同一话题的生成任务串行执行（concurrency=1）：多条消息连发/多模型 @ 时
+ * 并发流会互相交错写消息与块状态（上下文缺消息、顺序错乱、节流 RAF 抢占），
+ * 也是流式卡顿的来源之一。waitForTopicQueue/finishTopicLoading 的语义本就假设串行。
  */
 export const getTopicQueue = (topicId: string, options = {}): PQueue => {
   if (!requestQueues[topicId]) {
-    requestQueues[topicId] = new PQueue(options)
+    requestQueues[topicId] = new PQueue({ concurrency: 1, ...options })
   }
   return requestQueues[topicId]
 }

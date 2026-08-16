@@ -9,6 +9,8 @@ import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/
 import store from '@renderer/store'
 import { updateTopicUpdatedAt } from '@renderer/store/assistants'
 import { type Assistant, type FileMetadata, type Model, type Topic } from '@renderer/types'
+import type { Chunk } from '@renderer/types/chunk'
+import { ChunkType } from '@renderer/types/chunk'
 import type { FileMessageBlock, ImageMessageBlock, Message, MessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { uuid } from '@renderer/utils'
@@ -28,6 +30,13 @@ import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } fr
 import { newMessagesActions, selectMessagesForTopic } from '../newMessage'
 
 const logger = loggerService.withContext('MessageThunk')
+
+/**
+ * 首 token 看门狗时长：预流阶段（MCP 工具拉取/IPC/文件读取/建连）没有超时覆盖，
+ * 一旦挂起会让队列任务永不结束 → loading 永久卡死 → 发送按钮永久禁用（只能重启应用）。
+ * 90 秒内未产出任何流式块即中止请求，走正常错误路径复位状态。
+ */
+const FIRST_TOKEN_TIMEOUT_MS = 90_000
 
 /**
  * Merge two message lists by id (incoming wins). Used before writing a topic's
@@ -328,6 +337,8 @@ const fetchAndProcessAssistantResponseImpl = async (
   let callbacks: StreamProcessorCallbacks = {}
   // Hoisted：finally 中按函数精确移除 abort 注册（多模型流共用 askId 时不能 delete 整条目）
   let abortFn: (() => void) | null = null
+  // Hoisted：首 token 看门狗定时器，finally 中兜底清理
+  let firstTokenWatchdog: ReturnType<typeof setTimeout> | null = null
   try {
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
@@ -388,6 +399,24 @@ const fetchAndProcessAssistantResponseImpl = async (
     abortFn = () => abortController.abort()
     addAbortController(userMessageId!, abortFn)
 
+    // 首 token 看门狗：预流阶段（MCP 工具拉取/IPC/文件读取/建连）无超时覆盖，
+    // 一旦挂起队列任务永不结束 → loading 永久卡死。首个真实流式块到达即解除。
+    let firstChunkReceived = false
+    firstTokenWatchdog = setTimeout(() => {
+      if (!firstChunkReceived) {
+        logger.warn('First token watchdog fired: aborting request with no stream output', { topicId, userMessageId })
+        abortController.abort(new DOMException('模型在 90 秒内未开始响应，已自动停止', 'TimeoutError'))
+      }
+    }, FIRST_TOKEN_TIMEOUT_MS)
+    // 包装 chunk 入口：LLM_RESPONSE_CREATED 是本地同步发出的占位信号，不算流式产出
+    const guardedChunkProcessor: (chunk: Chunk) => void = (chunk) => {
+      if (!firstChunkReceived && chunk.type !== ChunkType.LLM_RESPONSE_CREATED) {
+        firstChunkReceived = true
+        if (firstTokenWatchdog != null) clearTimeout(firstTokenWatchdog)
+      }
+      streamProcessorCallbacks(chunk)
+    }
+
     await transformMessagesAndFetch(
       {
         messages: messagesForContext,
@@ -401,7 +430,7 @@ const fetchAndProcessAssistantResponseImpl = async (
           headers: defaultAppHeaders()
         }
       },
-      streamProcessorCallbacks
+      guardedChunkProcessor
     )
   } catch (error: any) {
     logger.error('Error in fetchAndProcessAssistantResponseImpl:', error)
@@ -417,6 +446,7 @@ const fetchAndProcessAssistantResponseImpl = async (
   } finally {
     // 只移除本次注册的 abort 函数：多模型 @提及 时多个流共用同一 askId，
     // delete 整个条目会把其他仍在流式中的流的停止能力一起删掉
+    if (firstTokenWatchdog != null) clearTimeout(firstTokenWatchdog)
     if (userMessageId && abortFn) {
       removeAbortController(userMessageId, abortFn)
     }
@@ -556,6 +586,14 @@ export const clearTopicMessagesThunk =
   (topicId: string) => async (dispatch: AppDispatch, getState: () => RootState) => {
     try {
       const state = getState()
+      // 先中止该话题所有在途流：abort 注册按 askId 存，否则清空后流会立即重建消息
+      const askIds = [
+        ...new Set((selectMessagesForTopic(state, topicId) ?? []).map((m) => m.askId).filter(Boolean) as string[])
+      ]
+      for (const askId of askIds) {
+        abortCompletion(askId)
+      }
+
       const messageIdsToClear = state.messages.messageIdsByTopic[topicId] || []
       const blockIdsToDeleteSet = new Set<string>()
 

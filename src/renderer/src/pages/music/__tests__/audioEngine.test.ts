@@ -48,6 +48,15 @@ describe('AudioEngine 归属切换与监听自检', () => {
     expect(snap.meta).toEqual({ trackId: 42 })
   })
 
+  it('重复加载同一地址时复位播放位置（点击当前曲目 = 从头播放）', () => {
+    const engine = new AudioEngine()
+    engine.load('local', 'file:///D:/Music/a.mp3')
+    const el = (engine as any).el
+    el.currentTime = 42
+    engine.load('local', 'file:///D:/Music/a.mp3')
+    expect(el.currentTime).toBe(0)
+  })
+
   it('音量映射 0-100 → 0-1', () => {
     const engine = new AudioEngine()
     engine.setVolume(80)

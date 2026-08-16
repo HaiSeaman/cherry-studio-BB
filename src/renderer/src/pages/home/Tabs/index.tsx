@@ -125,11 +125,12 @@ const Container = styled.div`
   flex-direction: column;
   width: var(--assistants-width);
   transition: width 0.3s;
-  height: calc(100vh - var(--navbar-height));
+  /* 顶部导航已移除：与聊天页同高顶满窗口（否则底部留 42px 空隙） */
+  height: 100vh;
   position: relative;
 
   &.right {
-    height: calc(100vh - var(--navbar-height));
+    height: 100vh;
   }
 
   [navbar-position='left'] & {

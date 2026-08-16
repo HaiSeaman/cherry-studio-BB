@@ -68,25 +68,19 @@ const MinAppPage: FC = () => {
       return
     }
 
-    // 侧边栏模式：重定向到小程序列表页并弹出抽屉。
-    // hasRedirected 仅阻止同一挂载内重复 navigate；每次路由进入都是新挂载，
-    // 重定向后仍确保 popup 打开，避免直达 URL 时页面空白。
-    let cleanup: (() => void) | undefined
+    // 侧边栏模式：弹出抽屉并重定向到小程序列表页。
+    // hasRedirected 仅阻止同一挂载内重复 navigate；每次路由进入都是新挂载。
+    // 必须先开弹窗再重定向：navigate 会卸载本组件，挂起的定时器被 cleanup 清除后弹窗永远打不开。
     if (!initialIsTopNavbar.current) {
+      openMinappKeepAlive(app)
       if (!hasRedirected.current) {
         hasRedirected.current = true
         navigate('/apps')
       }
-      // Open popup after navigation（openMinappKeepAlive 对已打开的小程序幂等）
-      const openTimer = setTimeout(() => {
-        openMinappKeepAlive(app)
-      }, 100)
-      cleanup = () => clearTimeout(openTimer)
     } else {
       // For top navbar mode：无论是否已在缓存，都调用以确保 currentMinappId 同步到路由切换的新 appId
       openMinappKeepAlive(app)
     }
-    return cleanup
   }, [app, navigate, openMinappKeepAlive, initialIsTopNavbar])
 
   // -------------- 新的 Tab Shell 逻辑 --------------

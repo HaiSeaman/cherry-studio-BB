@@ -150,7 +150,8 @@ const Chat: FC<Props> = (props) => {
     firstUpdateOrNoFirstUpdateHandler()
   }
 
-  const mainHeight = isTopNavbar ? 'calc(100vh - var(--navbar-height) - 6px)' : 'calc(100vh - var(--navbar-height))'
+  // 顶栏已随顶部导航移除：左侧导航模式下页面顶满窗口（ChatNavbar 是页内头部，其高度在内部扣除）
+  const mainHeight = isTopNavbar ? 'calc(100vh - var(--navbar-height) - 6px)' : '100vh'
 
   return (
     <Container id="chat" className={classNames([messageStyle, { 'multi-select-mode': isMultiSelectMode }])}>

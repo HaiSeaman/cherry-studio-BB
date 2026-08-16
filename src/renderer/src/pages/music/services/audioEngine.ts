@@ -52,6 +52,13 @@ export class AudioEngine {
     if (this.el.src !== url) {
       this.el.src = url
       this.resetBufferSample()
+    } else if (this.el.currentTime !== 0) {
+      // 重复加载同一地址（点击当前曲目重播 / 单曲池自动循环）：复位到开头，否则会原地续播
+      try {
+        this.el.currentTime = 0
+      } catch {
+        // 元数据未就绪时忽略
+      }
     }
   }
 

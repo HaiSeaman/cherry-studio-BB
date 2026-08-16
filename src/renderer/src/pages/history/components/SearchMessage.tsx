@@ -10,7 +10,7 @@ import { runAsyncFunction } from '@renderer/utils'
 import { Button } from 'antd'
 import { Forward } from 'lucide-react'
 import type { FC } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 
 interface Props extends React.HTMLAttributes<HTMLDivElement> {
@@ -20,13 +20,19 @@ interface Props extends React.HTMLAttributes<HTMLDivElement> {
 const SearchMessage: FC<Props> = ({ message, ...props }) => {
   const navigate = NavigationService.navigate!
   const [topic, setTopic] = useState<Topic | null>(null)
+  // 查询序号守卫：快速点击不同搜索结果时丢弃过期响应，避免话题张冠李戴
+  const querySeq = useRef(0)
 
   useEffect(() => {
+    const topicId = message?.topicId
+    if (!topicId) {
+      setTopic(null)
+      return
+    }
+    const seq = ++querySeq.current
     void runAsyncFunction(async () => {
-      if (message?.topicId) {
-        const topic = await getTopicById(message.topicId)
-        setTopic(topic)
-      }
+      const topic = await getTopicById(topicId)
+      if (querySeq.current === seq) setTopic(topic)
     })
   }, [message])
 

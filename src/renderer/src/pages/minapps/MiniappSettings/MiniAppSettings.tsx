@@ -69,7 +69,10 @@ const MiniAppSettings: FC = () => {
     const temp = visibleMiniApps
     setVisibleMiniApps(disabledMiniApps)
     setDisabledMiniApps(temp)
-  }, [disabledMiniApps, visibleMiniApps])
+    // 同时落盘 store：否则只改本地 state，关闭弹窗/地区切换后交换结果丢失
+    updateMinapps(disabledMiniApps)
+    updateDisabledMinapps(temp)
+  }, [disabledMiniApps, visibleMiniApps, updateDisabledMinapps, updateMinapps])
 
   // 恢复默认缓存数量
   const handleResetCacheLimit = useCallback(() => {

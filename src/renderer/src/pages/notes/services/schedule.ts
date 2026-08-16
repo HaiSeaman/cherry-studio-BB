@@ -56,8 +56,8 @@ export function nextRingInfo(a: HubAlarm, now: Date): number | null {
 
   const alarmSec = a.h * 3600 + a.m * 60 + (a.s || 0)
   const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
-  if (a.date && a.date > todayKey) {
-    // 未来日期：按当日时刻显示差值（当天尚未到点才算）
+  if (a.date) {
+    // 日历闹钟单日触发：今天已过到点 → 永不响（不按"明天"倒计时误导）
     return alarmSec > nowSec ? alarmSec - nowSec : null
   }
   return alarmSec > nowSec ? alarmSec - nowSec : 24 * 3600 - nowSec + alarmSec // 无 date：今天已过按明天

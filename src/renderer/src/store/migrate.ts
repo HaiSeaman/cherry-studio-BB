@@ -35,10 +35,11 @@ import type {
   Model,
   Provider,
   ProviderApiOptions,
+  SidebarIcon,
   TranslateLanguageCode,
   WebSearchProvider
 } from '@renderer/types'
-import { isBuiltinMCPServer, isSystemProvider, SystemProviderIds } from '@renderer/types'
+import { isBuiltinMCPServer, isSystemProvider, SystemProviderIds, ThemeMode } from '@renderer/types'
 import { getDefaultGroupName, getLeadingEmoji, runAsyncFunction, uuid } from '@renderer/utils'
 import {
   isSupportArrayContentProvider,
@@ -3212,6 +3213,44 @@ const migrateConfig = {
       return state
     } catch (error) {
       logger.error('migrate 215 error', error as Error)
+      return state
+    }
+  },
+  '216': (state: RootState) => {
+    try {
+      // 侧边栏归一化：清理上游残留的死图标（topics/memory/knowledge/search/store 等）与
+      // visible/disabled 重复项（214/215 只追加不清理造成），并按设计顺序排列——
+      // 自此「显示设置→侧边栏设置」的拖拽排序真正生效（Sidebar MainMenus 按 store 顺序渲染）
+      if (state.settings?.sidebarIcons) {
+        const { visible, disabled } = state.settings.sidebarIcons
+        const known: SidebarIcon[] = ['assistants', 'minapp', 'paint', 'music', 'notes']
+        const dedup = (list: SidebarIcon[] | undefined): SidebarIcon[] => [
+          ...new Set(list ?? []).values()
+        ].filter((i) => known.includes(i))
+        const vis = dedup(visible)
+        const dis = dedup(disabled).filter((i) => !vis.includes(i))
+        const designOrder: SidebarIcon[] = ['assistants', 'minapp', 'music', 'paint', 'notes']
+        state.settings.sidebarIcons.visible = designOrder.filter((i) => vis.includes(i))
+        state.settings.sidebarIcons.disabled = dis
+      }
+      // 老版本 theme（light/dark/system）→ themeId 回填：深色 → slate，跟随系统 → 按 OS 实际模式，
+      // 避免升级后老用户被静默切成浅色（theme 字段自此只写不读）
+      if (!(state.settings as { themeId?: string }).themeId) {
+        if (state.settings.theme === ThemeMode.dark) {
+          state.settings.themeId = 'slate'
+        } else if (state.settings.theme === ThemeMode.system) {
+          state.settings.themeId =
+            typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
+              ? 'slate'
+              : 'oasis'
+        } else {
+          state.settings.themeId = 'oasis'
+        }
+      }
+      logger.info('migrate 216 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 216 error', error as Error)
       return state
     }
   }

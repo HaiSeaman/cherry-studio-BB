@@ -132,7 +132,33 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
     onError: async (error: AISDKError) => {
       logger.debug('onError', error)
       if (NoOutputGeneratedError.isInstance(error)) {
-        return
+        // 空输出（200 空 body/内容被过滤等）：不能静默吞掉，否则回复永远 PENDING 转圈、零反馈。
+        // 纯工具回合（有工具调用但无文本）是正常行为，按成功收尾；其余情况落错误块给用户可见反馈。
+        const currentMessage = getState().messages.entities[assistantMsgId]
+        const hasToolBlocks = currentMessage
+          ? findAllBlocks(currentMessage).some((b) => b.type === MessageBlockType.TOOL)
+          : false
+        if (hasToolBlocks) {
+          await flushPendingText?.()
+          dispatch(
+            newMessagesActions.updateMessage({
+              topicId,
+              messageId: assistantMsgId,
+              updates: { status: AssistantMessageStatus.SUCCESS }
+            })
+          )
+          void EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, {
+            id: assistantMsgId,
+            topicId,
+            status: 'success',
+            error: undefined
+          })
+          return
+        }
+        error = new Error(
+          '模型未返回任何内容（可能被内容过滤或服务端异常），请重试或更换模型'
+        ) as AISDKError
+        // 继续走下方统一错误处理（落错误块 + 消息 ERROR）
       }
       const isErrorTypeAbort = isAbortError(error)
       const serializableError = serializeError(error)

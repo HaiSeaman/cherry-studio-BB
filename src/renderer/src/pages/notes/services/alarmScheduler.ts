@@ -15,6 +15,8 @@ class AlarmScheduler {
   private alarms: HubAlarm[] = []
   private lastCheckDate = ''
   private currentRinging: RingingInfo | null = null
+  /** 同一 tick 内多个闹钟到期（90 秒补触发窗口内可能同时命中多个）：排队，停止当前后逐个响 */
+  private ringQueue: HubAlarm[] = []
   private listeners = new Set<() => void>()
   private timer: ReturnType<typeof setInterval> | null = null
 
@@ -40,6 +42,8 @@ class AlarmScheduler {
     alarmSounds.stop()
     this.currentRinging = null
     this.emit()
+    // 同批到期的闹钟还有排队：继续响下一个
+    this.ringNext()
   }
 
   /** 倒计时结束等外部触发 */
@@ -59,6 +63,18 @@ class AlarmScheduler {
     this.emit()
   }
 
+  /** 从队列取一个闹钟开始响铃（无则返回） */
+  private ringNext(): void {
+    const next = this.ringQueue.shift()
+    if (!next) return
+    const timeText = `${pad2(next.h)}:${pad2(next.m)}:${pad2(next.s)}`
+    this.startRinging(
+      { label: next.label, sound: next.sound },
+      '闹钟响铃',
+      `${timeText}${next.label ? ` · ${next.label}` : ''}`
+    )
+  }
+
   private tick(): void {
     const now = new Date()
     const result = computeDueAlarms(this.alarms, now, this.lastCheckDate)
@@ -75,13 +91,9 @@ class AlarmScheduler {
           void db.hub_alarms.update(a.id, { triggered: true, lastTriggerKey: a.lastTriggerKey })
         }
       }
-      const first = result.toFire[0]
-      const timeText = `${pad2(first.h)}:${pad2(first.m)}:${pad2(first.s)}`
-      this.startRinging(
-        { label: first.label, sound: first.sound },
-        '闹钟响铃',
-        `${timeText}${first.label ? ` · ${first.label}` : ''}`
-      )
+      // 当前无闹钟在响 → 立即响第一个；其余排队，停止当前后逐个响（修复：只响第一个其余静默失效）
+      this.ringQueue.push(...result.toFire)
+      if (!this.currentRinging) this.ringNext()
     }
   }
 

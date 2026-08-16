@@ -6,7 +6,7 @@ import { safeDeleteFiles } from '@renderer/services/MessagesService'
 import store from '@renderer/store'
 import { updateTopic } from '@renderer/store/assistants'
 import { removeManyBlocks } from '@renderer/store/messageBlock'
-import { newMessagesActions } from '@renderer/store/newMessage'
+import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
 import { setNewlyRenamedTopics, setRenamingTopics } from '@renderer/store/runtime'
 import { loadTopicMessagesThunk } from '@renderer/store/thunk/messageThunk'
 import type { Assistant, FileMetadata, Topic } from '@renderer/types'
@@ -36,6 +36,18 @@ let _activeTopic: Topic
 let _setActiveTopic: Dispatch<SetStateAction<Topic>>
 
 const logger = loggerService.withContext('useTopic')
+
+/**
+ * 中止话题的所有在途流。abort 注册按 askId（userMessageId）存，删除/清空话题时
+ * 必须逐个 askId abort，否则在途流会继续向已删除/已清空的话题写孤儿消息与块。
+ */
+function abortTopicStreams(topicId: string): void {
+  const messages = selectMessagesForTopic(store.getState(), topicId)
+  const askIds = [...new Set((messages ?? []).map((m) => m.askId).filter((id): id is string => !!id))]
+  for (const askId of askIds) {
+    abortCompletion(askId)
+  }
+}
 
 export function useActiveTopic(assistantId: string, topic?: Topic) {
   const { assistant } = useAssistant(assistantId)
@@ -229,11 +241,12 @@ export const TopicManager = {
   },
 
   async removeTopic(id: string) {
+    // 中止在途流：abort 注册按 askId 存（messageThunk 以 userMessageId 注册），
+    // 直接 abortCompletion(id) 找不到条目，流会继续向已删除话题写孤儿块
+    abortTopicStreams(id)
     // Release the topic's request queue so its PQueue instance (and the 'idle'
     // endTrace listener) does not stay in memory forever.
     clearTopicQueue(id)
-    // 中止在途流，避免删除后流继续向 DB/Redux 写孤儿块
-    abortCompletion(id)
     // 删除前先取块 id（DB 删除后无法再查询）
     const blockIds = await getBlockIdsForTopic(id).catch(() => [])
     await TopicManager.clearTopicMessages(id)
@@ -244,6 +257,8 @@ export const TopicManager = {
   },
 
   async clearTopicMessages(id: string): Promise<void> {
+    // 中止在途流：清空消息后流仍在写的话会立即重建消息，清空等于没清
+    abortTopicStreams(id)
     // 暂存需要删除的文件信息
     let filesToDelete: FileMetadata[] = []
 

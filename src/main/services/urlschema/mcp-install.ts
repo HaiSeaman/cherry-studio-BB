@@ -61,7 +61,14 @@ export function handleMcpProtocolUrl(url: URL) {
       if (data) {
         const stringify = Buffer.from(data, 'base64').toString('utf8')
         logger.debug(`install MCP servers from urlschema: ${stringify}`)
-        const jsonConfig = JSON.parse(stringify)
+        // 协议 URL 可被任意来源触发：损坏/伪造的 base64 内容解析失败时记录并忽略，不能抛出导致主进程崩溃
+        let jsonConfig: any
+        try {
+          jsonConfig = JSON.parse(stringify)
+        } catch (err) {
+          logger.error('install MCP servers from urlschema: invalid JSON payload', err as Error)
+          break
+        }
         logger.debug(`install MCP servers from urlschema: ${JSON.stringify(jsonConfig)}`)
 
         // support both {mcpServers: [servers]}, [servers] and {server}

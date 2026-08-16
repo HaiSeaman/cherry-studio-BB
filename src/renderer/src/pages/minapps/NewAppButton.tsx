@@ -30,7 +30,14 @@ const NewAppButton: FC<Props> = ({ size = 60 }) => {
 
   const handleAddCustomApp = async (values: any) => {
     try {
-      const content = await window.api.file.read('custom-minapps.json')
+      // 与 loadCustomMiniApp 一致：文件缺失（被删除）时按空列表处理，写入时自动重建，
+      // 否则删除 custom-minapps.json 后保存永远失败
+      let content: string
+      try {
+        content = await window.api.file.read('custom-minapps.json')
+      } catch {
+        content = '[]'
+      }
       const customApps = JSON.parse(content)
 
       // Check for duplicate ID

@@ -132,11 +132,12 @@ export function useFmPlayer(stations: RadioStation[]) {
 
   // 事件接线（一次）；网速采样在 playing 状态每秒刷新
   useEffect(() => {
-    // 页面卸载后引擎继续播放（后台播放特性），重新挂载时恢复 UI 状态
+    // 页面卸载后引擎继续播放（后台播放特性），重新挂载时恢复 UI 状态（含暂停态：否则回页后 status=idle，
+    // 按播放会跳到下一台而不是续播当前台）
     const snap = audioEngine.snapshot()
-    if (snap.owner === 'fm' && snap.url && !snap.paused) {
+    if (snap.owner === 'fm' && snap.url) {
       setCurrentUrl(snap.url)
-      setStatus('playing')
+      setStatus(snap.paused ? 'paused' : 'playing')
     }
 
     const offs = [

@@ -21,7 +21,7 @@ import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import { removeBlocksThunk } from '@renderer/store/thunk/messageThunk'
 import type { Assistant, Model, Topic, TranslateLanguage } from '@renderer/types'
-import { type Message, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { type Message, type MessageBlock, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { captureScrollableAsBlob, captureScrollableAsDataURL, classNames } from '@renderer/utils'
 import { abortCompletion } from '@renderer/utils/abortController'
 import { copyMessageAsPlainText } from '@renderer/utils/copy'
@@ -60,7 +60,7 @@ import {
 } from 'lucide-react'
 import type { Dispatch, FC, ReactNode, SetStateAction } from 'react'
 import { Fragment, memo, useCallback, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { shallowEqual, useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import MessageTokens from './MessageTokens'
@@ -216,7 +216,16 @@ const MessageMenubar: FC<Props> = (props) => {
     startEditing(message.id)
   }, [message.id, startEditing])
 
-  const blockEntities = useSelector(messageBlocksSelectors.selectEntities)
+  // 按本消息的块订阅：整表订阅会让任意块的流式更新重渲染全部消息的菜单栏
+  const blockEntities = useSelector((state: RootState) => {
+    const entities = messageBlocksSelectors.selectEntities(state)
+    const subset: Record<string, MessageBlock> = {}
+    for (const id of message.blocks) {
+      const block = entities[id]
+      if (block) subset[id] = block
+    }
+    return subset
+  }, shallowEqual)
 
   const isTranslating = useMemo(() => {
     const translationBlock = message.blocks
