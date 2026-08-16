@@ -90,6 +90,29 @@ export const BUILTIN_CN_HK_MUSIC_STATIONS: RadioStation[] = [
   { name: 'RTHK Radio 4', url: 'http://rthkaudio4.rthk.hk:80/', favicon: '', country: 'Hong Kong', tags: 'music,classical', bitrate: 128, codec: 'MP3', homepage: 'https://www.rthk.hk' }
 ]
 
+/**
+ * 内置中文音乐电台（直链流，2026-08 经 RadioBrowser 核实可用）。
+ * 含「清晨音乐台」等 11 个台，永远排在电台列表最前。
+ */
+export const BUILTIN_CN_MUSIC_STATIONS: RadioStation[] = [
+  { name: '清晨音乐台', url: 'http://lhttp.qingting.fm/live/4915/64k.mp3', favicon: '', country: 'China', tags: 'music,pop', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: 'AsiaFM 亚洲音乐台', url: 'http://lhttp.qingting.fm/live/4581/64k.mp3', favicon: '', country: 'China', tags: 'music,pop', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: 'AsiaFM 高清音乐台', url: 'http://asiafm.hk:8000/asiahd', favicon: '', country: 'China', tags: 'music,hd', bitrate: 96, codec: 'AAC+', homepage: '' },
+  { name: 'AsiaFM 亚洲经典台', url: 'http://goldfm.cn:8000/goldfm', favicon: '', country: 'China', tags: 'music,classic', bitrate: 128, codec: 'AAC+', homepage: '' },
+  { name: '广东音乐之声', url: 'https://lhttp.qtfm.cn/live/1260/64k.mp3', favicon: '', country: 'China', tags: 'music', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: '上海音乐广播', url: 'http://lhttp.qingting.fm/live/273/64k.mp3', favicon: '', country: 'China', tags: 'music', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: '上海经典音乐广播', url: 'http://lhttp.qingting.fm/live/267/64k.mp3', favicon: '', country: 'China', tags: 'music,classic', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: '广州金曲音乐广播', url: 'http://lhttp.qingting.fm/live/20192/64k.mp3', favicon: '', country: 'China', tags: 'music,golden', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: 'CRI 劲曲调频 HIT FM（成都）', url: 'http://lhttp.qingting.fm/live/15318703/64k.mp3', favicon: '', country: 'China', tags: 'music,hit', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: 'CityFM 城市音乐台', url: 'https://lhttp.qtfm.cn/live/20500153/64k.mp3', favicon: '', country: 'China', tags: 'music,city', bitrate: 64, codec: 'MP3', homepage: '' },
+  { name: '动听音乐台', url: 'https://lhttp-hw.qtfm.cn/live/5022107/64k.mp3', favicon: '', country: 'China', tags: 'music', bitrate: 64, codec: 'MP3', homepage: '' }
+]
+
+/** 中港音乐列表统一合并：中文精选 → RTHK → 自定义 → 线上结果（缓存读取与在线拉取共用，保证内置台始终置顶） */
+export function withBuiltinCnHk(list: RadioStation[], customStations: RadioStation[] = []): RadioStation[] {
+  return dedupStationsByUrl(BUILTIN_CN_MUSIC_STATIONS, BUILTIN_CN_HK_MUSIC_STATIONS, customStations, list)
+}
+
 /** 单镜像 JSON 请求：超时中止 + 响应体 5MB 上限 */
 export async function fetchRadioJson(base: string, path: string, timeoutMs: number): Promise<any> {
   const ctrl = new AbortController()
@@ -149,7 +172,7 @@ export async function getTopStations(cfg: RadioConfig, limit = 50): Promise<Radi
  */
 export async function getCnHkMusicStations(cfg: RadioConfig, limit = 50): Promise<RadioStation[]> {
   if (cfg.apiBaseUrl === 'cnhk-music') {
-    return dedupStationsByUrl(BUILTIN_CN_HK_MUSIC_STATIONS, cfg.customStations)
+    return dedupStationsByUrl(BUILTIN_CN_MUSIC_STATIONS, BUILTIN_CN_HK_MUSIC_STATIONS, cfg.customStations)
   }
   const n = clampLimit(limit)
   const [cn, hk] = await Promise.all([
@@ -157,7 +180,7 @@ export async function getCnHkMusicStations(cfg: RadioConfig, limit = 50): Promis
     fetchStations(cfg.apiBaseUrl, cfg.timeout, `/json/stations/search?countrycode=HK&tag=music&hidebroken=true&order=clickcount&reverse=true&limit=30`)
   ])
   const filtered = dedupStationsByUrl(cn, hk).filter(isPlayableCnHk)
-  return dedupStationsByUrl(BUILTIN_CN_HK_MUSIC_STATIONS, cfg.customStations, filtered)
+  return withBuiltinCnHk(filtered, cfg.customStations)
 }
 
 /** 列表刷新来源（照文档 §7.7 五种循环） */

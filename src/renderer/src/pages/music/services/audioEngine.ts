@@ -27,12 +27,11 @@ export class AudioEngine {
     return { owner: this.owner, url: this.el.src || '', paused: this.el.paused, meta: this.owner ? this.ownerMeta : null }
   }
 
-  /** 取得引擎归属；若另一方正在使用，先将其停掉并复位其回调 */
+  /** 取得引擎归属；若另一方正在使用，先将其停掉并复位其回调（监听不物理移除，见 on 注释） */
   claim(owner: AudioOwner): void {
     if (this.owner === owner) return
     if (this.owner) {
       const prev = this.owner
-      this.offOwner(prev)
       this.el.pause()
       this.el.removeAttribute('src')
       this.el.load()
@@ -92,9 +91,15 @@ export class AudioEngine {
     this.el.volume = Math.min(Math.max(volume, 0), 100) / 100
   }
 
-  /** 订阅 audio 元素事件；claim 切换时非当前 owner 的回调会被自动移除 */
+  /**
+   * 订阅 audio 元素事件。回调在触发时自检归属：引擎当前归属方不是订阅方时忽略，
+   * 因此 claim 切换不会物理移除监听——归属切回后（如先听 FM 再播本地）监听自动恢复，
+   * 否则会出现「进度条不走 / 自动切歌失效」类问题（回归测试见 audioEngine.test.ts）。
+   */
   on(owner: AudioOwner, type: string, cb: () => void): () => void {
-    const wrapped: EventListener = () => cb()
+    const wrapped: EventListener = () => {
+      if (this.owner === owner) cb()
+    }
     this.el.addEventListener(type, wrapped)
     const entry: ListenerEntry = { owner, type, wrapped }
     this.listeners.push(entry)
@@ -139,15 +144,6 @@ export class AudioEngine {
     this.lastBufferedEnd = 0
     this.lastSampleAt = 0
     this.lastKbps = 0
-  }
-
-  private offOwner(owner: AudioOwner): void {
-    for (const l of this.listeners) {
-      if (l.owner === owner) {
-        this.el.removeEventListener(l.type, l.wrapped)
-      }
-    }
-    this.listeners = this.listeners.filter((l) => l.owner !== owner)
   }
 }
 
