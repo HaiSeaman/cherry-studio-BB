@@ -3,6 +3,7 @@ import { type FC } from 'react'
 import styled from 'styled-components'
 
 import FmRadio from './components/FmRadio'
+import LocalMusicPlayer from './components/LocalMusicPlayer'
 
 /**
  * 音乐工作台页面
@@ -15,7 +16,7 @@ const MusicPage: FC = () => {
         <NavbarMain>{'音乐'}</NavbarMain>
       </Navbar>
       <MainArea>
-        <Panel>{'本地音乐（建设中）'}</Panel>
+        <LocalMusicPlayer />
         <FmRadio />
       </MainArea>
     </Container>
@@ -45,20 +46,6 @@ const MainArea = styled.div`
   @media (max-width: 700px) {
     flex-direction: column;
   }
-`
-
-const Panel = styled.div`
-  flex: 1;
-  min-width: 0;
-  min-height: 240px;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 12px;
-  overflow: hidden;
-  color: var(--color-text-2);
 `
 
 export default MusicPage

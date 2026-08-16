@@ -1,0 +1,293 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+import { useAppDispatch, useAppSelector } from '@renderer/store'
+
+import { audioEngine } from '../services/audioEngine'
+import { nextIndexInPool, prevIndexInPool, pushShuffleHistory, toFileUrl } from '../services/playLogic'
+import { setFavoritesActive, setPlayMode } from '../store/musicSettingsSlice'
+import type { MusicTrack, PlayMode } from '../types'
+
+/**
+ * 本地音乐播放状态机（复刻音乐tab页.md §4.5-4.6）：
+ * - 三种播放模式：顺序 / 随机（历史栈上限 100，手动点击重置）/ 单曲循环
+ * - 收藏夹播放池：激活后只在收藏内切换；当前曲非收藏时播完落回收藏池
+ * - 加载失败自动跳下一首，全列表失败则停止
+ * - currentId（Dexie 主键）作稳定标识，拖拽/删除后不漂移；随机历史也存 id
+ */
+export function useLocalPlayer(tracks: MusicTrack[]) {
+  const dispatch = useAppDispatch()
+  const playMode = useAppSelector((s) => s.musicSettings.playMode)
+  const favoritesActive = useAppSelector((s) => s.musicSettings.favoritesActive)
+
+  const [currentId, setCurrentId] = useState<number | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [tip, setTip] = useState('')
+
+  const tracksRef = useRef(tracks)
+  tracksRef.current = tracks
+  const currentIdRef = useRef<number | null>(null)
+  currentIdRef.current = currentId
+  const playModeRef = useRef(playMode)
+  playModeRef.current = playMode
+  const favoritesActiveRef = useRef(favoritesActive)
+  favoritesActiveRef.current = favoritesActive
+  const isSeekingRef = useRef(false)
+  const shuffleHistoryRef = useRef<number[]>([]) // 存 track id
+  const loadErrorCount = useRef(0)
+  const pendingReturnToFavorites = useRef(false)
+  const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const favoriteIndices = useMemo(
+    () => tracks.map((t, i) => ({ t, i })).filter((x) => x.t.favorite === 1).map((x) => x.i),
+    [tracks]
+  )
+  const favoriteIndicesRef = useRef(favoriteIndices)
+  favoriteIndicesRef.current = favoriteIndices
+
+  const showTip = useCallback((msg: string) => {
+    setTip(msg)
+    if (tipTimer.current) clearTimeout(tipTimer.current)
+    tipTimer.current = setTimeout(() => setTip(''), 3000)
+  }, [])
+
+  const getPool = useCallback((): number[] => {
+    return favoritesActiveRef.current && favoriteIndicesRef.current.length > 0
+      ? favoriteIndicesRef.current
+      : tracksRef.current.map((_, i) => i)
+  }, [])
+
+  const currentIndex = useMemo(() => {
+    if (currentId == null) return -1
+    return tracks.findIndex((t) => t.id === currentId)
+  }, [tracks, currentId])
+
+  const stopPlayback = useCallback(() => {
+    audioEngine.stop()
+    setCurrentId(null)
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+  }, [])
+
+  /** 播放指定索引（manual=true 表示用户手动点击：随机历史重置） */
+  const playIndex = useCallback(
+    (index: number, manual = false) => {
+      const list = tracksRef.current
+      const track = list[index]
+      if (!track || track.id == null) return
+      if (playModeRef.current === 'shuffle') {
+        shuffleHistoryRef.current = manual ? [track.id] : pushShuffleHistory(shuffleHistoryRef.current, track.id)
+      }
+      setCurrentId(track.id)
+      setCurrentTime(0)
+      setDuration(0)
+      audioEngine.load('local', toFileUrl(track.filePath))
+      audioEngine.play().catch(() => {
+        // play 拒绝由 error 事件统一处理
+      })
+    },
+    []
+  )
+
+  /** 自动/手动切下一首（池内按模式选择；pendingReturn 时落回收藏池） */
+  const next = useCallback(
+    (_auto = true) => {
+      const list = tracksRef.current
+      if (list.length === 0) return
+      let pool = getPool()
+      let curIdx = list.findIndex((t) => t.id === currentIdRef.current)
+      if (pendingReturnToFavorites.current) {
+        // 当前曲非收藏且已播完：从收藏池头部继续
+        pendingReturnToFavorites.current = false
+        curIdx = -1
+        pool = favoriteIndicesRef.current.length > 0 ? favoriteIndicesRef.current : pool
+        if (pool.length === 0) return stopPlayback()
+      }
+      if (pool.length === 0) return stopPlayback()
+      const mode = playModeRef.current === 'shuffle' ? 'shuffle' : 'sequential'
+      const nextIdx = nextIndexInPool(pool, curIdx, mode)
+      if (nextIdx < 0) return stopPlayback()
+      playIndex(nextIdx)
+    },
+    [getPool, playIndex, stopPlayback]
+  )
+
+  const nextRef = useRef(next)
+  nextRef.current = next
+
+  const prev = useCallback(() => {
+    const list = tracksRef.current
+    if (list.length === 0) return
+    // 随机模式优先回溯历史栈（弹出当前，回到上一曲）
+    if (playModeRef.current === 'shuffle' && shuffleHistoryRef.current.length > 1) {
+      shuffleHistoryRef.current.pop()
+      const lastId = shuffleHistoryRef.current[shuffleHistoryRef.current.length - 1]
+      const idx = list.findIndex((t) => t.id === lastId)
+      if (idx >= 0) return playIndex(idx)
+    }
+    const pool = getPool()
+    if (pool.length === 0) return
+    const curIdx = list.findIndex((t) => t.id === currentIdRef.current)
+    const prevIdx = prevIndexInPool(pool, curIdx)
+    if (prevIdx >= 0) playIndex(prevIdx)
+  }, [getPool, playIndex])
+
+  const toggle = useCallback(() => {
+    if (currentIdRef.current == null) {
+      next(false)
+      return
+    }
+    if (audioEngine.paused) {
+      audioEngine.play().catch(() => {})
+    } else {
+      audioEngine.pause()
+    }
+  }, [next])
+
+  const seek = useCallback((time: number) => {
+    audioEngine.seek(time)
+    setCurrentTime(time)
+  }, [])
+
+  /** 播放模式循环切换：顺序 → 随机 → 单曲 */
+  const togglePlayMode = useCallback(() => {
+    const order: PlayMode[] = ['sequential', 'shuffle', 'single']
+    const nextMode = order[(order.indexOf(playModeRef.current) + 1) % order.length]
+    shuffleHistoryRef.current = []
+    dispatch(setPlayMode(nextMode))
+  }, [dispatch])
+
+  /** 收藏夹播放模式：空收藏拒绝激活；当前曲非收藏 → 播完落回收藏池 */
+  const toggleFavoritesMode = useCallback(() => {
+    if (!favoritesActiveRef.current) {
+      if (favoriteIndicesRef.current.length === 0) {
+        showTip('暂无收藏音乐，先点击列表中的 ☆ 收藏')
+        return
+      }
+      const list = tracksRef.current
+      const curIdx = list.findIndex((t) => t.id === currentIdRef.current)
+      if (curIdx >= 0 && list[curIdx].favorite !== 1) {
+        pendingReturnToFavorites.current = true
+      }
+      // 历史栈清掉非收藏曲，保证「上一首」只回溯到收藏
+      shuffleHistoryRef.current = shuffleHistoryRef.current.filter((id) => {
+        const t = list.find((x) => x.id === id)
+        return t?.favorite === 1
+      })
+      dispatch(setFavoritesActive(true))
+    } else {
+      pendingReturnToFavorites.current = false
+      dispatch(setFavoritesActive(false))
+    }
+  }, [dispatch, showTip])
+
+  /** 收藏模式下取消收藏当前曲：播完落回收藏池 + 清理历史栈非收藏项 */
+  const markPendingReturn = useCallback(() => {
+    pendingReturnToFavorites.current = true
+    const list = tracksRef.current
+    shuffleHistoryRef.current = shuffleHistoryRef.current.filter((id) => {
+      const t = list.find((x) => x.id === id)
+      return t?.favorite === 1
+    })
+  }, [])
+
+  /** 删除当前播放曲后接续播放原位置（LiveQuery 未刷新，先按 id 剔除被删曲） */
+  const onCurrentTrackDeleted = useCallback(
+    (deletedId: number) => {
+      audioEngine.stop()
+      setIsPlaying(false)
+      const list = tracksRef.current.filter((t) => t.id !== deletedId)
+      if (list.length === 0) {
+        stopPlayback()
+        return
+      }
+      const curIdx = tracksRef.current.findIndex((t) => t.id === currentIdRef.current)
+      const resumeIdx = Math.min(curIdx < 0 ? 0 : curIdx, list.length - 1)
+      if (favoritesActiveRef.current && list[resumeIdx].favorite !== 1) {
+        pendingReturnToFavorites.current = true
+        const pool = favoriteIndicesRef.current.filter((i) => tracksRef.current[i]?.id !== deletedId)
+        if (pool.length > 0) playIndex(pool[0])
+        else stopPlayback()
+        return
+      }
+      playIndex(resumeIdx)
+    },
+    [playIndex, stopPlayback]
+  )
+
+  useEffect(() => {
+    const offs = [
+      audioEngine.on('local', 'loadedmetadata', () => {
+        setDuration(audioEngine.duration)
+      }),
+      audioEngine.on('local', 'timeupdate', () => {
+        if (!isSeekingRef.current) setCurrentTime(audioEngine.currentTime)
+      }),
+      audioEngine.on('local', 'play', () => setIsPlaying(true)),
+      audioEngine.on('local', 'pause', () => setIsPlaying(false)),
+      audioEngine.on('local', 'playing', () => {
+        loadErrorCount.current = 0
+      }),
+      audioEngine.on('local', 'ended', () => {
+        if (playModeRef.current === 'single' && currentIdRef.current != null) {
+          audioEngine.seek(0)
+          audioEngine.play().catch(() => {})
+          return
+        }
+        nextRef.current(true)
+      }),
+      audioEngine.on('local', 'error', () => {
+        if (currentIdRef.current == null) return
+        loadErrorCount.current += 1
+        if (loadErrorCount.current >= tracksRef.current.length) {
+          loadErrorCount.current = 0
+          stopPlayback()
+          showTip('全部曲目均无法播放')
+          return
+        }
+        nextRef.current(true)
+      })
+    ]
+    audioEngine.onStop('local', () => {
+      setCurrentId(null)
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
+    })
+    return () => {
+      offs.forEach((off) => off())
+      if (tipTimer.current) clearTimeout(tipTimer.current)
+    }
+  }, [showTip, stopPlayback])
+
+  const currentTrack = currentId != null ? tracks.find((t) => t.id === currentId) ?? null : null
+
+  return {
+    currentId,
+    currentTrack,
+    currentIndex,
+    isPlaying,
+    currentTime,
+    duration,
+    playMode,
+    favoritesActive,
+    favoriteCount: favoriteIndices.length,
+    tip,
+    showTip,
+    setSeeking: (v: boolean) => {
+      isSeekingRef.current = v
+    },
+    playIndex,
+    next,
+    prev,
+    toggle,
+    seek,
+    togglePlayMode,
+    toggleFavoritesMode,
+    markPendingReturn,
+    stop: stopPlayback,
+    onCurrentTrackDeleted
+  }
+}
