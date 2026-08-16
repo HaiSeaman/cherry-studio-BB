@@ -19,7 +19,7 @@ import { useAlarmEngine } from './services/alarmScheduler'
  */
 const NotesPage: FC = () => {
   const alarms = useLiveQuery(async () => (await db.hub_alarms.toArray()) ?? [], [], [])
-  const { ringing, stopRinging } = useAlarmEngine(alarms ?? [])
+  const { ringing } = useAlarmEngine(alarms ?? [])
 
   return (
     <Container>
@@ -29,7 +29,7 @@ const NotesPage: FC = () => {
       <MainArea>
         <NotesPanel />
         <AlarmPanelCell>
-          <AlarmPanel ringing={ringing} onStopRinging={stopRinging} />
+          <AlarmPanel ringing={ringing} />
         </AlarmPanelCell>
         <TodoPanel />
         <CalendarPanel />

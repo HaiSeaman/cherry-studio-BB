@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 
 import { useCountdown } from '../hooks/useCountdown'
 import { alarmSounds, ALARM_SOUND_OPTIONS, type AlarmSoundType } from '../services/alarmSounds'
+import { alarmScheduler } from '../services/alarmScheduler'
 import { nextRingInfo } from '../services/schedule'
 import { setAlarmVolume } from '../store/hubSettingsSlice'
 import type { HubAlarm } from '../types'
@@ -24,12 +25,11 @@ const fmtHMS = (s: number) => `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor((
 const fmtRingInfo = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)} 分 ${sec % 60} 秒后` : `${sec} 秒后`)
 
 interface AlarmPanelProps {
-  ringing: { label: string; sound: string } | null
-  onStopRinging: () => void
+  ringing: { label: string; sound: string; fromTimer?: boolean } | null
 }
 
 /** 右上卡片：实时时钟 + 倒计时/定时闹钟子 tab + 音量（响铃由全局调度器驱动） */
-const AlarmPanel: FC<AlarmPanelProps> = ({ ringing, onStopRinging }) => {
+const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
   const dispatch = useAppDispatch()
   const alarmVolume = useAppSelector((s) => s.hubSettings.alarmVolume)
   const defaultSound = useAppSelector((s) => s.hubSettings.defaultSound)
@@ -54,13 +54,12 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing, onStopRinging }) => {
   const [timerH, setTimerH] = useState('0')
   const [timerM, setTimerM] = useState('5')
   const [timerS, setTimerS] = useState('0')
-  const [timerRinging, setTimerRinging] = useState(false)
 
-  const cd = useCountdown(() => setTimerRinging(true))
+  // 结束时走全局调度器：响铃 + 系统通知 + 后台唤起主窗口（与闹钟同一引擎）
+  const cd = useCountdown(() => alarmScheduler.fireExternal(timerLabel, timerSound))
 
   const stopAllRinging = () => {
-    setTimerRinging(false)
-    onStopRinging()
+    alarmScheduler.stopRinging()
   }
 
   // ---- 定时闹钟 ----
@@ -91,7 +90,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing, onStopRinging }) => {
   }
 
   const sortedAlarms = (alarms ?? []).slice().sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
-  const anyRinging = ringing != null || timerRinging
+  const anyRinging = ringing != null
   const timerProgress = cd.totalSec > 0 ? cd.remainSec / cd.totalSec : 0
 
   return (
@@ -131,7 +130,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing, onStopRinging }) => {
                 style={{ transition: 'stroke-dashoffset 0.25s linear' }}
               />
             </svg>
-            <RingText className={timerRinging ? 'ringing' : ''}>{fmtHMS(cd.remainSec)}</RingText>
+            <RingText className={anyRinging && ringing?.fromTimer ? 'ringing' : ''}>{fmtHMS(cd.remainSec)}</RingText>
           </RingWrap>
           <InputsRow>
             {[
@@ -168,14 +167,14 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing, onStopRinging }) => {
             ) : (
               <MXGhostPill
                 onClick={() => cd.start(clampNum(timerH, 99), clampNum(timerM, 59), clampNum(timerS, 59))}
-                disabled={timerRinging}>
+                disabled={anyRinging}>
                 <Play size={13} /> 开始
               </MXGhostPill>
             )}
             <MXGhostPill
               onClick={() => {
                 cd.reset()
-                setTimerRinging(false)
+                alarmScheduler.stopRinging()
               }}>
               <RotateCcw size={13} /> 重置
             </MXGhostPill>
@@ -233,7 +232,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing, onStopRinging }) => {
       )}
 
       {anyRinging && (
-        <StopBtn onClick={stopAllRinging}>🔕 停止响铃{ringing?.label ? ` · ${ringing.label}` : timerLabel ? ` · ${timerLabel}` : ''}</StopBtn>
+        <StopBtn onClick={stopAllRinging}>🔕 停止响铃{ringing?.label ? ` · ${ringing.label}` : ''}</StopBtn>
       )}
 
       <VolumeRow>

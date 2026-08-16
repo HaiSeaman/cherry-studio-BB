@@ -32,6 +32,7 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const noteIdRef = useRef<number | null>(null)
+  const textRef = useRef('')
   const lastSnapshotRef = useRef<{ ts: number; content: string }>({ ts: 0, content: '' })
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -44,6 +45,7 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
   // 切换便签：载入内容（父组件保证切换前已落盘上一条）
   useEffect(() => {
     setText(note?.content ?? '')
+    textRef.current = note?.content ?? ''
     noteIdRef.current = note?.id ?? null
     if (note?.id != null) {
       void db.hub_note_history
@@ -82,27 +84,29 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
     }
   }, [])
 
-  // 卸载前落盘未保存内容
+  // 卸载前落盘未保存内容（textRef 镜像最新输入，避免闭包捕获挂载时的空值）
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
       const id = noteIdRef.current
-      if (id != null && text) void db.hub_notes.update(id, { content: text, updatedAt: Date.now() })
+      if (id != null && textRef.current) void db.hub_notes.update(id, { content: textRef.current, updatedAt: Date.now() })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleInput = (value: string) => {
     setText(value)
+    textRef.current = value
     if (saveTimer.current) clearTimeout(saveTimer.current)
+    // 捕获调度时的便签 id：防抖期间切换便签，避免旧内容写入新便签
+    const scheduledId = noteIdRef.current
     saveTimer.current = setTimeout(async () => {
       saveTimer.current = null
-      const id = noteIdRef.current
-      if (id == null) return
-      await db.hub_notes.update(id, { content: value, updatedAt: Date.now() })
-      onContentChange(id, value)
+      if (scheduledId == null) return
+      await db.hub_notes.update(scheduledId, { content: value, updatedAt: Date.now() })
+      onContentChange(scheduledId, value)
       await bumpActivity()
-      await takeSnapshot(id, value)
+      await takeSnapshot(scheduledId, value)
     }, AUTOSAVE_DELAY)
   }
 
