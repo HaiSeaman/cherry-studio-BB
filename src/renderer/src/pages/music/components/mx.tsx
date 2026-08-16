@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { type FC, type ReactNode, useEffect } from 'react'
-import styled, { css, keyframes } from 'styled-components'
+import styled, { css } from 'styled-components'
 
 /**
  * 音乐/闹钟便签页设计系统：全部颜色取自全局主题 CSS 变量，
@@ -35,11 +35,6 @@ export const reduceMotion = css`
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
-`
-
-const eqBounce = keyframes`
-  0%, 100% { height: 4px; }
-  50% { height: 14px; }
 `
 
 export const MXCard = styled.div`
@@ -402,18 +397,16 @@ const DialogFooter = styled.div`
   margin-top: 16px;
 `
 
-/** 加载指示（呼吸圆点） */
+/** 加载指示（静止三点，避免无限旋转动画与毛玻璃联动重合成） */
 export const MXSpinner = styled.span`
   width: 14px;
   height: 14px;
   border-radius: 50%;
   border: 2px solid ${mx.accentSoft};
   border-top-color: ${mx.accent};
-  animation: ${keyframes`to { transform: rotate(360deg) }`} 0.8s linear infinite;
-  ${reduceMotion}
 `
 
-/** 播放中频谱条（3 根，签名元素之一；暂停时冻结为静止短条） */
+/** 播放中频谱条（3 根，签名元素之一；播放中高亮为静止高条，暂停时收缩为短条） */
 export const Equalizer = styled.span<{ $paused?: boolean }>`
   display: inline-flex;
   align-items: flex-end;
@@ -421,18 +414,22 @@ export const Equalizer = styled.span<{ $paused?: boolean }>`
   height: 14px;
   span {
     width: 3px;
+    height: 14px;
     border-radius: 2px;
     background: ${mx.accent};
-    animation: ${eqBounce} 0.9s ease-in-out infinite;
-    ${(p) => p.$paused && 'animation-play-state: paused; height: 4px;'}
+    /* 静止设计：任何无限 CSS 动画都会与侧边栏 backdrop-filter 联动导致整页逐帧重合成（实测 ~8% CPU） */
+    transform-origin: bottom;
+    transform: scaleY(0.55);
+    ${(p) => p.$paused && 'transform: scaleY(0.25);'}
   }
   span:nth-child(2) {
-    animation-delay: 0.25s;
+    transform: scaleY(1);
+    ${(p) => p.$paused && 'transform: scaleY(0.25);'}
   }
   span:nth-child(3) {
-    animation-delay: 0.5s;
+    transform: scaleY(0.75);
+    ${(p) => p.$paused && 'transform: scaleY(0.25);'}
   }
-  ${reduceMotion}
 `
 
 /** 播放中频谱条（3 根，签名元素之一） */

@@ -80,6 +80,10 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     const list = tracksRef.current
     const track = list[index]
     if (!track || track.id == null) return
+    // 用户手动点播即接管播放目标：清除"播完落回收藏池"待定标记，避免单收藏池时同曲无限重播
+    if (manual) pendingReturnToFavorites.current = false
+    // 复位拖拽状态：防止 seek 拖拽丢失 mouseup 后进度条永久冻结
+    isSeekingRef.current = false
     if (playModeRef.current === 'shuffle') {
       shuffleHistoryRef.current = manual ? [track.id] : pushShuffleHistory(shuffleHistoryRef.current, track.id)
     }
@@ -217,9 +221,9 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     })
   }, [])
 
-  /** 删除当前播放曲后接续播放原位置（LiveQuery 未刷新，先按 id 剔除被删曲） */
+  /** 删除当前播放曲后接续播放原位置（prevIndex 由调用方在删除前基于旧列表捕获，规避 LiveQuery 刷新竞态） */
   const onCurrentTrackDeleted = useCallback(
-    (deletedId: number) => {
+    (deletedId: number, prevIndex: number) => {
       audioEngine.stop()
       setIsPlaying(false)
       const list = tracksRef.current.filter((t) => t.id !== deletedId)
@@ -227,16 +231,27 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
         stopPlayback()
         return
       }
-      const curIdx = tracksRef.current.findIndex((t) => t.id === currentIdRef.current)
-      const resumeIdx = Math.min(curIdx < 0 ? 0 : curIdx, list.length - 1)
-      if (favoritesActiveRef.current && list[resumeIdx].favorite !== 1) {
-        pendingReturnToFavorites.current = true
-        const pool = favoriteIndicesRef.current.filter((i) => tracksRef.current[i]?.id !== deletedId)
-        if (pool.length > 0) playIndex(pool[0])
-        else stopPlayback()
+      const resumeIdx = Math.min(prevIndex < 0 ? 0 : prevIndex, list.length - 1)
+      let targetId = list[resumeIdx]?.id
+      if (targetId == null) {
+        stopPlayback()
         return
       }
-      playIndex(resumeIdx)
+      if (favoritesActiveRef.current && list[resumeIdx].favorite !== 1) {
+        pendingReturnToFavorites.current = true
+        // 基于删除后的实际列表重建收藏索引，避免旧索引错位
+        const pool = list.map((t, i) => ({ t, i })).filter((x) => x.t.favorite === 1).map((x) => x.i)
+        if (pool.length > 0) targetId = list[pool[0]].id
+        else return stopPlayback()
+      }
+      // 按 id 反查当前列表索引：删除后 LiveQuery 可能尚未刷新（tracksRef 仍是旧列表），
+      // 直接用 list 的索引会因偏移播到被删曲或错位曲目
+      const actualIdx = tracksRef.current.findIndex((t) => t.id === targetId)
+      if (actualIdx < 0) {
+        stopPlayback()
+        return
+      }
+      playIndex(actualIdx)
     },
     [playIndex, stopPlayback]
   )
@@ -263,7 +278,12 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
         setDuration(audioEngine.duration)
       }),
       audioEngine.on('local', 'timeupdate', () => {
-        if (!isSeekingRef.current) setCurrentTime(audioEngine.currentTime)
+        // 进度节流：整秒变化才触发 React 渲染（timeupdate 原生 ~4Hz，整秒变化仅 1Hz），
+        // 避免播放期间高频重建 UI 组件树（实测 4Hz 全量重渲染可占 ~3% CPU）
+        if (!isSeekingRef.current) {
+          const t = audioEngine.currentTime
+          setCurrentTime((prev) => (Math.floor(prev) === Math.floor(t) ? prev : t))
+        }
       }),
       audioEngine.on('local', 'play', () => setIsPlaying(true)),
       audioEngine.on('local', 'pause', () => setIsPlaying(false)),

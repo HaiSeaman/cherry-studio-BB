@@ -1,6 +1,6 @@
 import { ListMusic, Music2, Pause, Play, Repeat1, Shuffle, SkipBack, SkipForward, Star } from 'lucide-react'
 import { type FC, useState } from 'react'
-import styled, { keyframes } from 'styled-components'
+import styled from 'styled-components'
 
 import { formatTime, toFileUrl } from '../services/playLogic'
 import type { MusicTrack, PlayMode } from '../types'
@@ -164,14 +164,6 @@ const PlayerControls: FC<PlayerControlsProps> = ({
   )
 }
 
-const spinDisc = keyframes`
-  to { transform: rotate(360deg); }
-`
-const breatheGlow = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 30%, transparent); }
-  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary) 0%, transparent); }
-`
-
 const Dock = styled.div`
   display: grid;
   grid-template-columns: minmax(150px, 1fr) auto minmax(130px, 1fr);
@@ -210,13 +202,13 @@ const DiscWrap = styled.div`
   flex-shrink: 0;
   overflow: hidden;
   &.spin {
-    animation: ${spinDisc} 8s linear infinite;
+    /* 静止唱片：连续旋转/呼吸动画在合成器上持续占用 CPU（实测可占 ~8%），改为静态设计 */
     &::after {
       content: '';
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      animation: ${breatheGlow} 2.4s ease-in-out infinite;
+      background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 20%, transparent), transparent 68%);
       pointer-events: none;
     }
   }

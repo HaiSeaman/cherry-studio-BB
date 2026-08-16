@@ -68,23 +68,25 @@ const MinAppPage: FC = () => {
       return
     }
 
-    // For sidebar navigation, redirect to apps list and open popup
-    // Only check once and only if we haven't already redirected
-    if (!initialIsTopNavbar.current && !hasRedirected.current) {
-      hasRedirected.current = true
-      navigate('/apps')
-      // Open popup after navigation
-      setTimeout(() => {
+    // 侧边栏模式：重定向到小程序列表页并弹出抽屉。
+    // hasRedirected 仅阻止同一挂载内重复 navigate；每次路由进入都是新挂载，
+    // 重定向后仍确保 popup 打开，避免直达 URL 时页面空白。
+    let cleanup: (() => void) | undefined
+    if (!initialIsTopNavbar.current) {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true
+        navigate('/apps')
+      }
+      // Open popup after navigation（openMinappKeepAlive 对已打开的小程序幂等）
+      const openTimer = setTimeout(() => {
         openMinappKeepAlive(app)
       }, 100)
-      return
-    }
-
-    // For top navbar mode, integrate with cache system
-    if (initialIsTopNavbar.current) {
-      // 无论是否已在缓存，都调用以确保 currentMinappId 同步到路由切换的新 appId
+      cleanup = () => clearTimeout(openTimer)
+    } else {
+      // For top navbar mode：无论是否已在缓存，都调用以确保 currentMinappId 同步到路由切换的新 appId
       openMinappKeepAlive(app)
     }
+    return cleanup
   }, [app, navigate, openMinappKeepAlive, initialIsTopNavbar])
 
   // -------------- 新的 Tab Shell 逻辑 --------------
@@ -105,10 +107,13 @@ const MinAppPage: FC = () => {
     if (webviewRef.current === el) return true // 已附着
 
     webviewRef.current = el
-    const handleInPageNav = (e: any) => setCurrentUrl(e.url)
-    el.addEventListener('did-navigate-in-page', handleInPageNav)
+    // 整页跳转与站内导航都更新 URL（标题栏/搜索框显示真实地址）
+    const handleNav = (e: any) => setCurrentUrl(e.url)
+    el.addEventListener('did-navigate', handleNav)
+    el.addEventListener('did-navigate-in-page', handleNav)
     webviewCleanupRef.current = () => {
-      el.removeEventListener('did-navigate-in-page', handleInPageNav)
+      el.removeEventListener('did-navigate', handleNav)
+      el.removeEventListener('did-navigate-in-page', handleNav)
     }
     return true
   }, [app])

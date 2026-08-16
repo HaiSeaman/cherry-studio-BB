@@ -194,13 +194,24 @@ export const formatCitationsFromBlock = (block: CitationMessageBlock | undefined
         break
       case WEB_SEARCH_SOURCE.PERPLEXITY: {
         formattedCitations =
-          (block.response.results as any[])?.map((result, index) => ({
-            number: index + 1,
-            url: result.url || result, // 兼容旧数据
-            title: result.title || new URL(result).hostname, // 兼容旧数据
-            showFavicon: true,
-            type: 'websearch'
-          })) || []
+          (block.response.results as any[])?.map((result, index) => {
+            const url = result.url || result // 兼容旧数据
+            let title = result.title
+            if (!title) {
+              try {
+                title = new URL(url).hostname
+              } catch {
+                title = url
+              }
+            }
+            return {
+              number: index + 1,
+              url: url,
+              title: title,
+              showFavicon: true,
+              type: 'websearch'
+            }
+          }) || []
         break
       }
       case WEB_SEARCH_SOURCE.GROK:

@@ -29,6 +29,7 @@ const Translate: FC<Props> = ({ text }) => {
   const [targetLanguage, setTargetLanguage] = useState<TranslateLanguage>(_targetLanguage)
   const { translateModel } = useDefaultModel()
   const translatingRef = useRef(false)
+  const pendingTextRef = useRef<string | null>(null)
   const { getLanguageByLangcode } = useTranslate()
 
   _targetLanguage = targetLanguage
@@ -36,14 +37,22 @@ const Translate: FC<Props> = ({ text }) => {
   const translate = useCallback(async () => {
     if (!text.trim() || !translateModel) return
 
-    if (translatingRef.current) return
+    // 翻译进行中：记录待翻译文本，旧请求结束后自动补译（否则新文本被静默丢弃）
+    if (translatingRef.current) {
+      pendingTextRef.current = text
+      return
+    }
 
     try {
       translatingRef.current = true
-
-      await translateText(text, targetLanguage, setResult)
-
-      translatingRef.current = false
+      let textToTranslate = text
+      // 翻译期间用户继续改文本：pendingTextRef 记录最新文本，本轮结束后补译（最多补 3 次防极端循环）
+      for (let i = 0; i < 3; i++) {
+        pendingTextRef.current = null
+        await translateText(textToTranslate, targetLanguage, setResult)
+        if (!pendingTextRef.current || pendingTextRef.current === textToTranslate) break
+        textToTranslate = pendingTextRef.current
+      }
     } catch (error) {
       logger.error('Error fetching result:', error as Error)
     } finally {

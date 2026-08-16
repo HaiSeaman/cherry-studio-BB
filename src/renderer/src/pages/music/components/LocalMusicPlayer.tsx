@@ -1,7 +1,7 @@
 import { db } from '@renderer/databases'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { FolderPlus, Music4, Plus, RefreshCw, Search, Sparkles, Trash2 } from 'lucide-react'
-import { type FC, useEffect, useMemo, useState } from 'react'
+import { type FC, useCallback, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 import { useLocalPlayer } from '../hooks/useLocalPlayer'
@@ -50,10 +50,13 @@ const LocalMusicPlayer: FC = () => {
     return view
   }, [tracks, player.favoritesActive, searchQuery])
 
-  const playTrack = (track: MusicTrack) => {
-    const idx = tracks.findIndex((t) => t.id === track.id)
-    if (idx >= 0) player.playIndex(idx, true)
-  }
+  const playTrack = useCallback(
+    (track: MusicTrack) => {
+      const idx = tracks.findIndex((t) => t.id === track.id)
+      if (idx >= 0) player.playIndex(idx, true)
+    },
+    [tracks, player.playIndex]
+  )
 
   const onAddFiles = async () => {
     const files = await window.api.file
@@ -94,19 +97,29 @@ const LocalMusicPlayer: FC = () => {
     player.showTip('播放列表已清空')
   }
 
-  const onToggleFavorite = async (track: MusicTrack) => {
-    const favorite: 0 | 1 = track.favorite === 1 ? 0 : 1
-    await db.music_tracks.update(track.id, { favorite })
-    if (favorite === 0 && player.favoritesActive && track.id === player.currentId) {
-      player.markPendingReturn()
-    }
-  }
+  const onToggleFavorite = useCallback(
+    async (track: MusicTrack) => {
+      const favorite: 0 | 1 = track.favorite === 1 ? 0 : 1
+      await db.music_tracks.update(track.id, { favorite })
+      if (favorite === 0 && player.favoritesActive && track.id === player.currentId) {
+        player.markPendingReturn()
+      }
+    },
+    [player.favoritesActive, player.currentId, player.markPendingReturn]
+  )
 
-  const onDelete = async (track: MusicTrack) => {
-    const wasCurrent = track.id === player.currentId
-    await db.music_tracks.delete(track.id)
-    if (wasCurrent) player.onCurrentTrackDeleted(track.id!)
-  }
+  const onDelete = useCallback(
+    async (track: MusicTrack) => {
+      const wasCurrent = track.id === player.currentId
+      // 删除前基于当前列表捕获索引（await 后 LiveQuery 可能已刷新列表，索引会漂移）
+      const prevIndex = tracks.findIndex((t) => t.id === track.id)
+      await db.music_tracks.delete(track.id)
+      if (wasCurrent) player.onCurrentTrackDeleted(track.id!, prevIndex)
+    },
+    [tracks, player.currentId, player.onCurrentTrackDeleted]
+  )
+
+  const onReorder = useCallback((ids: number[]) => void reorderTracks(ids), [])
 
   const hasTracks = tracks.length > 0
   const emptyText = !hasTracks
@@ -182,7 +195,7 @@ const LocalMusicPlayer: FC = () => {
           onPlay={playTrack}
           onToggleFavorite={onToggleFavorite}
           onDelete={onDelete}
-          onReorder={(ids) => void reorderTracks(ids)}
+          onReorder={onReorder}
         />
       )}
       <PlayerControls

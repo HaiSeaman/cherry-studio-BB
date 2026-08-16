@@ -122,8 +122,17 @@ export const messagesSlice = createSlice({
       const { topicId, messages } = action.payload
       // @ts-ignore ts-2589 false positive
       messagesAdapter.upsertMany(state, messages)
-      state.messageIdsByTopic[topicId] = messages.map((m) => m.id)
-      state.currentTopicId = topicId
+      // 与已有列表合并（按 id 去重），而不是整体覆盖：
+      // 覆盖会丢掉话题加载期间新发送/新生成的消息（慢盘/大话题时加载与写入并发）
+      const existingIds = new Set(state.messageIdsByTopic[topicId] ?? [])
+      const merged = [...(state.messageIdsByTopic[topicId] ?? [])]
+      for (const m of messages) {
+        if (!existingIds.has(m.id)) {
+          merged.push(m.id)
+        }
+      }
+      state.messageIdsByTopic[topicId] = merged
+      // currentTopicId 由 loadTopicMessagesThunk 的 setCurrentTopicId 维护，这里不再覆盖
     },
     addMessage(state, action: PayloadAction<{ topicId: string; message: Message }>) {
       const { topicId, message } = action.payload

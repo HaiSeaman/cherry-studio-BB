@@ -178,17 +178,15 @@ export class WindowService {
 
   private setupContextMenu(mainWindow: BrowserWindow) {
     contextMenu.contextMenu(mainWindow.webContents)
-    // setup context menu for all webviews like miniapp
-    app.on('web-contents-created', (_, webContents) => {
-      contextMenu.contextMenu(webContents)
-    })
+    // setup context menu for all webviews like miniapp（去重：窗口重建时避免重复注册累积）
+    app.removeListener('web-contents-created', this.onWebContentsCreated)
+    app.on('web-contents-created', this.onWebContentsCreated)
+    // 注意：不要向远程 webview（chatgpt.com 等不可信内容）注入 preload——
+    // 完整 preload 会暴露 window.api 任意文件读写与 IPC 通道。小程序不依赖注入的 preload。
+  }
 
-    // Dangerous API
-    if (isDev) {
-      mainWindow.webContents.on('will-attach-webview', (_, webPreferences) => {
-        webPreferences.preload = join(__dirname, '../preload/index.js')
-      })
-    }
+  private onWebContentsCreated = (_event: Electron.Event, webContents: Electron.WebContents) => {
+    contextMenu.contextMenu(webContents)
   }
 
   private setupWindowEvents(mainWindow: BrowserWindow) {

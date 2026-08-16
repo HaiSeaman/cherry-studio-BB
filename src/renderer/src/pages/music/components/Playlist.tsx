@@ -1,6 +1,7 @@
-import { type FC, useRef } from 'react'
+import { memo, type FC, useRef } from 'react'
 import styled from 'styled-components'
 
+import { DynamicVirtualList } from '@renderer/components/VirtualList'
 import { toFileUrl } from '../services/playLogic'
 import type { MusicTrack } from '../types'
 import { Eq, mx } from './mx'
@@ -22,8 +23,12 @@ interface PlaylistProps {
   onReorder: (orderedIds: number[]) => void
 }
 
-/** 播放列表：封面缩略图两级回退、播放行频谱高亮、悬停 ★/✕、拖拽排序（过滤状态下禁用） */
-const Playlist: FC<PlaylistProps> = ({
+/**
+ * 播放列表：封面缩略图两级回退、播放行频谱高亮、悬停 ★/✕、拖拽排序（过滤状态下禁用）
+ * memo：播放进度 timeupdate（约 4Hz）只应刷新进度条，不得让整张列表 O(N) 重建
+ * 虚拟化：DynamicVirtualList 只渲染可见行（大曲库时 DOM/图片内存从 O(N) 降到 O(视口)）
+ */
+export const Playlist: FC<PlaylistProps> = memo(function Playlist({
   tracks,
   currentId,
   isPlaying,
@@ -32,7 +37,7 @@ const Playlist: FC<PlaylistProps> = ({
   onToggleFavorite,
   onDelete,
   onReorder
-}) => {
+}) {
   const dragSrcId = useRef<number | null>(null)
 
   const handleDrop = (e: React.DragEvent, targetId: number | null) => {
@@ -49,41 +54,42 @@ const Playlist: FC<PlaylistProps> = ({
   }
 
   return (
-    <List role="listbox">
-      {tracks.map((t) => {
-        const playing = t.id === currentId
-        return (
-          <Item
-            key={t.id}
-            className={playing ? 'playing' : ''}
-            draggable={dragEnabled}
-            data-no-dnd
-            onClick={() => onPlay(t)}
-            onDragStart={(e) => {
-              dragSrcId.current = t.id ?? null
-              e.dataTransfer.effectAllowed = 'move'
-              e.dataTransfer.setData('text/plain', String(t.id ?? ''))
-            }}
-            onDragOver={(e) => dragEnabled && e.preventDefault()}
-            onDrop={(e) => dragEnabled && handleDrop(e, t.id ?? null)}>
-            <Cover
-              loading="lazy"
-              decoding="async"
-              src={t.thumbPath || t.coverPath ? toFileUrl(t.thumbPath || t.coverPath) : COVER_FALLBACK}
-              onError={(e) => {
-                const img = e.currentTarget
-                if (t.coverPath && !img.dataset.fb1) {
-                  img.dataset.fb1 = '1'
-                  img.src = toFileUrl(t.coverPath)
-                } else if (!img.dataset.fb2) {
-                  img.dataset.fb2 = '1'
-                  img.src = COVER_FALLBACK
-                }
+    <ListWrap role="listbox">
+      <DynamicVirtualList list={tracks} estimateSize={() => ROW_HEIGHT} size="100%">
+        {(t) => {
+          const playing = t.id === currentId
+          return (
+            <Item
+              key={t.id}
+              className={playing ? 'playing' : ''}
+              draggable={dragEnabled}
+              data-no-dnd
+              onClick={() => onPlay(t)}
+              onDragStart={(e) => {
+                dragSrcId.current = t.id ?? null
+                e.dataTransfer.effectAllowed = 'move'
+                e.dataTransfer.setData('text/plain', String(t.id ?? ''))
               }}
-            />
-            <Info>
-              <Title className="title">{t.title}</Title>
-              <Meta>{[t.artist, t.album].filter(Boolean).join(' · ') || '未知艺术家'}</Meta>
+              onDragOver={(e) => dragEnabled && e.preventDefault()}
+              onDrop={(e) => dragEnabled && handleDrop(e, t.id ?? null)}>
+              <Cover
+                loading="lazy"
+                decoding="async"
+                src={t.thumbPath || t.coverPath ? toFileUrl(t.thumbPath || t.coverPath) : COVER_FALLBACK}
+                onError={(e) => {
+                  const img = e.currentTarget
+                  if (t.coverPath && !img.dataset.fb1) {
+                    img.dataset.fb1 = '1'
+                    img.src = toFileUrl(t.coverPath)
+                  } else if (!img.dataset.fb2) {
+                    img.dataset.fb2 = '1'
+                    img.src = COVER_FALLBACK
+                  }
+                }}
+              />
+              <Info>
+                <Title className="title">{t.title}</Title>
+                <Meta>{[t.artist, t.album].filter(Boolean).join(' · ') || '未知艺术家'}</Meta>
             </Info>
             <Duration>
               {playing ? <Eq paused={!isPlaying} /> : t.duration > 0 ? formatDuration(t.duration) : ''}
@@ -107,31 +113,24 @@ const Playlist: FC<PlaylistProps> = ({
             </DeleteBtn>
           </Item>
         )
-      })}
-    </List>
+      }}
+      </DynamicVirtualList>
+    </ListWrap>
   )
-}
+})
+
+/** 行高 = Item 52px（封面 40 + padding 12）+ 下边距 2px；虚拟列表估算必须与实测一致，否则首帧滚动位置偏移 */
+const ROW_HEIGHT = 54
 
 function formatDuration(sec: number): string {
   const s = Math.floor(sec)
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
-const List = styled.div`
+const ListWrap = styled.div`
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   padding: 4px 2px;
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: ${mx.border};
-    border-radius: 3px;
-  }
 `
 
 const Item = styled.div`
@@ -144,6 +143,8 @@ const Item = styled.div`
   cursor: pointer;
   user-select: none;
   transition: background 0.15s ease;
+  /* 行间距（虚拟列表无 gap，用下边距补齐，保持与估算行高一致） */
+  margin-bottom: 2px;
   &:hover {
     background: ${mx.soft};
   }

@@ -85,21 +85,32 @@ if (isLinux) {
 // intermittent renderer-process crashes (exit code 143) at startup.
 app.commandLine.appendSwitch('enable-features', 'DocumentPolicyIncludeJSCallStacksInCrashReports')
 
+// onHeadersReceived 是 per-session 的：按 session 只注册一次，避免每个新 webContents 重复注册导致 handler 无限累积
+const documentPolicySessions = new WeakSet<Electron.Session>()
+
 app.on('web-contents-created', (_, webContents) => {
-  webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Document-Policy': ['include-js-call-stacks-in-crash-reports']
-      }
+  const session = webContents.session
+  if (!documentPolicySessions.has(session)) {
+    documentPolicySessions.add(session)
+    session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Document-Policy': ['include-js-call-stacks-in-crash-reports']
+        }
+      })
     })
-  })
+  }
 
   webContents.on('unresponsive', async () => {
     // Interrupt execution and collect call stack from unresponsive renderer
     logger.error('Renderer unresponsive start')
-    const callStack = await webContents.mainFrame.collectJavaScriptCallStack()
-    logger.error(`Renderer unresponsive js call stack\n ${callStack}`)
+    try {
+      const callStack = await webContents.mainFrame.collectJavaScriptCallStack()
+      logger.error(`Renderer unresponsive js call stack\n ${callStack}`)
+    } catch (error) {
+      logger.error('Renderer unresponsive stack collection failed:', error as Error)
+    }
   })
 })
 

@@ -18,7 +18,7 @@ export function useMetaDataParser<T extends string>(
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const parseMetadata = useCallback(async () => {
-    if (!link || !isLoading) return
+    if (!link) return
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -59,7 +59,7 @@ export function useMetaDataParser<T extends string>(
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, link, properties, timeout])
+  }, [link, properties, timeout])
 
   useEffect(() => {
     return () => {

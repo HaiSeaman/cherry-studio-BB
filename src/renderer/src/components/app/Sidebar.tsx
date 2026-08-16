@@ -301,18 +301,6 @@ const Icon = styled.div`
     }
   }
 
-  @keyframes borderBreath {
-    0% {
-      opacity: 0.1;
-    }
-    50% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0.1;
-    }
-  }
-
   &.opened-minapp {
     position: relative;
   }
@@ -324,7 +312,7 @@ const Icon = styled.div`
     top: 0;
     left: 0;
     border-radius: inherit;
-    opacity: 0.3;
+    opacity: 0.45;
     border: 0.5px solid var(--color-primary);
   }
 `

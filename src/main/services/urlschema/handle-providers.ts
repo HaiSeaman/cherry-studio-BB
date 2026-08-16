@@ -70,6 +70,8 @@ export async function handleProvidersProtocolUrl(url: URL) {
       }
 
       // add check there is window.navigate function in mainWindow
+      // 重试上限：渲染进程一直未就绪（加载失败/异常）时避免无限 1s 重试
+      const retryCount = Number(url.searchParams.get('_retry') ?? 0)
       if (
         mainWindow &&
         !mainWindow.isDestroyed() &&
@@ -82,11 +84,14 @@ export async function handleProvidersProtocolUrl(url: URL) {
         if (isMac) {
           windowService.showMainWindow()
         }
-      } else {
+      } else if (retryCount < 30) {
+        url.searchParams.set('_retry', String(retryCount + 1))
         setTimeout(() => {
-          logger.debug('handleProvidersProtocolUrl timeout', { data, version })
+          logger.debug('handleProvidersProtocolUrl retry', { data, version, retryCount })
           void handleProvidersProtocolUrl(url)
         }, 1000)
+      } else {
+        logger.error('handleProvidersProtocolUrl gave up after 30 retries: renderer navigate unavailable')
       }
       break
     }

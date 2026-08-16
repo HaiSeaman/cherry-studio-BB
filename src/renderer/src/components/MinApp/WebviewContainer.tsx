@@ -5,6 +5,23 @@ import { memo, useEffect, useRef } from 'react'
 
 const logger = loggerService.withContext('WebviewContainer')
 
+/** 每个小程序最后导航地址（localStorage），关闭销毁后重开时恢复到关闭前页面 */
+function getLastUrl(appid: string): string | null {
+  try {
+    return localStorage.getItem(`minapp_last_url_${appid}`)
+  } catch {
+    return null
+  }
+}
+
+function setLastUrl(appid: string, url: string): void {
+  try {
+    localStorage.setItem(`minapp_last_url_${appid}`, url)
+  } catch {
+    // 存储满等异常忽略
+  }
+}
+
 /**
  * WebviewContainer is a component that renders a webview element.
  * It is used in the MinAppPopupContainer component.
@@ -26,6 +43,8 @@ const WebviewContainer = memo(
   }) => {
     const webviewRef = useRef<WebviewTag | null>(null)
     const { enableSpellCheck, minappsOpenLinkExternal } = useSettings()
+    const lastUrlRef = useRef<string | null>(null)
+    const webContentsIdRef = useRef<number | null>(null)
 
     const setRef = (appid: string) => {
       onSetRefCallback(appid, null)
@@ -69,12 +88,14 @@ const WebviewContainer = memo(
       }
 
       const handleNavigate = (event: any) => {
+        lastUrlRef.current = event.url
         onNavigateCallback(appid, event.url)
       }
 
       const handleDomReady = () => {
         const webviewId = webviewRef.current?.getWebContentsId()
         if (webviewId) {
+          webContentsIdRef.current = webviewId
           void window.api?.webview?.setSpellCheckEnabled?.(webviewId, enableSpellCheck)
           // Set link opening behavior for this webview
           void window.api?.webview?.setOpenLinkExternal?.(webviewId, minappsOpenLinkExternal)
@@ -90,16 +111,37 @@ const WebviewContainer = memo(
       webviewRef.current.addEventListener('dom-ready', handleDomReady)
       webviewRef.current.addEventListener('did-finish-load', handleLoaded)
       webviewRef.current.addEventListener('ready-to-show', handleReadyToShow)
+      // 同时监听整页跳转（did-navigate）与站内导航（did-navigate-in-page），保证标题栏 URL 与 Google 登录检测同步
+      webviewRef.current.addEventListener('did-navigate', handleNavigate)
       webviewRef.current.addEventListener('did-navigate-in-page', handleNavigate)
 
       // we set the url when the webview is ready
-      webviewRef.current.src = url
+      // 优先恢复上次关闭前的导航地址（关闭销毁进程后重开保持用户所在页面）
+      webviewRef.current.src = getLastUrl(appid) || url
 
       return () => {
+        // 记录最后导航地址，重开时恢复
+        if (lastUrlRef.current) {
+          setLastUrl(appid, lastUrlRef.current)
+        }
+        // 销毁 webview 渲染进程（~300M）：webview 从 DOM 移除不会自动销毁 webContents，
+        // 必须显式 close（主进程校验 type 后执行）
+        let webContentsId = webContentsIdRef.current
+        if (!webContentsId) {
+          try {
+            webContentsId = webviewRef.current?.getWebContentsId() ?? null
+          } catch {
+            // webview 未就绪/已脱离 DOM 时拿不到 id，进程由主进程在 webview 销毁时兜底回收
+          }
+        }
+        if (webContentsId) {
+          void window.api?.webview?.close?.(webContentsId)
+        }
         webviewRef.current?.removeEventListener('did-start-loading', handleStartLoading)
         webviewRef.current?.removeEventListener('dom-ready', handleDomReady)
         webviewRef.current?.removeEventListener('did-finish-load', handleLoaded)
         webviewRef.current?.removeEventListener('ready-to-show', handleReadyToShow)
+        webviewRef.current?.removeEventListener('did-navigate', handleNavigate)
         webviewRef.current?.removeEventListener('did-navigate-in-page', handleNavigate)
       }
       // because the appid and url are enough, no need to add onLoadedCallback

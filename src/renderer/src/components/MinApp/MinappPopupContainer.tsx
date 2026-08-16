@@ -166,7 +166,11 @@ const MinappPopupContainer: React.FC = () => {
   /** whether the minapps open link external is enabled */
   const { minappsOpenLinkExternal } = useSettings()
 
-  const { isLeftNavbar } = useNavbarPosition()
+  /** 供 memo 化的 WebviewContainerGroup 回调读取最新值（memo 只重建于 combinedApps 变化，闭包会过期） */
+  const currentMinappIdRef = useRef(currentMinappId)
+  currentMinappIdRef.current = currentMinappId
+  const minappsOpenLinkExternalRef = useRef(minappsOpenLinkExternal)
+  minappsOpenLinkExternalRef.current = minappsOpenLinkExternal
 
   const { setTimeoutTimer } = useTimer()
 
@@ -175,8 +179,9 @@ const MinappPopupContainer: React.FC = () => {
   /** set the popup display status */
   useEffect(() => {
     if (minappShow) {
-      // init the current url
-      if (currentMinappId && currentAppInfo) {
+      // init the current url：仅在切换到另一个小程序时重置为预设 URL；
+      // hide/show 往返（侧边栏图标切换）保留上次真实导航地址
+      if (currentMinappId && currentAppInfo && lastMinappId.current !== currentMinappId) {
         setCurrentUrl(currentAppInfo.url)
       }
 
@@ -294,21 +299,26 @@ const MinappPopupContainer: React.FC = () => {
       try {
         const webviewId = webviewElement.getWebContentsId()
         if (webviewId) {
-          void window.api.webview.setOpenLinkExternal(webviewId, minappsOpenLinkExternal)
+          void window.api.webview.setOpenLinkExternal(webviewId, minappsOpenLinkExternalRef.current)
         }
       } catch (error) {
         logger.debug(`WebView ${appid} not ready for getWebContentsId() in handleWebviewLoaded`)
       }
     }
-    if (appid == currentMinappId) {
-      setTimeoutTimer('handleWebviewLoaded', () => setIsReady(true), 200)
+    if (appid == currentMinappIdRef.current) {
+      setTimeoutTimer('handleWebviewLoaded', () => {
+        // 触发时复查：A 加载中切到 B 时，A 的定时器不应让 B 提前显示加载完成
+        if (appid === currentMinappIdRef.current) {
+          setIsReady(true)
+        }
+      }, 200)
     }
   }
 
   /** the callback function to handle webview navigation */
   const handleWebviewNavigate = (appid: string, url: string) => {
     // 记录当前URL，用于GoogleLoginTip判断
-    if (appid === currentMinappId) {
+    if (appid === currentMinappIdRef.current) {
       logger.debug(`URL changed: ${url}`)
       setCurrentUrl(url)
     }
@@ -530,7 +540,8 @@ const MinappPopupContainer: React.FC = () => {
       styles={{
         wrapper: {
           position: 'fixed',
-          marginLeft: isLeftNavbar ? 'var(--sidebar-width)' : 0,
+          // 侧边栏已在右侧：抽屉恒贴左边缘，右端在侧边栏左缘截断（ant.css .minapp-drawer max-width）
+          marginLeft: 0,
           marginTop: isTopNavbar ? 'var(--navbar-height)' : 0
         },
         content: {

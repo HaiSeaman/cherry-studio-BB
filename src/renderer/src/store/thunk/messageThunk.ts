@@ -12,7 +12,7 @@ import { type Assistant, type FileMetadata, type Model, type Topic } from '@rend
 import type { FileMessageBlock, ImageMessageBlock, Message, MessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { uuid } from '@renderer/utils'
-import { abortMap, addAbortController } from '@renderer/utils/abortController'
+import { abortCompletion, addAbortController, removeAbortController } from '@renderer/utils/abortController'
 import {
   createAssistantMessage,
   createTranslationBlock,
@@ -326,6 +326,8 @@ const fetchAndProcessAssistantResponseImpl = async (
   // can release the abort registration.
   const userMessageId = assistantMessage.askId
   let callbacks: StreamProcessorCallbacks = {}
+  // Hoisted：finally 中按函数精确移除 abort 注册（多模型流共用 askId 时不能 delete 整条目）
+  let abortFn: (() => void) | null = null
   try {
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
@@ -383,7 +385,8 @@ const fetchAndProcessAssistantResponseImpl = async (
 
     const abortController = new AbortController()
     logger.silly('Add Abort Controller', { id: userMessageId })
-    addAbortController(userMessageId!, () => abortController.abort())
+    abortFn = () => abortController.abort()
+    addAbortController(userMessageId!, abortFn)
 
     await transformMessagesAndFetch(
       {
@@ -412,11 +415,10 @@ const fetchAndProcessAssistantResponseImpl = async (
       dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
     }
   } finally {
-    // Normal completion must release the abort registration; otherwise the
-    // global abortMap grows one entry per message forever (entries were only
-    // removed when the user explicitly stopped a completion).
-    if (userMessageId) {
-      abortMap.delete(userMessageId)
+    // 只移除本次注册的 abort 函数：多模型 @提及 时多个流共用同一 askId，
+    // delete 整个条目会把其他仍在流式中的流的停止能力一起删掉
+    if (userMessageId && abortFn) {
+      removeAbortController(userMessageId, abortFn)
     }
   }
 }
@@ -675,6 +677,10 @@ export const resendMessageThunk =
         logger.error('[resendMessageThunk] Error updating database:', dbError as Error)
       }
 
+      // 中止该 askId 的在途流并等旧任务退出（否则旧流会继续向同一消息写块/覆盖状态）
+      abortCompletion(userMessageToResend.id)
+      await waitForTopicQueue(topicId)
+
       const queue = getTopicQueue(topicId)
       for (const resetMsg of resetDataList) {
         const assistantConfigForThisRegen = {
@@ -802,7 +808,11 @@ export const regenerateAssistantResponseThunk =
         }
       })
 
-      // 8. Add fetch/process call to the queue
+      // 8. 中止该 askId 在途流并等旧任务退出（重新生成时旧流不能继续写同一消息）
+      abortCompletion(askId)
+      await waitForTopicQueue(topicId)
+
+      // 9. Add fetch/process call to the queue
       const queue = getTopicQueue(topicId)
       const assistantConfigForRegen = {
         ...assistant,

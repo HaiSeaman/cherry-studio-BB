@@ -2,8 +2,8 @@ import { db } from '@renderer/databases'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Pause, Play, Plus, Radio, RefreshCw, RotateCw, Search, SkipBack, SkipForward } from 'lucide-react'
-import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import styled, { keyframes } from 'styled-components'
+import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import styled from 'styled-components'
 
 import { type FmStatus, useFmPlayer } from '../hooks/useFmPlayer'
 import {
@@ -38,8 +38,7 @@ import {
   MXIconButton,
   MXSearchInput,
   MXSpinner,
-  MXTabs,
-  reduceMotion
+  MXTabs
 } from './mx'
 import VolumeControl from './VolumeControl'
 
@@ -205,20 +204,26 @@ const FmRadio: FC = () => {
     }
   }, [loadTop, loadCnhk, searchText])
 
-  const toggleFavorite = async (s: RadioStation) => {
-    const exists = (favorites || []).some((f) => f.url === s.url)
-    if (exists) await db.radio_favorites.delete(s.url)
-    else await db.radio_favorites.put({ ...s, addedAt: Date.now() })
-  }
+  const toggleFavorite = useCallback(
+    async (s: RadioStation) => {
+      const exists = (favorites || []).some((f) => f.url === s.url)
+      if (exists) await db.radio_favorites.delete(s.url)
+      else await db.radio_favorites.put({ ...s, addedAt: Date.now() })
+    },
+    [favorites]
+  )
 
-  const removeStation = (s: RadioStation) => {
-    if (customStations.some((c) => c.url === s.url)) {
-      dispatch(removeCustomStation(s.url))
-      return
-    }
-    addExcludedUrl(s.url)
-    setExcludedUrls(getExcludedUrls())
-  }
+  const removeStation = useCallback(
+    (s: RadioStation) => {
+      if (customStations.some((c) => c.url === s.url)) {
+        dispatch(removeCustomStation(s.url))
+        return
+      }
+      addExcludedUrl(s.url)
+      setExcludedUrls(getExcludedUrls())
+    },
+    [customStations, dispatch]
+  )
 
   const addCustom = () => {
     const name = customName.trim()
@@ -252,6 +257,25 @@ const FmRadio: FC = () => {
       : tab === 'favorites'
         ? '点击电台旁的 ☆ 收藏，随时在这里找到它'
         : '检查网络后点右上 ↻ 重试；中港音乐 tab 始终有内置精选台'
+
+  // 列表行 memo：网速（kbps）每秒刷新时只更新状态栏，不重建整张列表
+  const stationRows = useMemo(
+    () =>
+      stations.map((s) => (
+        <StationRow
+          key={s.url}
+          station={s}
+          favored={(favorites || []).some((f) => f.url === s.url)}
+          isCustom={customStations.some((c) => c.url === s.url)}
+          isCurrent={player.currentUrl === s.url}
+          live={live}
+          onPlay={player.play}
+          onToggleFavorite={toggleFavorite}
+          onRemove={removeStation}
+        />
+      )),
+    [stations, favorites, customStations, player.currentUrl, player.play, live, toggleFavorite, removeStation]
+  )
 
   return (
     <MXCard data-no-dnd>
@@ -345,54 +369,7 @@ const FmRadio: FC = () => {
             <EmptyHint>{emptyHint}</EmptyHint>
           </Empty>
         ) : (
-          <StationList>
-            {stations.map((s) => {
-              const favored = (favorites || []).some((f) => f.url === s.url)
-              const isCustom = customStations.some((c) => c.url === s.url)
-              const isCurrent = player.currentUrl === s.url
-              return (
-                <StationItem key={s.url} className={isCurrent ? 'playing' : ''} onClick={() => player.play(s.url)}>
-                  <FaviconWrap>
-                    <Favicon
-                      src={s.favicon || FAVICON_FALLBACK}
-                      onError={(e) => {
-                        const img = e.currentTarget
-                        if (!img.dataset.fb) {
-                          img.dataset.fb = '1'
-                          img.src = FAVICON_FALLBACK
-                        }
-                      }}
-                    />
-                    {isCurrent && <FaviconMask>{live ? <Eq /> : <Eq paused />}</FaviconMask>}
-                  </FaviconWrap>
-                  <StationInfo>
-                    <StationName>{s.name}</StationName>
-                    <StationMeta>
-                      {[s.country, s.bitrate > 0 ? `${s.bitrate} kbps` : '', s.codec].filter(Boolean).join(' · ')}
-                      {isCustom ? ' · 自定义' : ''}
-                    </StationMeta>
-                  </StationInfo>
-                  <FavBtn
-                    className={favored ? 'favorited' : ''}
-                    title={favored ? '取消收藏' : '收藏'}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void toggleFavorite(s)
-                    }}>
-                    {favored ? '★' : '☆'}
-                  </FavBtn>
-                  <DeleteBtn
-                    title={isCustom ? '删除自定义电台' : '隐藏此电台'}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      removeStation(s)
-                    }}>
-                    ✕
-                  </DeleteBtn>
-                </StationItem>
-              )
-            })}
-          </StationList>
+          <StationList>{stationRows}</StationList>
         )}
       </ListArea>
       <MXDialog
@@ -439,10 +416,70 @@ function dedupMerge(chinaHk: RadioStation[], stations: RadioStation[]): RadioSta
   return out
 }
 
-const pulseDot = keyframes`
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-`
+interface StationRowProps {
+  station: RadioStation
+  favored: boolean
+  isCustom: boolean
+  isCurrent: boolean
+  live: boolean
+  onPlay: (url: string) => void
+  onToggleFavorite: (s: RadioStation) => void
+  onRemove: (s: RadioStation) => void
+}
+
+/** 单行电台（memo）：kbps 每秒刷新时整行 props 不变，跳过重建 */
+const StationRow: FC<StationRowProps> = memo(function StationRow({
+  station: s,
+  favored,
+  isCustom,
+  isCurrent,
+  live,
+  onPlay,
+  onToggleFavorite,
+  onRemove
+}) {
+  return (
+    <StationItem className={isCurrent ? 'playing' : ''} onClick={() => onPlay(s.url)}>
+      <FaviconWrap>
+        <Favicon
+          src={s.favicon || FAVICON_FALLBACK}
+          onError={(e) => {
+            const img = e.currentTarget
+            if (!img.dataset.fb) {
+              img.dataset.fb = '1'
+              img.src = FAVICON_FALLBACK
+            }
+          }}
+        />
+        {isCurrent && <FaviconMask>{live ? <Eq /> : <Eq paused />}</FaviconMask>}
+      </FaviconWrap>
+      <StationInfo>
+        <StationName>{s.name}</StationName>
+        <StationMeta>
+          {[s.country, s.bitrate > 0 ? `${s.bitrate} kbps` : '', s.codec].filter(Boolean).join(' · ')}
+          {isCustom ? ' · 自定义' : ''}
+        </StationMeta>
+      </StationInfo>
+      <FavBtn
+        className={favored ? 'favorited' : ''}
+        title={favored ? '取消收藏' : '收藏'}
+        onClick={(e) => {
+          e.stopPropagation()
+          void onToggleFavorite(s)
+        }}>
+        {favored ? '★' : '☆'}
+      </FavBtn>
+      <DeleteBtn
+        title={isCustom ? '删除自定义电台' : '隐藏此电台'}
+        onClick={(e) => {
+          e.stopPropagation()
+          onRemove(s)
+        }}>
+        ✕
+      </DeleteBtn>
+    </StationItem>
+  )
+})
 
 const LiveBar = styled.div`
   display: flex;
@@ -464,13 +501,10 @@ const LiveDot = styled.span`
   flex-shrink: 0;
   &.connecting {
     background: ${mx.amber};
-    animation: ${pulseDot} 1s ease-in-out infinite;
   }
   &.on {
     background: ${mx.live};
-    animation: ${pulseDot} 1.6s ease-in-out infinite;
   }
-  ${reduceMotion}
 `
 
 const LiveText = styled.span`

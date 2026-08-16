@@ -76,20 +76,14 @@
   background-color: transparent !important;
 }
 
-[navbar-position='left'] .minapp-drawer {
-  max-width: calc(100vw - var(--sidebar-width));
+/* 侧边栏恒在右侧：小程序抽屉贴左边缘，右端在侧边栏左缘截断。
+   !important：antd 5 的 CSS-in-JS 在静态样式之后注入，同特异性会被其 max-width:100vw 覆盖 */
+.minapp-drawer .ant-drawer-content-wrapper {
+  max-width: calc(100vw - var(--sidebar-width)) !important;
 }
 
-[navbar-position='left'] .minapp-drawer .ant-drawer-header {
-  width: calc(100vw - var(--sidebar-width));
-}
-
-[navbar-position='top'] .minapp-drawer {
-  max-width: 100vw;
-}
-
-[navbar-position='top'] .minapp-drawer .ant-drawer-header {
-  width: 100vw;
+.minapp-drawer .ant-drawer-header {
+  width: calc(100vw - var(--sidebar-width)) !important;
 }
 
 .ant-drawer-header {

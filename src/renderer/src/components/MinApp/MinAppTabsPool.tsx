@@ -11,12 +11,14 @@ import styled from 'styled-components'
 /**
  * Mini-app WebView pool for Tab 模式 (顶部导航).
  *
+ * 注意：本组件当前无渲染入口（未挂载在任何布局中），Tab 模式为潜伏死代码：
+ * navbarPosition 恒为 'left'（设置项无 UI 入口、migrate 强制 'left'），
+ * /apps/:id 一律走 MinAppPage 重定向 + Popup 抽屉模式。若未来启用顶部导航需先挂载本组件。
+ *
  * 与 Popup 模式相似，但独立存在：
  *  - 仅在 isTopNavbar=true 且访问 /apps 路由时显示
  *  - 保证已打开的 keep-alive 小程序对应的 <webview> 不被卸载，只通过 display 切换
  *  - LRU 淘汰通过 openedKeepAliveMinapps 变化自动移除 DOM
- *
- * 后续可演进：与 Popup 共享同一实例（方案 B）。
  */
 const logger = loggerService.withContext('MinAppTabsPool')
 

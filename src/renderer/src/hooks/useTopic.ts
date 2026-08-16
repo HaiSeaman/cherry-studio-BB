@@ -5,11 +5,14 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { safeDeleteFiles } from '@renderer/services/MessagesService'
 import store from '@renderer/store'
 import { updateTopic } from '@renderer/store/assistants'
+import { removeManyBlocks } from '@renderer/store/messageBlock'
+import { newMessagesActions } from '@renderer/store/newMessage'
 import { setNewlyRenamedTopics, setRenamingTopics } from '@renderer/store/runtime'
 import { loadTopicMessagesThunk } from '@renderer/store/thunk/messageThunk'
 import type { Assistant, FileMetadata, Topic } from '@renderer/types'
 import type { FileMessageBlock, ImageMessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockType } from '@renderer/types/newMessage'
+import { abortCompletion } from '@renderer/utils/abortController'
 import { findMainTextBlocks } from '@renderer/utils/messageUtils/find'
 import { truncateText } from '@renderer/utils/naming'
 import { clearTopicQueue } from '@renderer/utils/queue'
@@ -18,6 +21,16 @@ import { type Dispatch, type SetStateAction, useEffect, useState } from 'react'
 
 import { useAssistant } from './useAssistant'
 import { getStoreSetting } from './useSettings'
+
+/** 获取话题全部消息块的 id（用于删除话题时清理 Redux 块实体） */
+async function getBlockIdsForTopic(topicId: string): Promise<string[]> {
+  const topic = await db.topics.get(topicId)
+  if (!topic) return []
+  const messageIds = topic.messages.map((m) => m.id)
+  if (messageIds.length === 0) return []
+  const blocks = await db.message_blocks.where('messageId').anyOf(messageIds).toArray()
+  return blocks.map((b) => b.id)
+}
 
 let _activeTopic: Topic
 let _setActiveTopic: Dispatch<SetStateAction<Topic>>
@@ -219,8 +232,15 @@ export const TopicManager = {
     // Release the topic's request queue so its PQueue instance (and the 'idle'
     // endTrace listener) does not stay in memory forever.
     clearTopicQueue(id)
+    // 中止在途流，避免删除后流继续向 DB/Redux 写孤儿块
+    abortCompletion(id)
+    // 删除前先取块 id（DB 删除后无法再查询）
+    const blockIds = await getBlockIdsForTopic(id).catch(() => [])
     await TopicManager.clearTopicMessages(id)
     await db.topics.delete(id)
+    // 清理 Redux 中该话题的消息与块实体，避免随话题增删无界增长
+    store.dispatch(newMessagesActions.clearTopicMessages(id))
+    store.dispatch(removeManyBlocks(blockIds))
   },
 
   async clearTopicMessages(id: string): Promise<void> {

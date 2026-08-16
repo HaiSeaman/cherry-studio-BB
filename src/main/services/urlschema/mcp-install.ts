@@ -37,7 +37,6 @@ function installMCPServers(servers: Record<string, MCPServer>) {
 }
 
 export function handleMcpProtocolUrl(url: URL) {
-  const params = new URLSearchParams(url.search)
   switch (url.pathname) {
     case '/install': {
       // jsonConfig example:
@@ -54,7 +53,10 @@ export function handleMcpProtocolUrl(url: URL) {
       // }
       // cherrystudio://mcp/install?servers={base64Encode(JSON.stringify(jsonConfig))}
 
-      const data = params.get('servers')
+      // URLSearchParams 会处理 + 和 /，base64 需先转义再还原（与 handle-providers 一致）
+      const processedSearch = url.search.replaceAll('+', '_').replaceAll('/', '-')
+      const params = new URLSearchParams(processedSearch)
+      const data = params.get('servers')?.replaceAll('_', '+').replaceAll('-', '/')
 
       if (data) {
         const stringify = Buffer.from(data, 'base64').toString('utf8')

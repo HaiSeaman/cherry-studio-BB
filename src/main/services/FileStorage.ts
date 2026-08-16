@@ -1616,6 +1616,12 @@ class FileStorage {
       if (response.body) {
         const writeStream = fs.createWriteStream(destPath)
         let total = 0
+        // 流错误必须有监听，否则 destroy(err) 触发 unhandled 'error' 事件使主进程崩溃
+        const onStreamError = (err: Error) => {
+          logger.error('downloadFile stream error:', err)
+          fs.promises.unlink(destPath).catch(() => {})
+        }
+        writeStream.on('error', onStreamError)
         try {
           for await (const chunk of response.body) {
             total += chunk.byteLength
@@ -1629,6 +1635,7 @@ class FileStorage {
           }
         } finally {
           writeStream.end()
+          writeStream.removeListener('error', onStreamError)
         }
       }
 

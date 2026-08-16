@@ -1,7 +1,7 @@
 import Favicon from '@renderer/components/Icons/FallbackFavicon'
 import { useMetaDataParser } from '@renderer/hooks/useMetaDataParser'
 import { Skeleton } from 'antd'
-import { type PropsWithChildren, useCallback, useEffect, useMemo } from 'react'
+import { type PropsWithChildren, useCallback, useEffect, useMemo, useRef } from 'react'
 
 import MarqueeText from './MarqueeText'
 
@@ -24,12 +24,16 @@ export const OGCard = ({ link, show }: Props) => {
     }
   }, [link])
 
+  // 已解析的链接：组件实例被复用且 link 变化时（如点击不同消息）重新解析，
+  // 而不是只在首次 isLoading 时解析一次
+  const parsedLinkRef = useRef<string | null>(null)
+
   useEffect(() => {
-    // use show to lazy loading
-    if (show && isLoading) {
+    if (show && link !== parsedLinkRef.current) {
+      parsedLinkRef.current = link
       void parseMetadata()
     }
-  }, [parseMetadata, isLoading, show])
+  }, [parseMetadata, show, link])
 
   const GeneratedGraph = useCallback(() => {
     return (

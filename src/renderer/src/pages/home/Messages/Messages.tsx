@@ -88,12 +88,19 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     }
   }, [])
 
+  // 分页状态只在消息 id 集合变化时重置：流式期间块转换/状态更新会改变 messages 引用，
+  // 若按引用重置，用户向上翻页加载的历史会被反复清掉、滚动位置跳动
+  const messagesKey = useMemo(() => messages.map((m) => m.id).join(','), [messages])
+  const messagesKeyRef = useRef<string>('')
+
   useEffect(() => {
+    if (messagesKey === messagesKeyRef.current) return
+    messagesKeyRef.current = messagesKey
     const page = paginateMessages(messages, 0, displayCount)
     setDisplayMessages(page.messages)
     setMessageCursor(page.nextCursor)
     setHasMore(page.hasMore)
-  }, [messages, displayCount])
+  }, [messagesKey, messages, displayCount])
 
   // NOTE: 如果设置为平滑滚动会导致滚动条无法跟随生成的新消息保持在底部位置
   const scrollToBottom = useCallback(() => {

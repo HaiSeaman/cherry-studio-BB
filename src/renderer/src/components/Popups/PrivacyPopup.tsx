@@ -45,9 +45,26 @@ const PopupContainer: React.FC<Props> = ({
   const [open, setOpen] = useState(true)
   const [privacyUrl, setPrivacyUrl] = useState<string>('')
   const resolvedRef = useRef(false)
+  const webviewContainerRef = useRef<HTMLDivElement | null>(null)
   const { theme } = useTheme()
   const shouldShowDeclineButton = !modal && (showDeclineButton ?? true)
   const shouldQuitOnDecline = quitOnDecline ?? !modal
+
+  // 裸 webview 从 DOM 移除不会销毁 webContents（渲染进程常驻），弹窗关闭时显式回收
+  useEffect(() => {
+    return () => {
+      const wv = webviewContainerRef.current?.querySelector('webview')
+      if (!wv) return
+      try {
+        const webviewId = (wv as any).getWebContentsId?.()
+        if (webviewId) {
+          void window.api?.webview?.close?.(webviewId)
+        }
+      } catch {
+        // webview 未就绪时忽略
+      }
+    }
+  }, [])
 
   const getTitle = () => {
     if (title) return title
@@ -118,7 +135,7 @@ const PopupContainer: React.FC<Props> = ({
           {acceptButtonText ?? '我知道了'}
         </Button>
       ].filter(Boolean)}>
-      <WebViewContainer>
+      <WebViewContainer ref={webviewContainerRef}>
         {privacyUrl && <webview src={privacyUrl} style={{ width: '100%', height: '100%' }} />}
       </WebViewContainer>
     </Modal>

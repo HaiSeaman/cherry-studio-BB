@@ -35,7 +35,7 @@ let minAppsCache: LRUCache<string, MinAppType>
  */
 export const useMinappPopup = () => {
   const dispatch = useAppDispatch()
-  const { openedKeepAliveMinapps, openedOneOffMinapp, minappShow } = useRuntime()
+  const { openedKeepAliveMinapps, openedOneOffMinapp, minappShow, currentMinappId } = useRuntime()
   const { maxKeepAliveMinapps } = useSettings() // 使用设置中的值
   const { isTopNavbar } = useNavbarPosition()
 
@@ -140,11 +140,14 @@ export const useMinappPopup = () => {
         dispatch(setOpenedOneOffMinapp(null))
       }
 
-      dispatch(setCurrentMinappId(''))
-      dispatch(setMinappShow(false))
+      // 仅当关闭的是当前展示的小程序时才收起抽屉；关闭其他页签不应影响当前展示
+      if (currentMinappId === appid) {
+        dispatch(setCurrentMinappId(''))
+        dispatch(setMinappShow(false))
+      }
       return
     },
-    [dispatch, openedKeepAliveMinapps, openedOneOffMinapp]
+    [dispatch, openedKeepAliveMinapps, openedOneOffMinapp, currentMinappId]
   )
 
   /** Close all minapps (popup hides and all minapps unloaded) */

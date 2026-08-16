@@ -23,6 +23,8 @@ function isBenignPlayRejection(err: unknown): boolean {
 export function useFmPlayer(stations: RadioStation[]) {
   const [currentUrl, setCurrentUrl] = useState<string | null>(null)
   const [status, setStatus] = useState<FmStatus>('idle')
+  const statusRef = useRef(status)
+  statusRef.current = status
   const [kbps, setKbps] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -158,7 +160,8 @@ export function useFmPlayer(stations: RadioStation[]) {
       })
     ]
     const speedInterval = setInterval(() => {
-      if (currentUrlRef.current) {
+      // 仅播放中采样网速：暂停/连接中不空转 setKbps 触发无谓渲染
+      if (currentUrlRef.current && statusRef.current === 'playing') {
         const st = stationsRef.current.find((s) => s.url === currentUrlRef.current)
         setKbps(audioEngine.sampleBufferedKbps(st?.bitrate || 128))
       }

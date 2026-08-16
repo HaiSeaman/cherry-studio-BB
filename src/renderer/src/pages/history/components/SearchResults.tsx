@@ -187,6 +187,7 @@ const buildSearchSnippet = (text: string, terms: string[], matchMode: KeywordMat
 const SearchResults: FC<Props> = ({ keywords, onMessageClick, onTopicClick, ...props }) => {
   const { handleScroll, containerRef } = useScrollPosition('SearchResults')
   const observerRef = useRef<MutationObserver | null>(null)
+  const searchReqIdRef = useRef(0)
 
   const [matchMode, setMatchMode] = useState<KeywordMatchMode>('whole-word')
   const [sortOrder, setSortOrder] = useState<ResultSortOrder>('newest')
@@ -201,6 +202,8 @@ const SearchResults: FC<Props> = ({ keywords, onMessageClick, onTopicClick, ...p
   const [isLoading, setIsLoading] = useState(false)
 
   const onSearch = useCallback(async () => {
+    // 请求序号守卫：并发搜索时丢弃过期结果，防止慢的旧请求覆盖新结果
+    const reqId = ++searchReqIdRef.current
     setSearchResults([])
     setIsLoading(true)
 
@@ -241,6 +244,8 @@ const SearchResults: FC<Props> = ({ keywords, onMessageClick, onTopicClick, ...p
         return null
       })
     ).then((results) => results.filter(Boolean) as SearchResult[])
+
+    if (searchReqIdRef.current !== reqId) return // 过期响应丢弃
 
     const endTime = performance.now()
     setSearchResults(results)

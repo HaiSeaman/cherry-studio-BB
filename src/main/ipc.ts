@@ -728,6 +728,14 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
     if (!webview) return
     webview.session.setSpellCheckerEnabled(isEnable)
   })
+  // 销毁 webview 渲染进程（✕ 关闭 / LRU 淘汰时回收 ~300M 内存）。
+  // close() 默认 waitForBeforeUnload=false，不被页面 beforeunload 拦截，直接销毁 WebContents。
+  // 仅允许销毁 guest webview 的 webContents，防止误传主窗口/其他窗口 id 导致窗口被关。
+  ipcMain.handle(IpcChannel.Webview_Close, (_, webviewId: number) => {
+    const webview = webContents.fromId(webviewId)
+    if (!webview || webview.isDestroyed() || webview.getType() !== 'webview') return
+    webview.close()
+  })
 
   // Webview print and save handlers
   ipcMain.handle(IpcChannel.Webview_PrintToPDF, async (_, webviewId: number) => {

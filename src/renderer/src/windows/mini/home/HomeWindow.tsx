@@ -8,7 +8,7 @@ import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { ConversationService } from '@renderer/services/ConversationService'
 import { getAssistantMessage, getUserMessage } from '@renderer/services/MessagesService'
 import store, { useAppSelector } from '@renderer/store'
-import { updateOneBlock, upsertManyBlocks, upsertOneBlock } from '@renderer/store/messageBlock'
+import { removeAllBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '@renderer/store/messageBlock'
 import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
 import { cancelThrottledBlockUpdate, throttledBlockUpdate } from '@renderer/store/thunk/messageThunk'
 import type { Topic } from '@renderer/types'
@@ -412,8 +412,13 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
                 if (!isAborted) {
                   throw new Error(chunk.error.message)
                 }
+                // 中止流：执行清理但保持 PAUSED 状态，不能落入 BLOCK_COMPLETE 把状态覆盖成 SUCCESS
+                setIsLoading(false)
+                setIsOutputted(true)
+                currentAskId.current = ''
                 thinkingStartTime = null
                 thinkingBlockId = null
+                break
               }
               //fall through
               case ChunkType.BLOCK_COMPLETE:
@@ -463,6 +468,8 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
         // Clear the topic messages to reduce memory usage
         if (currentTopic.current) {
           store.dispatch(newMessagesActions.clearTopicMessages(currentTopic.current.id))
+          // 块内容（markdown/工具输出/引用）同样驻留堆，一并清空
+          store.dispatch(removeAllBlocks())
         }
 
         // Reset the topic
