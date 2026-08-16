@@ -10,9 +10,10 @@ import styled, { css, keyframes } from 'styled-components'
 
 export const mx = {
   paper: 'color-mix(in srgb, var(--color-background) 86%, transparent)',
-  card: 'var(--color-list-item)',
+  /* 卡片/内容框/输入框统一为当前主题配色（背景色），靠边框与阴影区分，只有功能按键加深 */
+  card: 'var(--color-background)',
   soft: 'var(--color-background-soft)',
-  soft2: 'var(--color-background-mute)',
+  soft2: 'var(--color-background)',
   border: 'var(--color-border)',
   text: 'var(--color-text)',
   text2: 'var(--color-text-2)',
@@ -56,7 +57,7 @@ export const MXCard = styled.div`
   color: ${mx.text};
 `
 
-/** 36px 圆形幽灵图标按钮（悬停泛绿） */
+/** 36px 圆形幽灵图标按钮（主题色浅底，悬停泛主色） */
 export const MXIconButton = styled.button<{ $danger?: boolean; $size?: number }>`
   display: inline-flex;
   align-items: center;
@@ -65,7 +66,7 @@ export const MXIconButton = styled.button<{ $danger?: boolean; $size?: number }>
   height: ${(p) => p.$size ?? 36}px;
   border-radius: 50%;
   border: 1px solid ${mx.border};
-  background: ${mx.card};
+  background: var(--color-background);
   color: ${(p) => (p.$danger ? mx.danger : mx.text2)};
   cursor: pointer;
   transition: all 0.18s ease;
@@ -91,7 +92,7 @@ export const MXIconButton = styled.button<{ $danger?: boolean; $size?: number }>
     &:hover {
       transform: none;
       border-color: ${mx.border};
-      background: ${mx.card};
+      background: var(--color-background);
       color: ${mx.text2};
     }
   }
@@ -126,7 +127,7 @@ export const MXPrimaryButton = styled.button`
   }
 `
 
-/** 次级胶囊按钮 */
+/** 次级胶囊按钮（主题色浅底） */
 export const MXGhostPill = styled.button<{ $danger?: boolean }>`
   display: inline-flex;
   align-items: center;
@@ -136,7 +137,7 @@ export const MXGhostPill = styled.button<{ $danger?: boolean }>`
   padding: 5px 12px;
   font-size: 12px;
   color: ${(p) => (p.$danger ? mx.danger : mx.text2)};
-  background: ${mx.card};
+  background: var(--color-background);
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
@@ -234,7 +235,7 @@ const TabBtn = styled.button<{ $active: boolean; $size: 'sm' | 'md' }>`
   font-size: ${(p) => (p.$size === 'sm' ? '11.5px' : '12.5px')};
   font-weight: ${(p) => (p.$active ? 600 : 400)};
   color: ${(p) => (p.$active ? mx.accent : mx.text2)};
-  background: ${(p) => (p.$active ? mx.card : 'transparent')};
+  background: ${(p) => (p.$active ? 'var(--color-background)' : 'transparent')};
   box-shadow: ${(p) => (p.$active ? '0 1px 4px rgba(34,49,42,0.10)' : 'none')};
   cursor: pointer;
   transition: all 0.18s ease;

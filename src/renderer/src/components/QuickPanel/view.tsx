@@ -848,7 +848,7 @@ const QuickPanelBody = styled.div`
     content: '';
     position: absolute;
     inset: 0;
-    background-color: rgba(240, 240, 240, 0.5);
+    background-color: var(--color-background-opacity);
     backdrop-filter: blur(35px) saturate(150%);
     z-index: -1;
     border-radius: inherit;

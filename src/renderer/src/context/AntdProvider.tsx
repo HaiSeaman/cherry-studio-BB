@@ -45,15 +45,18 @@ const AntdProvider: FC<PropsWithChildren> = ({ children }) => {
           },
           Input: {
             controlHeight: 30,
-            colorBorder: 'var(--color-border)'
+            colorBorder: 'var(--color-border)',
+            colorBgContainer: 'var(--color-background)'
           },
           InputNumber: {
             controlHeight: 30,
-            colorBorder: 'var(--color-border)'
+            colorBorder: 'var(--color-border)',
+            colorBgContainer: 'var(--color-background)'
           },
           Select: {
             controlHeight: 30,
-            colorBorder: 'var(--color-border)'
+            colorBorder: 'var(--color-border)',
+            colorBgContainer: 'var(--color-background)'
           },
           Collapse: {
             headerBg: 'transparent'

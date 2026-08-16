@@ -270,6 +270,7 @@
   --color-background-soft: #2b2f35;
   --color-background-mute: #33383f;
   --color-background-opacity: rgba(35, 38, 43, 0.72);
+  /* 深色下卡片 = 背景亮一档的面板色 */
   --inner-glow-opacity: 0.3;
 
   --color-primary: #6fbf9b;
@@ -386,14 +387,4 @@
   --acrylic-2: #232d3d;
   --acrylic-3: #1c2430;
   --acrylic-mask: rgba(30, 37, 48, 0.5);
-}
-
-[navbar-position='left'][theme-mode='light'] {
-  --color-list-item: #edf5f0;
-  --color-list-item-hover: #e3ede7;
-}
-
-[navbar-position='left'][theme-mode='dark'] {
-  --color-list-item: #252525;
-  --color-list-item-hover: #1e1e1e;
 }
