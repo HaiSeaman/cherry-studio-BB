@@ -1,8 +1,9 @@
 import App from '@renderer/components/MinApp/MinApp'
 import Scrollbar from '@renderer/components/Scrollbar'
+import MinappSettingsPopup from './MiniappSettings/MinappSettingsPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
-import { Input } from 'antd'
-import { Search } from 'lucide-react'
+import { Button, Input } from 'antd'
+import { Search, SettingsIcon } from 'lucide-react'
 import type { FC } from 'react'
 import React, { useState } from 'react'
 import styled from 'styled-components'
@@ -44,6 +45,12 @@ const AppsPage: FC = () => {
                 suffix={<Search size={18} />}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+              />
+              <Button
+                type="text"
+                className="nodrag"
+                icon={<SettingsIcon size={18} color="var(--color-text-2)" />}
+                onClick={() => MinappSettingsPopup.show()}
               />
             </HeaderContainer>
             <AppsContainerWrapper>

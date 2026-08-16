@@ -70,9 +70,8 @@ const Sidebar: FC = () => {
           </StyledLink>
         </Tooltip>
       </Menus>
-      {/* 中段：小程序打开的详情页签 */}
+      {/* 中段：固定小程序图标 */}
       <MainMenusContainer>
-        <SidebarOpenedMinappTabs />
         {showPinnedApps && (
           <AppsContainer>
             <Divider />
@@ -82,8 +81,9 @@ const Sidebar: FC = () => {
           </AppsContainer>
         )}
       </MainMenusContainer>
-      {/* 下段：主菜单（从下往上：头像-聊天-便签闹钟-图片生成-音乐-小程序）+ 头像 */}
+      {/* 下段：打开的小程序页签（从「小程序」入口向上排列）+ 主菜单 + 头像 */}
       <Menus>
+        <SidebarOpenedMinappTabs />
         <MainMenus />
         {isEmoji(avatar) ? (
           <EmojiAvatar onClick={onEditUser} className="sidebar-avatar" size={31} fontSize={18}>
@@ -215,6 +215,8 @@ const MainMenus: FC = () => {
 const Container = styled.div<{ $isFullscreen: boolean }>`
   position: relative;
   z-index: 0;
+  /* 恒贴右：路由切换瞬间内容区卸载（懒加载）时，避免 Sidebar 被 flex 布局甩到左侧闪现 */
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -24,7 +24,6 @@ import InstallNpxUv from './InstallNpxUv'
 import McpMarketList from './McpMarketList'
 import ProviderDetail from './McpProviderSettings'
 import McpServersList from './McpServersList'
-import MiniAppSettings from '@renderer/pages/minapps/MiniappSettings/MiniAppSettings'
 import McpSettings from './McpSettings'
 import NpxSearch from './NpxSearch'
 import { getProviderDisplayName, providers } from './providers/config'
@@ -127,17 +126,7 @@ const MCPSettings: FC = () => {
           )}
           <Routes>
             <Route index element={<Navigate to="servers" replace />} />
-            <Route
-              path="servers"
-              element={
-                <>
-                  <McpServersList />
-                  <SettingContainer theme={theme}>
-                    <MiniAppSettings />
-                  </SettingContainer>
-                </>
-              }
-            />
+            <Route path="servers" element={<McpServersList />} />
             <Route path="settings/:serverId" element={<McpSettings />} />
             <Route
               path="npx-search"
