@@ -20,6 +20,7 @@ import type { TopicType } from '@renderer/types'
 import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMessage'
 import { Dexie, type EntityTable } from 'dexie'
 
+import type { MusicTrack, RadioStation } from '../pages/music/types'
 import { upgradeToV5, upgradeToV7, upgradeToV8 } from './upgrades'
 
 // Database declaration (move this to its own module also)
@@ -32,6 +33,10 @@ export const db = new Dexie('CherryStudio', {
   settings: EntityTable<{ id: string; value: any }, 'id'>
   quick_phrases: EntityTable<QuickPhrase, 'id'>
   message_blocks: EntityTable<MessageBlock, 'id'> // Correct type for message_blocks
+  // 音乐 TAB（本地播放列表/已添加文件夹/FM 收藏）
+  music_tracks: EntityTable<MusicTrack, 'id'>
+  music_folders: EntityTable<{ path: string; addedAt: number }, 'path'>
+  radio_favorites: EntityTable<RadioStation & { addedAt: number }, 'url'>
 }
 
 db.version(1).stores({
@@ -123,6 +128,18 @@ db.version(10).stores({
   settings: '&id, value',
   quick_phrases: 'id',
   message_blocks: 'id, messageId, file.id'
+})
+
+// --- NEW VERSION 11：音乐 TAB 三张表（本地曲目/已添加文件夹/FM 收藏） ---
+db.version(11).stores({
+  files: 'id, name, origin_name, path, size, ext, type, created_at, count',
+  topics: '&id',
+  settings: '&id, value',
+  quick_phrases: 'id',
+  message_blocks: 'id, messageId, file.id',
+  music_tracks: '++id, &filePath, order, favorite',
+  music_folders: '&path',
+  radio_favorites: '&url'
 })
 
 export default db

@@ -22,6 +22,7 @@ import { FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, R
 import storage from 'redux-persist/lib/storage'
 
 import paint from '../pages/paint/store/paintSlice'
+import musicSettings from '../pages/music/store/musicSettingsSlice'
 import storeSyncService from '../services/StoreSyncService'
 import assistants from './assistants'
 import backup from './backup'
@@ -59,6 +60,7 @@ const rootReducer = combineReducers({
   messageBlocks: messageBlocksReducer,
   inputTools: inputToolsReducer,
   paint,
+  musicSettings,
   translate,
   toolPermissions
 })
