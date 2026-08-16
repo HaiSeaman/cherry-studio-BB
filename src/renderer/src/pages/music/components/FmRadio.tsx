@@ -1,30 +1,37 @@
-import { Pause, Play, Plus, Radio, RefreshCw, RotateCw, Search, SkipBack, SkipForward } from 'lucide-react'
-import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import styled, { keyframes } from 'styled-components'
-
 import { db } from '@renderer/databases'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { Pause, Play, Plus, Radio, RefreshCw, RotateCw, Search, SkipBack, SkipForward } from 'lucide-react'
+import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import styled, { keyframes } from 'styled-components'
 
-import { useFmPlayer, type FmStatus } from '../hooks/useFmPlayer'
+import { type FmStatus, useFmPlayer } from '../hooks/useFmPlayer'
 import {
   getCnHkMusicStations,
   getStationsBySource,
   getTopStations,
-  searchStations,
-  withBuiltinCnHk,
   type RadioConfig,
-  type RadioSource
+  type RadioSource,
+  searchStations,
+  withBuiltinCnHk
 } from '../services/radioApi'
-import { addExcludedUrl, clearRadioCache, getCachedCnHk, getCachedTop, getExcludedUrls, setCachedCnHk, setCachedTop } from '../services/radioCache'
+import {
+  addExcludedUrl,
+  clearRadioCache,
+  getCachedCnHk,
+  getCachedTop,
+  getExcludedUrls,
+  setCachedCnHk,
+  setCachedTop
+} from '../services/radioCache'
 import { addCustomStation, removeCustomStation } from '../store/musicSettingsSlice'
 import type { RadioStation } from '../types'
-import VolumeControl from './VolumeControl'
 import {
   DialogField,
   DialogInput,
   DialogLabel,
   Eq,
+  mx,
   MXCard,
   MXDialog,
   MXGhostPill,
@@ -32,9 +39,9 @@ import {
   MXSearchInput,
   MXSpinner,
   MXTabs,
-  mx,
   reduceMotion
 } from './mx'
+import VolumeControl from './VolumeControl'
 
 type FmTab = 'top' | 'cnhk' | 'search' | 'favorites'
 type SearchMode = 'keyword' | 'country' | 'tag'
@@ -165,7 +172,8 @@ const FmRadio: FC = () => {
     const timer = setTimeout(async () => {
       setLoading(true)
       try {
-        const opts = searchMode === 'keyword' ? { keyword: text } : searchMode === 'country' ? { country: text } : { tag: text }
+        const opts =
+          searchMode === 'keyword' ? { keyword: text } : searchMode === 'country' ? { country: text } : { tag: text }
         const list = await searchStations(cfgRef.current, opts)
         if (searchReqId.current === reqId) setSearchList(list)
       } catch {
@@ -177,7 +185,8 @@ const FmRadio: FC = () => {
     return () => clearTimeout(timer)
   }, [searchText, searchMode])
 
-  const rawList: RadioStation[] = tab === 'top' ? topList : tab === 'cnhk' ? cnhkList : tab === 'search' ? searchList : favorites || []
+  const rawList: RadioStation[] =
+    tab === 'top' ? topList : tab === 'cnhk' ? cnhkList : tab === 'search' ? searchList : favorites || []
   const stations = useMemo(() => rawList.filter((s) => !excludedUrls.includes(s.url)), [rawList, excludedUrls])
 
   const player = useFmPlayer(stations)
@@ -216,7 +225,18 @@ const FmRadio: FC = () => {
     const url = customUrl.trim()
     if (!name) return setCustomError('请输入电台名称')
     if (!/^https?:\/\//i.test(url)) return setCustomError('流地址必须以 http:// 或 https:// 开头')
-    dispatch(addCustomStation({ name, url, favicon: '', country: '自定义', tags: 'custom', bitrate: 0, codec: '', homepage: '' }))
+    dispatch(
+      addCustomStation({
+        name,
+        url,
+        favicon: '',
+        country: '自定义',
+        tags: 'custom',
+        bitrate: 0,
+        codec: '',
+        homepage: ''
+      })
+    )
     setCustomOpen(false)
     setCustomName('')
     setCustomUrl('')
@@ -227,7 +247,11 @@ const FmRadio: FC = () => {
   const emptyText =
     tab === 'search' && searchText.trim() ? '没有找到电台' : tab === 'favorites' ? '还没有收藏电台' : '电台列表加载失败'
   const emptyHint =
-    tab === 'search' ? '换个关键词，或切换名称 / 国家 / 标签模式' : tab === 'favorites' ? '点击电台旁的 ☆ 收藏，随时在这里找到它' : '检查网络后点右上 ↻ 重试；中港音乐 tab 始终有内置精选台'
+    tab === 'search'
+      ? '换个关键词，或切换名称 / 国家 / 标签模式'
+      : tab === 'favorites'
+        ? '点击电台旁的 ☆ 收藏，随时在这里找到它'
+        : '检查网络后点右上 ↻ 重试；中港音乐 tab 始终有内置精选台'
 
   return (
     <MXCard data-no-dnd>
@@ -268,7 +292,9 @@ const FmRadio: FC = () => {
         />
         <TabsActions>
           {tab === 'top' && (
-            <MXGhostPill onClick={cycleSource} title={`当前来源：${SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}，点击循环切换`}>
+            <MXGhostPill
+              onClick={cycleSource}
+              title={`当前来源：${SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}，点击循环切换`}>
               <RefreshCw size={12} /> {SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}
             </MXGhostPill>
           )}
@@ -292,7 +318,13 @@ const FmRadio: FC = () => {
           <MXSearchInput>
             <Search size={13} />
             <input
-              placeholder={searchMode === 'keyword' ? '搜索电台名称…' : searchMode === 'country' ? '按国家搜索，如 China' : '按标签搜索，如 jazz'}
+              placeholder={
+                searchMode === 'keyword'
+                  ? '搜索电台名称…'
+                  : searchMode === 'country'
+                    ? '按国家搜索，如 China'
+                    : '按标签搜索，如 jazz'
+              }
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
@@ -372,14 +404,24 @@ const FmRadio: FC = () => {
         onOk={addCustom}>
         <DialogField>
           <DialogLabel>名称</DialogLabel>
-          <DialogInput value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="如：我的私人电台" />
+          <DialogInput
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            placeholder="如：我的私人电台"
+          />
         </DialogField>
         <DialogField>
           <DialogLabel>流地址</DialogLabel>
-          <DialogInput value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} placeholder="http://…（Icecast / Shoutcast 直播流）" />
+          <DialogInput
+            value={customUrl}
+            onChange={(e) => setCustomUrl(e.target.value)}
+            placeholder="http://…（Icecast / Shoutcast 直播流）"
+          />
         </DialogField>
         {customError && <ErrorText>{customError}</ErrorText>}
-        {!customError && customUrl.trim() && !/^https?:\/\//i.test(customUrl.trim()) && <ErrorText>流地址必须以 http:// 或 https:// 开头</ErrorText>}
+        {!customError && customUrl.trim() && !/^https?:\/\//i.test(customUrl.trim()) && (
+          <ErrorText>流地址必须以 http:// 或 https:// 开头</ErrorText>
+        )}
       </MXDialog>
     </MXCard>
   )

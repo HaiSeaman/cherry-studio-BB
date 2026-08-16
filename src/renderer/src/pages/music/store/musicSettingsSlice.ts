@@ -57,7 +57,14 @@ const musicSettingsSlice = createSlice({
   }
 })
 
-export const { setVolume, setLastVolumeBeforeMute, setPlayMode, setFavoritesActive, setRadioConfig, addCustomStation, removeCustomStation } =
-  musicSettingsSlice.actions
+export const {
+  setVolume,
+  setLastVolumeBeforeMute,
+  setPlayMode,
+  setFavoritesActive,
+  setRadioConfig,
+  addCustomStation,
+  removeCustomStation
+} = musicSettingsSlice.actions
 
 export default musicSettingsSlice.reducer

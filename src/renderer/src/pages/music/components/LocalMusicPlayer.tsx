@@ -1,16 +1,15 @@
+import { db } from '@renderer/databases'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { FolderPlus, Music4, Plus, RefreshCw, Search, Sparkles, Trash2 } from 'lucide-react'
 import { type FC, useEffect, useMemo, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import styled from 'styled-components'
-
-import { db } from '@renderer/databases'
 
 import { useLocalPlayer } from '../hooks/useLocalPlayer'
 import { addFilesToLibrary, addFolderToLibrary, reorderTracks, rescanFolders } from '../services/musicLibrary'
 import type { MusicTrack } from '../types'
+import { mx, MXCard, MXDialog, MXIconButton, MXPrimaryButton, MXSearchInput } from './mx'
 import PlayerControls from './PlayerControls'
 import Playlist from './Playlist'
-import { MXCard, MXDialog, MXIconButton, MXPrimaryButton, MXSearchInput, mx } from './mx'
 
 const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'weba', 'webm']
 
@@ -97,7 +96,7 @@ const LocalMusicPlayer: FC = () => {
 
   const onToggleFavorite = async (track: MusicTrack) => {
     const favorite: 0 | 1 = track.favorite === 1 ? 0 : 1
-    await db.music_tracks.update(track.id!, { favorite })
+    await db.music_tracks.update(track.id, { favorite })
     if (favorite === 0 && player.favoritesActive && track.id === player.currentId) {
       player.markPendingReturn()
     }
@@ -105,7 +104,7 @@ const LocalMusicPlayer: FC = () => {
 
   const onDelete = async (track: MusicTrack) => {
     const wasCurrent = track.id === player.currentId
-    await db.music_tracks.delete(track.id!)
+    await db.music_tracks.delete(track.id)
     if (wasCurrent) player.onCurrentTrackDeleted(track.id!)
   }
 
@@ -117,7 +116,11 @@ const LocalMusicPlayer: FC = () => {
       : searchQuery && visibleTracks.length === 0
         ? '没有匹配的曲目'
         : ''
-  const emptyHint = !hasTracks ? '添加几首喜欢的音乐，随时开听' : player.favoritesActive ? '点击曲目旁的 ☆，把喜欢的收进收藏夹' : '换个关键词试试'
+  const emptyHint = !hasTracks
+    ? '添加几首喜欢的音乐，随时开听'
+    : player.favoritesActive
+      ? '点击曲目旁的 ☆，把喜欢的收进收藏夹'
+      : '换个关键词试试'
 
   return (
     <MXCard data-no-dnd>
@@ -145,7 +148,11 @@ const LocalMusicPlayer: FC = () => {
         </MXIconButton>
         <MXSearchInput>
           <Search size={13} />
-          <input placeholder="搜索曲目 / 艺术家 / 专辑" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+          <input
+            placeholder="搜索曲目 / 艺术家 / 专辑"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
         </MXSearchInput>
       </Toolbar>
       {player.tip && (

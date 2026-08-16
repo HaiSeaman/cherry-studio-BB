@@ -1,9 +1,26 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import {
+  addExcludedUrl,
+  clearRadioCache,
+  getCachedCnHk,
+  getCachedTop,
+  getExcludedUrls,
+  setCachedCnHk,
+  setCachedTop
+} from '../services/radioCache'
 import type { RadioStation } from '../types'
-import { addExcludedUrl, clearRadioCache, getCachedCnHk, getCachedTop, getExcludedUrls, setCachedCnHk, setCachedTop } from '../services/radioCache'
 
-const st = (url: string): RadioStation => ({ name: 'x', url, favicon: '', country: '', tags: '', bitrate: 128, codec: 'MP3', homepage: '' })
+const st = (url: string): RadioStation => ({
+  name: 'x',
+  url,
+  favicon: '',
+  country: '',
+  tags: '',
+  bitrate: 128,
+  codec: 'MP3',
+  homepage: ''
+})
 
 describe('radioCache', () => {
   it('热门榜缓存 7 天内有效，过期返回 null', () => {

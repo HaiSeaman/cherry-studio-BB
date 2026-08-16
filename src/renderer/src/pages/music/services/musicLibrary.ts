@@ -1,7 +1,7 @@
 import { db } from '@renderer/databases'
 
-import { fetchTrackMetadata } from './playLogic'
 import type { MusicTrack } from '../types'
+import { fetchTrackMetadata } from './playLogic'
 
 /** 逐个读取元数据的并发数（主进程 parseStream 有 IO/CPU 开销，限 3） */
 const METADATA_CONCURRENCY = 3
@@ -20,7 +20,10 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
 }
 
 /** 为扫描到的文件构建曲目（去重 + 元数据降级 + order 接续） */
-export async function buildTracks(files: { filePath: string; size: number }[], existingPaths: Set<string>): Promise<MusicTrack[]> {
+export async function buildTracks(
+  files: { filePath: string; size: number }[],
+  existingPaths: Set<string>
+): Promise<MusicTrack[]> {
   const fresh = files.filter((f) => f.filePath && !existingPaths.has(f.filePath))
   if (fresh.length === 0) return []
 

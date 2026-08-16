@@ -6,10 +6,10 @@ import { type FC, useEffect, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 
 import { useCountdown } from '../hooks/useCountdown'
-import { ALARM_SOUND_OPTIONS, alarmSounds } from '../services/alarmSounds'
 import { alarmScheduler } from '../services/alarmScheduler'
+import { ALARM_SOUND_OPTIONS, alarmSounds } from '../services/alarmSounds'
 import { nextRingInfo } from '../services/schedule'
-import { setAlarmVolume, type CustomSound } from '../store/hubSettingsSlice'
+import { type CustomSound, setAlarmVolume } from '../store/hubSettingsSlice'
 import type { HubAlarm } from '../types'
 import { mx, MXGhostPill, MXTabs, reduceMotion } from './mx'
 import SoundPicker from './SoundPicker'
@@ -92,18 +92,20 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
   }
 
   const toggleAlarm = async (a: HubAlarm) => {
-    await db.hub_alarms.update(a.id!, { enabled: !a.enabled, triggered: false, lastTriggerKey: undefined })
+    await db.hub_alarms.update(a.id, { enabled: !a.enabled, triggered: false, lastTriggerKey: undefined })
   }
 
   const deleteAlarm = async (a: HubAlarm) => {
-    await db.hub_alarms.delete(a.id!)
+    await db.hub_alarms.delete(a.id)
   }
 
   // 定时闹钟（无 date）与日历闹钟（带 date）分组：互不混排
   const regularAlarms = (alarms ?? []).filter((a) => !a.date)
   const calAlarms = (alarms ?? [])
     .filter((a) => !!a.date)
-    .sort((a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0) || a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
+    .sort(
+      (a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0) || a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60)
+    )
   const sortedAlarms = regularAlarms.slice().sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
   const anyRinging = ringing != null
   const timerProgress = cd.totalSec > 0 ? cd.remainSec / cd.totalSec : 0
@@ -111,7 +113,10 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
   return (
     <Panel data-no-dnd>
       <ClockRow>
-        <ClockTime className={anyRinging ? 'ringing' : ''}>{`${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`}</ClockTime>
+        <ClockTime
+          className={
+            anyRinging ? 'ringing' : ''
+          }>{`${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`}</ClockTime>
         <ClockDate>
           {`${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 · ${WEEKDAYS[now.getDay()]}`}
         </ClockDate>
@@ -168,7 +173,13 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
             ))}
           </InputsRow>
           <ExtraRow>
-            <input className="mx-text" placeholder="文字说明（可选）" maxLength={50} value={timerLabel} onChange={(e) => setTimerLabel(e.target.value)} />
+            <input
+              className="mx-text"
+              placeholder="文字说明（可选）"
+              maxLength={50}
+              value={timerLabel}
+              onChange={(e) => setTimerLabel(e.target.value)}
+            />
             <SoundPicker value={timerSound} onChange={setTimerSound} />
           </ExtraRow>
           <ActionsRow>
@@ -207,7 +218,13 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
               <input type="number" min={0} max={59} value={alarmM} onChange={(e) => setAlarmM(e.target.value)} />
               <span>分</span>
             </NumInput>
-            <input className="mx-text" placeholder="标签（可选）" maxLength={50} value={alarmLabel} onChange={(e) => setAlarmLabel(e.target.value)} />
+            <input
+              className="mx-text"
+              placeholder="标签（可选）"
+              maxLength={50}
+              value={alarmLabel}
+              onChange={(e) => setAlarmLabel(e.target.value)}
+            />
             <AddBtn onClick={() => void addAlarm()}>
               <Plus size={13} /> 添加
             </AddBtn>
@@ -220,7 +237,11 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
                 const info = nextRingInfo(a, now)
                 return (
                   <AlarmItem key={a.id} className={!a.enabled ? 'off' : ''}>
-                    <Toggle className={a.enabled ? 'on' : ''} onClick={() => void toggleAlarm(a)} role="switch" aria-checked={a.enabled}>
+                    <Toggle
+                      className={a.enabled ? 'on' : ''}
+                      onClick={() => void toggleAlarm(a)}
+                      role="switch"
+                      aria-checked={a.enabled}>
                       <span />
                     </Toggle>
                     <AlarmInfo>
@@ -254,7 +275,11 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
                 const info = nextRingInfo(a, now)
                 return (
                   <AlarmItem key={a.id} className={!a.enabled ? 'off' : ''}>
-                    <Toggle className={a.enabled ? 'on' : ''} onClick={() => void toggleAlarm(a)} role="switch" aria-checked={a.enabled}>
+                    <Toggle
+                      className={a.enabled ? 'on' : ''}
+                      onClick={() => void toggleAlarm(a)}
+                      role="switch"
+                      aria-checked={a.enabled}>
                       <span />
                     </Toggle>
                     <AlarmInfo>

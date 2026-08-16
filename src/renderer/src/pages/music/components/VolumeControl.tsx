@@ -1,8 +1,7 @@
+import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { Volume1, Volume2, VolumeX } from 'lucide-react'
 import { type FC, useEffect } from 'react'
 import styled from 'styled-components'
-
-import { useAppDispatch, useAppSelector } from '@renderer/store'
 
 import { audioEngine } from '../services/audioEngine'
 import { setLastVolumeBeforeMute, setVolume } from '../store/musicSettingsSlice'

@@ -1,11 +1,10 @@
+import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { Music4, Plus, X } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-import { useAppDispatch, useAppSelector } from '@renderer/store'
-
-import { alarmSounds, ALARM_SOUND_OPTIONS } from '../services/alarmSounds'
-import { addCustomSound, removeCustomSound, type CustomSound } from '../store/hubSettingsSlice'
+import { ALARM_SOUND_OPTIONS, alarmSounds } from '../services/alarmSounds'
+import { addCustomSound, type CustomSound, removeCustomSound } from '../store/hubSettingsSlice'
 import { mx } from './mx'
 
 export const CUSTOM_PICK = 'custom:pick'

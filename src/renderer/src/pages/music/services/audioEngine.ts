@@ -24,7 +24,12 @@ export class AudioEngine {
 
   /** 引擎快照：owner 方可在组件重新挂载时恢复播放状态（页面卸载后引擎继续播放） */
   snapshot(): { owner: AudioOwner | null; url: string; paused: boolean; meta: unknown } {
-    return { owner: this.owner, url: this.el.src || '', paused: this.el.paused, meta: this.owner ? this.ownerMeta : null }
+    return {
+      owner: this.owner,
+      url: this.el.src || '',
+      paused: this.el.paused,
+      meta: this.owner ? this.ownerMeta : null
+    }
   }
 
   /** 取得引擎归属；若另一方正在使用，先将其停掉并复位其回调（监听不物理移除，见 on 注释） */

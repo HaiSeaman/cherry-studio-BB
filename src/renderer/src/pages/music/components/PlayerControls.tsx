@@ -1,11 +1,11 @@
-import { ListMusic, Pause, Play, Repeat1, Shuffle, SkipBack, SkipForward, Star, Music2 } from 'lucide-react'
+import { ListMusic, Music2, Pause, Play, Repeat1, Shuffle, SkipBack, SkipForward, Star } from 'lucide-react'
 import { type FC, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 
 import { formatTime, toFileUrl } from '../services/playLogic'
 import type { MusicTrack, PlayMode } from '../types'
-import VolumeControl from './VolumeControl'
 import { mx, reduceMotion } from './mx'
+import VolumeControl from './VolumeControl'
 
 const MODE_META: Record<PlayMode, { icon: React.ReactNode; label: string }> = {
   sequential: { icon: <ListMusic size={16} />, label: '顺序播放' },
@@ -99,7 +99,11 @@ const PlayerControls: FC<PlayerControlsProps> = ({
 
       <Center>
         <Buttons>
-          <FilterPill $active={favoritesActive} onClick={onToggleFavorites} aria-pressed={favoritesActive} title="只在收藏中播放">
+          <FilterPill
+            $active={favoritesActive}
+            onClick={onToggleFavorites}
+            aria-pressed={favoritesActive}
+            title="只在收藏中播放">
             <Star size={12} fill={favoritesActive ? 'currentColor' : 'none'} />
             收藏夹
           </FilterPill>

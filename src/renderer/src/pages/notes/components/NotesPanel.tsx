@@ -12,8 +12,16 @@ import NoteEditor from './NoteEditor'
 /** 左上卡片：便签列表（搜索/新建/归档/垃圾桶）+ 编辑器 */
 const NotesPanel: FC = () => {
   const notes = useLiveQuery(async () => (await db.hub_notes.where('status').equals('active').toArray()) ?? [], [], [])
-  const archived = useLiveQuery(async () => (await db.hub_notes.where('status').equals('archived').toArray()) ?? [], [], [])
-  const trashed = useLiveQuery(async () => (await db.hub_notes.where('status').equals('trashed').toArray()) ?? [], [], [])
+  const archived = useLiveQuery(
+    async () => (await db.hub_notes.where('status').equals('archived').toArray()) ?? [],
+    [],
+    []
+  )
+  const trashed = useLiveQuery(
+    async () => (await db.hub_notes.where('status').equals('trashed').toArray()) ?? [],
+    [],
+    []
+  )
   const active = useMemo(() => (notes ?? []).slice().sort((a, b) => b.updatedAt - a.updatedAt), [notes])
 
   const [currentId, setCurrentId] = useState<number | null>(null)
@@ -37,14 +45,17 @@ const NotesPanel: FC = () => {
   }, [active, currentId])
 
   useEffect(() => {
-    if ((notes ?? []).length === 0 && (archived ?? []).length === 0 && (trashed ?? []).length === 0 && !creating.current) {
+    if (
+      (notes ?? []).length === 0 &&
+      (archived ?? []).length === 0 &&
+      (trashed ?? []).length === 0 &&
+      !creating.current
+    ) {
       creating.current = true
       const now = Date.now()
-      void db.hub_notes
-        .add({ content: '', createdAt: now, updatedAt: now, status: 'active' })
-        .finally(() => {
-          creating.current = false
-        })
+      void db.hub_notes.add({ content: '', createdAt: now, updatedAt: now, status: 'active' }).finally(() => {
+        creating.current = false
+      })
     }
   }, [notes, archived, trashed])
 
@@ -53,18 +64,15 @@ const NotesPanel: FC = () => {
     [active, searchQuery]
   )
 
-  const currentNote = currentId != null ? active.find((n) => n.id === currentId) ?? null : null
+  const currentNote = currentId != null ? (active.find((n) => n.id === currentId) ?? null) : null
 
   // 切换便签前落盘上一条（NoteEditor 卸载副作用只处理组件卸载场景）
-  const switchNote = useCallback(
-    async (nextId: number | null, prev: HubNote | null, latestContent?: string) => {
-      if (prev && prev.id != null && latestContent != null && latestContent !== prev.content) {
-        await db.hub_notes.update(prev.id, { content: latestContent, updatedAt: Date.now() })
-      }
-      setCurrentId(nextId)
-    },
-    []
-  )
+  const switchNote = useCallback(async (nextId: number | null, prev: HubNote | null, latestContent?: string) => {
+    if (prev && prev.id != null && latestContent != null && latestContent !== prev.content) {
+      await db.hub_notes.update(prev.id, { content: latestContent, updatedAt: Date.now() })
+    }
+    setCurrentId(nextId)
+  }, [])
 
   const createNote = async () => {
     if (creating.current) return
@@ -143,12 +151,36 @@ const NotesPanel: FC = () => {
             <Empty>{active.length === 0 ? '还没有便签，点右上 ＋ 新建' : '没有匹配的便签'}</Empty>
           ) : (
             filtered.map((n) => (
-              <Item key={n.id} className={n.id === currentId ? 'active' : ''} onClick={() => void switchNote(n.id ?? null, currentNote, n.id != null ? pendingContentOf(n.id) : undefined)}>
+              <Item
+                key={n.id}
+                className={n.id === currentId ? 'active' : ''}
+                onClick={() =>
+                  void switchNote(
+                    n.id ?? null,
+                    currentNote,
+                    currentNote?.id != null ? pendingContentOf(currentNote.id) : undefined
+                  )
+                }>
                 <ItemTitle>{previewText(n.content)}</ItemTitle>
                 <ItemTime>{fmtTime(n.createdAt)}</ItemTime>
                 <ItemActions>
-                  <MiniBtn title="归档" onClick={(e) => { e.stopPropagation(); void archiveNote(n) }}>📦</MiniBtn>
-                  <MiniBtn $danger title="移入垃圾桶" onClick={(e) => { e.stopPropagation(); void trashNote(n) }}>✕</MiniBtn>
+                  <MiniBtn
+                    title="归档"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void archiveNote(n)
+                    }}>
+                    📦
+                  </MiniBtn>
+                  <MiniBtn
+                    $danger
+                    title="移入垃圾桶"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void trashNote(n)
+                    }}>
+                    ✕
+                  </MiniBtn>
                 </ItemActions>
               </Item>
             ))
@@ -161,7 +193,11 @@ const NotesPanel: FC = () => {
         open={archiveOpen}
         title="便签归档文件夹"
         emptyHint="归档的便签会出现在这里"
-        items={archiveItems.map((n) => ({ id: n.id!, preview: previewText(n.content), time: n.archivedAt ?? n.updatedAt }))}
+        items={archiveItems.map((n) => ({
+          id: n.id!,
+          preview: previewText(n.content),
+          time: n.archivedAt ?? n.updatedAt
+        }))}
         onClose={() => setArchiveOpen(false)}
         onRestore={(id) => void db.hub_notes.update(id, { status: 'active', archivedAt: undefined })}
         onDelete={(id) => void db.hub_notes.delete(id)}
@@ -171,7 +207,11 @@ const NotesPanel: FC = () => {
         open={trashOpen}
         title="垃圾桶"
         emptyHint="垃圾桶是空的"
-        items={trashItems.map((n) => ({ id: n.id!, preview: previewText(n.content), time: n.trashedAt ?? n.updatedAt }))}
+        items={trashItems.map((n) => ({
+          id: n.id!,
+          preview: previewText(n.content),
+          time: n.trashedAt ?? n.updatedAt
+        }))}
         onClose={() => setTrashOpen(false)}
         onRestore={(id) => void db.hub_notes.update(id, { status: 'active', trashedAt: undefined })}
         onDelete={(id) => void db.hub_notes.delete(id)}

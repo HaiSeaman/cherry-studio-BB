@@ -64,7 +64,7 @@ export const MXIconButton = styled.button<{ $danger?: boolean; $size?: number }>
   border-radius: 50%;
   border: 1px solid ${mx.border};
   background: ${mx.card};
-  color: ${p => (p.$danger ? mx.danger : mx.text2)};
+  color: ${(p) => (p.$danger ? mx.danger : mx.text2)};
   cursor: pointer;
   transition: all 0.18s ease;
   flex-shrink: 0;
@@ -133,7 +133,7 @@ export const MXGhostPill = styled.button<{ $danger?: boolean }>`
   border-radius: 999px;
   padding: 5px 12px;
   font-size: 12px;
-  color: ${p => (p.$danger ? mx.danger : mx.text2)};
+  color: ${(p) => (p.$danger ? mx.danger : mx.text2)};
   background: ${mx.card};
   cursor: pointer;
   transition: all 0.18s ease;
@@ -266,7 +266,17 @@ interface MXDialogProps {
   onCancel: () => void
 }
 
-export const MXDialog: FC<MXDialogProps> = ({ open, title, children, okText = '确定', cancelText = '取消', okDisabled, danger, onOk, onCancel }) => {
+export const MXDialog: FC<MXDialogProps> = ({
+  open,
+  title,
+  children,
+  okText = '确定',
+  cancelText = '取消',
+  okDisabled,
+  danger,
+  onOk,
+  onCancel
+}) => {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -289,7 +299,10 @@ export const MXDialog: FC<MXDialogProps> = ({ open, title, children, okText = '�
         <DialogBody>{children}</DialogBody>
         <DialogFooter>
           <MXGhostPill onClick={onCancel}>{cancelText}</MXGhostPill>
-          <MXPrimaryButton onClick={onOk} disabled={okDisabled} style={danger ? { background: mx.danger, boxShadow: '0 4px 14px rgba(239,83,80,0.35)' } : undefined}>
+          <MXPrimaryButton
+            onClick={onOk}
+            disabled={okDisabled}
+            style={danger ? { background: mx.danger, boxShadow: '0 4px 14px rgba(239,83,80,0.35)' } : undefined}>
             {okText}
           </MXPrimaryButton>
         </DialogFooter>

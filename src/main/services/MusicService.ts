@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { loggerService } from '@logger'
-import { app, nativeImage, type IpcMainInvokeEvent } from 'electron'
+import { app, type IpcMainInvokeEvent, nativeImage } from 'electron'
 import { parseStream } from 'music-metadata'
 
 const logger = loggerService.withContext('MusicService')
@@ -52,7 +52,10 @@ export class MusicService {
     return dir
   }
 
-  public readMetadata = async (_: IpcMainInvokeEvent, { filePath }: { filePath: string }): Promise<MusicMetadataResponse> => {
+  public readMetadata = async (
+    _: IpcMainInvokeEvent,
+    { filePath }: { filePath: string }
+  ): Promise<MusicMetadataResponse> => {
     try {
       if (!path.isAbsolute(filePath)) throw new Error('path must be absolute')
       const ext = path.extname(filePath).toLowerCase()
@@ -146,10 +149,14 @@ export class MusicService {
   }
 
   /** 读取自定义闹钟声音文件（二进制，≤20MB，扩展名白名单） */
-  public readAudioFile = async (_: IpcMainInvokeEvent, { filePath }: { filePath: string }): Promise<MusicAudioFileResponse> => {
+  public readAudioFile = async (
+    _: IpcMainInvokeEvent,
+    { filePath }: { filePath: string }
+  ): Promise<MusicAudioFileResponse> => {
     try {
       if (!path.isAbsolute(filePath)) throw new Error('path must be absolute')
-      if (!CUSTOM_SOUND_EXTS.includes(path.extname(filePath).toLowerCase())) throw new Error('unsupported audio extension')
+      if (!CUSTOM_SOUND_EXTS.includes(path.extname(filePath).toLowerCase()))
+        throw new Error('unsupported audio extension')
       const stat = await fs.promises.stat(filePath)
       if (!stat.isFile()) throw new Error('not a file')
       if (stat.size > CUSTOM_SOUND_MAX_BYTES) throw new Error('file too large (max 20MB)')

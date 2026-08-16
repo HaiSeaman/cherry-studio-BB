@@ -36,7 +36,14 @@ function ensureCtx(): AudioContext {
 }
 
 /** 基础音符：0→vol 线性起音 → 指数衰减到 0.001 */
-function playNote(ctx: AudioContext, freq: number, startTime: number, duration: number, type: OscillatorType = 'sine', vol = 0.3): void {
+function playNote(
+  ctx: AudioContext,
+  freq: number,
+  startTime: number,
+  duration: number,
+  type: OscillatorType = 'sine',
+  vol = 0.3
+): void {
   const osc = ctx.createOscillator()
   const gain = ctx.createGain()
   osc.type = type

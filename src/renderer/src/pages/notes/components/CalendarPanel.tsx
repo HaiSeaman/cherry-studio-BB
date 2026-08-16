@@ -42,7 +42,10 @@ const CalendarPanel: FC = () => {
 
   // 月历标记：蓝点 = 当日待办；琥珀点 = 日历闹钟
   const dayNoteDates = useMemo(() => new Set(dayNotes?.map((n) => n.date) ?? []), [dayNotes])
-  const alarmDates = useMemo(() => new Set((alarms ?? []).filter((a) => a.date && a.enabled).map((a) => a.date!)), [alarms])
+  const alarmDates = useMemo(
+    () => new Set((alarms ?? []).filter((a) => a.date && a.enabled).map((a) => a.date!)),
+    [alarms]
+  )
 
   // 热力图
   const activityMap = useMemo(() => new Map((activity ?? []).map((a) => [a.date, a] as const)), [activity])
@@ -67,7 +70,9 @@ const CalendarPanel: FC = () => {
   const totalActive = useMemo(() => (activity ?? []).reduce((sum, a) => sum + a.note + a.todo, 0), [activity])
 
   // ---- 当日数据 ----
-  const dayAlarms = (alarms ?? []).filter((a) => a.date === selected).sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
+  const dayAlarms = (alarms ?? [])
+    .filter((a) => a.date === selected)
+    .sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
   const selectedDayNotes = (dayNotes ?? []).filter((n) => n.date === selected).sort((a, b) => b.createdAt - a.createdAt)
 
   /** 铃声展示名：内置查表，自定义查自定义声音列表 */
@@ -202,7 +207,12 @@ const CalendarPanel: FC = () => {
           </DetailTitle>
           <InputRow>
             <TimeInput type="time" value={alarmTime} onChange={(e) => setAlarmTime(e.target.value)} />
-            <TextInput placeholder="标签" maxLength={50} value={alarmLabel} onChange={(e) => setAlarmLabel(e.target.value)} />
+            <TextInput
+              placeholder="标签"
+              maxLength={50}
+              value={alarmLabel}
+              onChange={(e) => setAlarmLabel(e.target.value)}
+            />
             <SoundWrap>
               <SoundPicker value={alarmSound} onChange={setAlarmSound} />
             </SoundWrap>

@@ -33,6 +33,9 @@ files:
       - "!config"
       - "!patches"
       - "!app-upgrade-config.json"
+      # dist 是 electron-builder 自身的产物目录，必须排除，
+      # 否则二次打包会把上次的 EXE 卷进 app.asar（体积滚雪球）
+      - "!dist"
       - "!**/node_modules/**/*.cpp"
       - "!**/node_modules/node-addon-api/**"
       - "!**/node_modules/prebuild-install/**"

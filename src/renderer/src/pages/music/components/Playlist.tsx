@@ -1,9 +1,9 @@
 import { type FC, useRef } from 'react'
 import styled from 'styled-components'
 
-import { Eq, mx } from './mx'
 import { toFileUrl } from '../services/playLogic'
 import type { MusicTrack } from '../types'
+import { Eq, mx } from './mx'
 
 const COVER_FALLBACK =
   'data:image/svg+xml,' +
@@ -23,7 +23,16 @@ interface PlaylistProps {
 }
 
 /** 播放列表：封面缩略图两级回退、播放行频谱高亮、悬停 ★/✕、拖拽排序（过滤状态下禁用） */
-const Playlist: FC<PlaylistProps> = ({ tracks, currentId, isPlaying, dragEnabled, onPlay, onToggleFavorite, onDelete, onReorder }) => {
+const Playlist: FC<PlaylistProps> = ({
+  tracks,
+  currentId,
+  isPlaying,
+  dragEnabled,
+  onPlay,
+  onToggleFavorite,
+  onDelete,
+  onReorder
+}) => {
   const dragSrcId = useRef<number | null>(null)
 
   const handleDrop = (e: React.DragEvent, targetId: number | null) => {
@@ -76,7 +85,9 @@ const Playlist: FC<PlaylistProps> = ({ tracks, currentId, isPlaying, dragEnabled
               <Title className="title">{t.title}</Title>
               <Meta>{[t.artist, t.album].filter(Boolean).join(' · ') || '未知艺术家'}</Meta>
             </Info>
-            <Duration>{playing ? <Eq paused={!isPlaying} /> : t.duration > 0 ? formatDuration(t.duration) : ''}</Duration>
+            <Duration>
+              {playing ? <Eq paused={!isPlaying} /> : t.duration > 0 ? formatDuration(t.duration) : ''}
+            </Duration>
             <FavBtn
               className={t.favorite === 1 ? 'favorited' : ''}
               title={t.favorite === 1 ? '取消收藏' : '收藏'}

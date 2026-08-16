@@ -12,8 +12,16 @@ import { mx } from './mx'
 /** 左下卡片：待办事项（与便签/日历当日待办完全独立） */
 const TodoPanel: FC = () => {
   const todos = useLiveQuery(async () => (await db.hub_todos.where('status').equals('active').toArray()) ?? [], [], [])
-  const archived = useLiveQuery(async () => (await db.hub_todos.where('status').equals('archived').toArray()) ?? [], [], [])
-  const trashed = useLiveQuery(async () => (await db.hub_todos.where('status').equals('trashed').toArray()) ?? [], [], [])
+  const archived = useLiveQuery(
+    async () => (await db.hub_todos.where('status').equals('archived').toArray()) ?? [],
+    [],
+    []
+  )
+  const trashed = useLiveQuery(
+    async () => (await db.hub_todos.where('status').equals('trashed').toArray()) ?? [],
+    [],
+    []
+  )
 
   const [input, setInput] = useState('')
   const [archiveOpen, setArchiveOpen] = useState(false)
@@ -103,7 +111,11 @@ const TodoPanel: FC = () => {
         ) : (
           sorted.map((t) => (
             <Row key={t.id}>
-              <Check className={t.done ? 'checked' : ''} onClick={() => void toggleTodo(t)} role="checkbox" aria-checked={t.done}>
+              <Check
+                className={t.done ? 'checked' : ''}
+                onClick={() => void toggleTodo(t)}
+                role="checkbox"
+                aria-checked={t.done}>
                 {t.done && <span>✓</span>}
               </Check>
               <Info>
@@ -111,7 +123,9 @@ const TodoPanel: FC = () => {
                 <Time>{t.done && t.completedAt ? `完成于 ${fmtTime(t.completedAt)}` : fmtTime(t.createdAt)}</Time>
               </Info>
               <RowActions>
-                <MiniBtn title="归档" onClick={() => void archiveTodo(t)}>📦</MiniBtn>
+                <MiniBtn title="归档" onClick={() => void archiveTodo(t)}>
+                  📦
+                </MiniBtn>
                 <MiniBtn $danger title="移入垃圾桶" onClick={() => void trashTodo(t)}>
                   <Trash2 size={12} />
                 </MiniBtn>
@@ -138,7 +152,11 @@ const TodoPanel: FC = () => {
         open={archiveOpen}
         title="待办归档文件夹"
         emptyHint="归档的待办会出现在这里"
-        items={archiveItems.map((t) => ({ id: t.id!, preview: previewText(t.text), time: t.archivedAt ?? t.updatedAt }))}
+        items={archiveItems.map((t) => ({
+          id: t.id!,
+          preview: previewText(t.text),
+          time: t.archivedAt ?? t.updatedAt
+        }))}
         onClose={() => setArchiveOpen(false)}
         onRestore={(id) => void db.hub_todos.update(id, { status: 'active', archivedAt: undefined })}
         onDelete={(id) => void db.hub_todos.delete(id)}

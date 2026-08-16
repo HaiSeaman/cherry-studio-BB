@@ -40,7 +40,14 @@ const NoteHistoryPanel: FC<NoteHistoryPanelProps> = ({ open, snapshots, onClose,
   )
 
   return (
-    <MXDialog open={open} title="历史版本（后悔药）" okText="关闭" okDisabled cancelText="关闭" onCancel={onClose} onOk={onClose}>
+    <MXDialog
+      open={open}
+      title="历史版本（后悔药）"
+      okText="关闭"
+      okDisabled
+      cancelText="关闭"
+      onCancel={onClose}
+      onOk={onClose}>
       {snapshots.length === 0 ? (
         <Empty>还没有历史版本，编辑后自动保存快照</Empty>
       ) : (

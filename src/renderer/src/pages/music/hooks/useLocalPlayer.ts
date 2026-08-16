@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
 import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { audioEngine } from '../services/audioEngine'
 import { nextIndexInPool, prevIndexInPool, pushShuffleHistory, toFileUrl } from '../services/playLogic'
@@ -40,7 +39,11 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
   const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const favoriteIndices = useMemo(
-    () => tracks.map((t, i) => ({ t, i })).filter((x) => x.t.favorite === 1).map((x) => x.i),
+    () =>
+      tracks
+        .map((t, i) => ({ t, i }))
+        .filter((x) => x.t.favorite === 1)
+        .map((x) => x.i),
     [tracks]
   )
   const favoriteIndicesRef = useRef(favoriteIndices)
@@ -72,24 +75,21 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
   }, [])
 
   /** 播放指定索引（manual=true 表示用户手动点击：随机历史重置） */
-  const playIndex = useCallback(
-    (index: number, manual = false) => {
-      const list = tracksRef.current
-      const track = list[index]
-      if (!track || track.id == null) return
-      if (playModeRef.current === 'shuffle') {
-        shuffleHistoryRef.current = manual ? [track.id] : pushShuffleHistory(shuffleHistoryRef.current, track.id)
-      }
-      setCurrentId(track.id)
-      setCurrentTime(0)
-      setDuration(0)
-      audioEngine.load('local', toFileUrl(track.filePath), { trackId: track.id })
-      audioEngine.play().catch(() => {
-        // play 拒绝由 error 事件统一处理
-      })
-    },
-    []
-  )
+  const playIndex = useCallback((index: number, manual = false) => {
+    const list = tracksRef.current
+    const track = list[index]
+    if (!track || track.id == null) return
+    if (playModeRef.current === 'shuffle') {
+      shuffleHistoryRef.current = manual ? [track.id] : pushShuffleHistory(shuffleHistoryRef.current, track.id)
+    }
+    setCurrentId(track.id)
+    setCurrentTime(0)
+    setDuration(0)
+    audioEngine.load('local', toFileUrl(track.filePath), { trackId: track.id })
+    audioEngine.play().catch(() => {
+      // play 拒绝由 error 事件统一处理
+    })
+  }, [])
 
   /** 自动/手动切下一首（池内按模式选择；pendingReturn 时落回收藏池） */
   const next = useCallback(
@@ -276,7 +276,7 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     }
   }, [showTip, stopPlayback])
 
-  const currentTrack = currentId != null ? tracks.find((t) => t.id === currentId) ?? null : null
+  const currentTrack = currentId != null ? (tracks.find((t) => t.id === currentId) ?? null) : null
 
   return {
     currentId,

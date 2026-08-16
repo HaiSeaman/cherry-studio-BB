@@ -84,10 +84,46 @@ export function isPlayableCnHk(s: RadioStation): boolean {
 
 /** 内置精选电台（线上 API 完全不可用时的保底，永远排在最前） */
 export const BUILTIN_CN_HK_MUSIC_STATIONS: RadioStation[] = [
-  { name: 'RTHK Radio 1', url: 'http://rthkaudio1.rthk.hk:80/', favicon: '', country: 'Hong Kong', tags: 'music,news', bitrate: 128, codec: 'MP3', homepage: 'https://www.rthk.hk' },
-  { name: 'RTHK Radio 2', url: 'http://rthkaudio2.rthk.hk:80/', favicon: '', country: 'Hong Kong', tags: 'music,pop', bitrate: 128, codec: 'MP3', homepage: 'https://www.rthk.hk' },
-  { name: 'RTHK Radio 3', url: 'http://rthkaudio3.rthk.hk:80/', favicon: '', country: 'Hong Kong', tags: 'music,english', bitrate: 128, codec: 'MP3', homepage: 'https://www.rthk.hk' },
-  { name: 'RTHK Radio 4', url: 'http://rthkaudio4.rthk.hk:80/', favicon: '', country: 'Hong Kong', tags: 'music,classical', bitrate: 128, codec: 'MP3', homepage: 'https://www.rthk.hk' }
+  {
+    name: 'RTHK Radio 1',
+    url: 'http://rthkaudio1.rthk.hk:80/',
+    favicon: '',
+    country: 'Hong Kong',
+    tags: 'music,news',
+    bitrate: 128,
+    codec: 'MP3',
+    homepage: 'https://www.rthk.hk'
+  },
+  {
+    name: 'RTHK Radio 2',
+    url: 'http://rthkaudio2.rthk.hk:80/',
+    favicon: '',
+    country: 'Hong Kong',
+    tags: 'music,pop',
+    bitrate: 128,
+    codec: 'MP3',
+    homepage: 'https://www.rthk.hk'
+  },
+  {
+    name: 'RTHK Radio 3',
+    url: 'http://rthkaudio3.rthk.hk:80/',
+    favicon: '',
+    country: 'Hong Kong',
+    tags: 'music,english',
+    bitrate: 128,
+    codec: 'MP3',
+    homepage: 'https://www.rthk.hk'
+  },
+  {
+    name: 'RTHK Radio 4',
+    url: 'http://rthkaudio4.rthk.hk:80/',
+    favicon: '',
+    country: 'Hong Kong',
+    tags: 'music,classical',
+    bitrate: 128,
+    codec: 'MP3',
+    homepage: 'https://www.rthk.hk'
+  }
 ]
 
 /**
@@ -95,17 +131,116 @@ export const BUILTIN_CN_HK_MUSIC_STATIONS: RadioStation[] = [
  * 含「清晨音乐台」等 11 个台，永远排在电台列表最前。
  */
 export const BUILTIN_CN_MUSIC_STATIONS: RadioStation[] = [
-  { name: '清晨音乐台', url: 'http://lhttp.qingting.fm/live/4915/64k.mp3', favicon: '', country: 'China', tags: 'music,pop', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: 'AsiaFM 亚洲音乐台', url: 'http://lhttp.qingting.fm/live/4581/64k.mp3', favicon: '', country: 'China', tags: 'music,pop', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: 'AsiaFM 高清音乐台', url: 'http://asiafm.hk:8000/asiahd', favicon: '', country: 'China', tags: 'music,hd', bitrate: 96, codec: 'AAC+', homepage: '' },
-  { name: 'AsiaFM 亚洲经典台', url: 'http://goldfm.cn:8000/goldfm', favicon: '', country: 'China', tags: 'music,classic', bitrate: 128, codec: 'AAC+', homepage: '' },
-  { name: '广东音乐之声', url: 'https://lhttp.qtfm.cn/live/1260/64k.mp3', favicon: '', country: 'China', tags: 'music', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: '上海音乐广播', url: 'http://lhttp.qingting.fm/live/273/64k.mp3', favicon: '', country: 'China', tags: 'music', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: '上海经典音乐广播', url: 'http://lhttp.qingting.fm/live/267/64k.mp3', favicon: '', country: 'China', tags: 'music,classic', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: '广州金曲音乐广播', url: 'http://lhttp.qingting.fm/live/20192/64k.mp3', favicon: '', country: 'China', tags: 'music,golden', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: 'CRI 劲曲调频 HIT FM（成都）', url: 'http://lhttp.qingting.fm/live/15318703/64k.mp3', favicon: '', country: 'China', tags: 'music,hit', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: 'CityFM 城市音乐台', url: 'https://lhttp.qtfm.cn/live/20500153/64k.mp3', favicon: '', country: 'China', tags: 'music,city', bitrate: 64, codec: 'MP3', homepage: '' },
-  { name: '动听音乐台', url: 'https://lhttp-hw.qtfm.cn/live/5022107/64k.mp3', favicon: '', country: 'China', tags: 'music', bitrate: 64, codec: 'MP3', homepage: '' }
+  {
+    name: '清晨音乐台',
+    url: 'http://lhttp.qingting.fm/live/4915/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music,pop',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: 'AsiaFM 亚洲音乐台',
+    url: 'http://lhttp.qingting.fm/live/4581/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music,pop',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: 'AsiaFM 高清音乐台',
+    url: 'http://asiafm.hk:8000/asiahd',
+    favicon: '',
+    country: 'China',
+    tags: 'music,hd',
+    bitrate: 96,
+    codec: 'AAC+',
+    homepage: ''
+  },
+  {
+    name: 'AsiaFM 亚洲经典台',
+    url: 'http://goldfm.cn:8000/goldfm',
+    favicon: '',
+    country: 'China',
+    tags: 'music,classic',
+    bitrate: 128,
+    codec: 'AAC+',
+    homepage: ''
+  },
+  {
+    name: '广东音乐之声',
+    url: 'https://lhttp.qtfm.cn/live/1260/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: '上海音乐广播',
+    url: 'http://lhttp.qingting.fm/live/273/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: '上海经典音乐广播',
+    url: 'http://lhttp.qingting.fm/live/267/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music,classic',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: '广州金曲音乐广播',
+    url: 'http://lhttp.qingting.fm/live/20192/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music,golden',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: 'CRI 劲曲调频 HIT FM（成都）',
+    url: 'http://lhttp.qingting.fm/live/15318703/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music,hit',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: 'CityFM 城市音乐台',
+    url: 'https://lhttp.qtfm.cn/live/20500153/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music,city',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  },
+  {
+    name: '动听音乐台',
+    url: 'https://lhttp-hw.qtfm.cn/live/5022107/64k.mp3',
+    favicon: '',
+    country: 'China',
+    tags: 'music',
+    bitrate: 64,
+    codec: 'MP3',
+    homepage: ''
+  }
 ]
 
 /** 中港音乐列表统一合并：中文精选 → RTHK → 自定义 → 线上结果（缓存读取与在线拉取共用，保证内置台始终置顶） */
@@ -176,8 +311,16 @@ export async function getCnHkMusicStations(cfg: RadioConfig, limit = 50): Promis
   }
   const n = clampLimit(limit)
   const [cn, hk] = await Promise.all([
-    fetchStations(cfg.apiBaseUrl, cfg.timeout, `/json/stations/search?countrycode=CN&tag=music&hidebroken=true&order=clickcount&reverse=true&limit=${n}`),
-    fetchStations(cfg.apiBaseUrl, cfg.timeout, `/json/stations/search?countrycode=HK&tag=music&hidebroken=true&order=clickcount&reverse=true&limit=30`)
+    fetchStations(
+      cfg.apiBaseUrl,
+      cfg.timeout,
+      `/json/stations/search?countrycode=CN&tag=music&hidebroken=true&order=clickcount&reverse=true&limit=${n}`
+    ),
+    fetchStations(
+      cfg.apiBaseUrl,
+      cfg.timeout,
+      `/json/stations/search?countrycode=HK&tag=music&hidebroken=true&order=clickcount&reverse=true&limit=30`
+    )
   ])
   const filtered = dedupStationsByUrl(cn, hk).filter(isPlayableCnHk)
   return withBuiltinCnHk(filtered, cfg.customStations)

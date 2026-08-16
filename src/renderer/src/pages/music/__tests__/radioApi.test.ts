@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { RadioStation } from '../types'
 import {
+  buildTryUrls,
   BUILTIN_CN_HK_MUSIC_STATIONS,
   BUILTIN_CN_MUSIC_STATIONS,
-  buildTryUrls,
   dedupStationsByUrl,
   fetchStations,
   isPlayableCnHk,
-  radioGetMirror,
-  radioNormalizeStation,
   RADIO_DEFAULT_API,
   RADIO_FALLBACKS,
+  radioGetMirror,
+  radioNormalizeStation,
   withBuiltinCnHk
 } from '../services/radioApi'
+import type { RadioStation } from '../types'
 
 const station = (partial: Partial<RadioStation>): RadioStation => ({
   name: '测试电台',
@@ -33,7 +33,11 @@ beforeEach(() => {
 
 describe('radioGetMirror', () => {
   it('all 地址随机返回三镜像之一', () => {
-    const mirrors = ['https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info']
+    const mirrors = [
+      'https://de1.api.radio-browser.info',
+      'https://nl1.api.radio-browser.info',
+      'https://at1.api.radio-browser.info'
+    ]
     for (let i = 0; i < 30; i++) {
       expect(mirrors).toContain(radioGetMirror(RADIO_DEFAULT_API))
     }
@@ -47,7 +51,11 @@ describe('radioGetMirror', () => {
 describe('buildTryUrls', () => {
   it('固定镜像时容灾顺序为 首选+其余镜像 且去重', () => {
     const urls = buildTryUrls('https://de1.api.radio-browser.info')
-    expect(urls).toEqual(['https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info'])
+    expect(urls).toEqual([
+      'https://de1.api.radio-browser.info',
+      'https://nl1.api.radio-browser.info',
+      'https://at1.api.radio-browser.info'
+    ])
     expect(urls.length).toBe(new Set(urls).size)
     expect(urls.length).toBeLessThanOrEqual(RADIO_FALLBACKS.length)
   })
@@ -88,7 +96,13 @@ describe('radioNormalizeStation', () => {
   })
 
   it('favicon 非 http(s) 置空，tags 数组拼接，bitrate 非数字为 0', () => {
-    const s = radioNormalizeStation({ name: 'x', url: 'http://a/b', favicon: 'file:///etc/passwd', tags: ['a', 'b'], bitrate: 'abc' })!
+    const s = radioNormalizeStation({
+      name: 'x',
+      url: 'http://a/b',
+      favicon: 'file:///etc/passwd',
+      tags: ['a', 'b'],
+      bitrate: 'abc'
+    })!
     expect(s.favicon).toBe('')
     expect(s.tags).toBe('a,b')
     expect(s.bitrate).toBe(0)
@@ -117,7 +131,12 @@ describe('isPlayableCnHk', () => {
 describe('内置精选电台', () => {
   it('4 个 RTHK 电台且流地址正确', () => {
     expect(BUILTIN_CN_HK_MUSIC_STATIONS).toHaveLength(4)
-    expect(BUILTIN_CN_HK_MUSIC_STATIONS.map((s) => s.name)).toEqual(['RTHK Radio 1', 'RTHK Radio 2', 'RTHK Radio 3', 'RTHK Radio 4'])
+    expect(BUILTIN_CN_HK_MUSIC_STATIONS.map((s) => s.name)).toEqual([
+      'RTHK Radio 1',
+      'RTHK Radio 2',
+      'RTHK Radio 3',
+      'RTHK Radio 4'
+    ])
     expect(BUILTIN_CN_HK_MUSIC_STATIONS[0].url).toBe('http://rthkaudio1.rthk.hk:80/')
   })
 
@@ -130,7 +149,9 @@ describe('内置精选电台', () => {
     const custom = [station({ name: '自定义台', url: 'http://custom/1' })]
     const merged = withBuiltinCnHk(online, custom)
     expect(merged[0].name).toBe('清晨音乐台')
-    expect(merged.findIndex((s) => s.name === 'RTHK Radio 1')).toBeLessThan(merged.findIndex((s) => s.name === '自定义台'))
+    expect(merged.findIndex((s) => s.name === 'RTHK Radio 1')).toBeLessThan(
+      merged.findIndex((s) => s.name === '自定义台')
+    )
     expect(merged[merged.length - 1].name).toBe('线上台')
     expect(merged).toHaveLength(BUILTIN_CN_MUSIC_STATIONS.length + BUILTIN_CN_HK_MUSIC_STATIONS.length + 2)
   })
@@ -158,7 +179,9 @@ describe('fetchStations 镜像容灾', () => {
 
   it('全部镜像失败时抛出最后一个错误', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('all down')))
-    await expect(fetchStations('https://de1.api.radio-browser.info', 5000, '/json/stations/topvote/50')).rejects.toThrow('all down')
+    await expect(
+      fetchStations('https://de1.api.radio-browser.info', 5000, '/json/stations/topvote/50')
+    ).rejects.toThrow('all down')
   })
 
   it('请求超时中止', async () => {

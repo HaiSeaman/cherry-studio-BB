@@ -23,7 +23,16 @@ interface FolderModalProps {
 }
 
 /** 通用归档/垃圾桶文件夹弹窗：搜索（200ms 防抖）+ 逐条还原/永久删除 */
-const FolderModal: FC<FolderModalProps> = ({ open, title, emptyHint, items, onClose, onRestore, onDelete, onClearAll }) => {
+const FolderModal: FC<FolderModalProps> = ({
+  open,
+  title,
+  emptyHint,
+  items,
+  onClose,
+  onRestore,
+  onDelete,
+  onClearAll
+}) => {
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -54,15 +63,7 @@ const FolderModal: FC<FolderModalProps> = ({ open, title, emptyHint, items, onCl
   }
 
   return (
-    <MXDialog
-      open={open}
-      title={title}
-      okText="关闭"
-      cancelText="关闭"
-      okDisabled
-      onCancel={onClose}
-      onOk={onClose}
-    >
+    <MXDialog open={open} title={title} okText="关闭" cancelText="关闭" okDisabled onCancel={onClose} onOk={onClose}>
       <Toolbar>
         <SearchBox>
           <Search size={13} />
@@ -94,7 +95,12 @@ const FolderModal: FC<FolderModalProps> = ({ open, title, emptyHint, items, onCl
               </Info>
               {deletingId === item.id ? (
                 <ConfirmRow>
-                  <button className="danger" onClick={() => { onDelete(item.id); setDeletingId(null) }}>
+                  <button
+                    className="danger"
+                    onClick={() => {
+                      onDelete(item.id)
+                      setDeletingId(null)
+                    }}>
                     确认删除
                   </button>
                   <button onClick={() => setDeletingId(null)}>取消</button>

@@ -15,7 +15,8 @@ const alarm = (partial: Partial<HubAlarm>): HubAlarm => ({
   ...partial
 })
 
-const at = (iso: string, h: number, m: number, s: number) => new Date(`${iso}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`)
+const at = (iso: string, h: number, m: number, s: number) =>
+  new Date(`${iso}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`)
 
 describe('computeDueAlarms', () => {
   it('进入 90 秒触发窗口即命中（89s 命中 / 91s 不命中）', () => {
@@ -40,7 +41,9 @@ describe('computeDueAlarms', () => {
   })
 
   it('disabled 跳过；lastTriggerKey 相同跳过（防同秒重复）', () => {
-    expect(computeDueAlarms([alarm({ enabled: false })], at('2026-08-16', 9, 0, 0), '2026-08-15').toFire).toHaveLength(0)
+    expect(computeDueAlarms([alarm({ enabled: false })], at('2026-08-16', 9, 0, 0), '2026-08-15').toFire).toHaveLength(
+      0
+    )
     const fired = alarm({ lastTriggerKey: '2026-08-16-9-0-0' })
     expect(computeDueAlarms([fired], at('2026-08-16', 9, 0, 0), '2026-08-15').toFire).toHaveLength(0)
   })

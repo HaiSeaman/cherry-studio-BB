@@ -88,9 +88,9 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
       const id = noteIdRef.current
-      if (id != null && textRef.current) void db.hub_notes.update(id, { content: textRef.current, updatedAt: Date.now() })
+      if (id != null && textRef.current)
+        void db.hub_notes.update(id, { content: textRef.current, updatedAt: Date.now() })
     }
-     
   }, [])
 
   const handleInput = (value: string) => {
@@ -132,7 +132,42 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
   }
 
   const sanitized = DOMPurify.sanitize(text, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div', 'b', 'i', 's', 'sub', 'sup', 'mark'],
+    ALLOWED_TAGS: [
+      'p',
+      'br',
+      'strong',
+      'em',
+      'del',
+      'code',
+      'pre',
+      'blockquote',
+      'ul',
+      'ol',
+      'li',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'a',
+      'img',
+      'table',
+      'thead',
+      'tbody',
+      'tr',
+      'th',
+      'td',
+      'hr',
+      'span',
+      'div',
+      'b',
+      'i',
+      's',
+      'sub',
+      'sup',
+      'mark'
+    ],
     ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'colspan', 'rowspan', 'target', 'rel'],
     ALLOW_DATA_ATTR: false
   })
@@ -148,7 +183,10 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
           <ToolBtn className={flash} title="一键转长图（复制到剪贴板）" onClick={() => void doExport()}>
             <ImagePlus size={13} />
           </ToolBtn>
-          <ToolBtn $active={preview} title={preview ? '返回编辑' : 'Markdown 预览'} onClick={() => setPreview(!preview)}>
+          <ToolBtn
+            $active={preview}
+            title={preview ? '返回编辑' : 'Markdown 预览'}
+            onClick={() => setPreview(!preview)}>
             {preview ? <Pencil size={13} /> : <Eye size={13} />}
           </ToolBtn>
         </Tools>
