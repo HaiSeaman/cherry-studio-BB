@@ -31,6 +31,7 @@ import DxtService from './services/DxtService'
 import { ExportService } from './services/ExportService'
 import { externalAppsService } from './services/ExternalAppsService'
 import { fileStorage as fileManager } from './services/FileStorage'
+import { musicService } from './services/MusicService'
 import FileService from './services/FileSystemService'
 import mcpService from './services/MCPService'
 import NotificationService from './services/NotificationService'
@@ -522,6 +523,11 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.File_ResumeWatcher, fileManager.resumeFileWatcher.bind(fileManager))
   ipcMain.handle(IpcChannel.File_BatchUploadMarkdown, fileManager.batchUploadMarkdownFiles.bind(fileManager))
   ipcMain.handle(IpcChannel.File_ShowInFolder, fileManager.showInFolder.bind(fileManager))
+
+  // music tab（本地音乐：元数据解析/文件夹扫描/封面缩略图）
+  ipcMain.handle(IpcChannel.Music_ReadMetadata, musicService.readMetadata)
+  ipcMain.handle(IpcChannel.Music_ScanFolder, musicService.scanFolder)
+  ipcMain.handle(IpcChannel.Music_EnsureThumbs, musicService.ensureThumbs)
 
   // pdf
   ipcMain.handle(IpcChannel.Pdf_ExtractText, (_, data: Uint8Array | ArrayBuffer | string) => extractPdfText(data))

@@ -207,6 +207,12 @@ const api = {
     },
     showInFolder: (path: string): Promise<void> => ipcRenderer.invoke(IpcChannel.File_ShowInFolder, path)
   },
+  music: {
+    readMetadata: (filePath: string) => ipcRenderer.invoke(IpcChannel.Music_ReadMetadata, { filePath }),
+    scanFolder: (folderPath: string, recursive?: boolean) =>
+      ipcRenderer.invoke(IpcChannel.Music_ScanFolder, { folderPath, recursive }),
+    ensureThumbs: () => ipcRenderer.invoke(IpcChannel.Music_EnsureThumbs)
+  },
   fs: {
     read: (pathOrUrl: string, encoding?: BufferEncoding) => ipcRenderer.invoke(IpcChannel.Fs_Read, pathOrUrl, encoding),
     readText: (pathOrUrl: string): Promise<string> => ipcRenderer.invoke(IpcChannel.Fs_ReadText, pathOrUrl)

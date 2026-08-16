@@ -263,6 +263,11 @@ export enum IpcChannel {
   // ExternalApps
   ExternalApps_DetectInstalled = 'external-apps:detect-installed',
 
+  // Music Tab（本地音乐：元数据/扫描/缩略图）
+  Music_ReadMetadata = 'music:read-metadata',
+  Music_ScanFolder = 'music:scan-folder',
+  Music_EnsureThumbs = 'music:ensure-thumbs',
+
   // CherryAI
   Cherryai_GetSignature = 'cherryai:get-signature'
 }
