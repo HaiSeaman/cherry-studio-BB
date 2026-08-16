@@ -1,0 +1,171 @@
+/**
+ * Web Audio 纯代码合成闹钟铃声（复刻便签和闹钟.md §6.2，无音频文件依赖）：
+ * - AudioContext + masterGain（音量 0-300%，>100% 增益放大）
+ * - 后台/最小化时 AudioContext 被自动挂起，每次 tick 主动 resume
+ * - playNote：ADSR 包络（线性起音 → 指数衰减）
+ */
+
+export type AlarmSoundType = 'default' | 'apple' | 'android' | 'nokia' | 'crystal' | 'bird' | 'electronic'
+
+export const ALARM_SOUND_OPTIONS: { value: AlarmSoundType; label: string }[] = [
+  { value: 'default', label: '默认叮咚' },
+  { value: 'apple', label: '苹果风格' },
+  { value: 'android', label: '安卓风格' },
+  { value: 'nokia', label: '诺基亚经典' },
+  { value: 'crystal', label: '清脆铃声' },
+  { value: 'bird', label: '鸟鸣' },
+  { value: 'electronic', label: '电子闹钟' }
+]
+
+let audioCtx: AudioContext | null = null
+let masterGain: GainNode | null = null
+let volumePercent = 100
+let ringing = false
+let tickTimer: ReturnType<typeof setTimeout> | null = null
+let previewTimer: ReturnType<typeof setTimeout> | null = null
+
+function ensureCtx(): AudioContext {
+  if (!audioCtx) {
+    audioCtx = new AudioContext()
+    masterGain = audioCtx.createGain()
+    masterGain.gain.value = volumePercent / 100
+    masterGain.connect(audioCtx.destination)
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+  return audioCtx
+}
+
+/** 基础音符：0→vol 线性起音 → 指数衰减到 0.001 */
+function playNote(ctx: AudioContext, freq: number, startTime: number, duration: number, type: OscillatorType = 'sine', vol = 0.3): void {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.type = type
+  osc.frequency.value = freq
+  gain.gain.setValueAtTime(0, startTime)
+  gain.gain.linearRampToValueAtTime(vol, startTime + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+  osc.connect(gain)
+  gain.connect(masterGain ?? ctx.destination)
+  osc.start(startTime)
+  osc.stop(startTime + duration)
+}
+
+/** 鸟鸣啁啾：2200→2800Hz 频率滑变 */
+function playChirp(ctx: AudioContext, startTime: number): void {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(2200, startTime)
+  osc.frequency.linearRampToValueAtTime(2800, startTime + 0.08)
+  gain.gain.setValueAtTime(0, startTime)
+  gain.gain.linearRampToValueAtTime(0.3, startTime + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12)
+  osc.connect(gain)
+  gain.connect(masterGain ?? ctx.destination)
+  osc.start(startTime)
+  osc.stop(startTime + 0.15)
+}
+
+type SoundFn = (ctx: AudioContext) => number
+
+/** 7 种铃声：每个函数播放一个循环周期并返回周期时长 ms */
+const SOUND_FNS: Record<AlarmSoundType, SoundFn> = {
+  default: (ctx) => {
+    const t = ctx.currentTime
+    playNote(ctx, 880, t, 0.25, 'sine', 0.35)
+    playNote(ctx, 660, t + 0.4, 0.35, 'sine', 0.35)
+    return 800
+  },
+  apple: (ctx) => {
+    const t = ctx.currentTime
+    playNote(ctx, 523.25, t, 0.22, 'triangle', 0.3) // C5
+    playNote(ctx, 659.25, t + 0.3, 0.22, 'triangle', 0.3) // E5
+    playNote(ctx, 783.99, t + 0.6, 0.28, 'triangle', 0.3) // G5
+    return 900
+  },
+  android: (ctx) => {
+    const t = ctx.currentTime
+    playNote(ctx, 660, t, 0.2, 'square', 0.18)
+    playNote(ctx, 440, t + 0.35, 0.3, 'square', 0.18)
+    return 700
+  },
+  nokia: (ctx) => {
+    const t = ctx.currentTime
+    playNote(ctx, 659.25, t, 0.12, 'sine', 0.3) // E5
+    playNote(ctx, 587.33, t + 0.15, 0.12, 'sine', 0.3) // D5
+    playNote(ctx, 698.46, t + 0.3, 0.12, 'sine', 0.3) // F5
+    playNote(ctx, 783.99, t + 0.45, 0.12, 'sine', 0.3) // G5
+    playNote(ctx, 523.25, t + 0.75, 0.4, 'sine', 0.3) // C5（八分音符加长）
+    return 1800
+  },
+  crystal: (ctx) => {
+    const t = ctx.currentTime
+    playNote(ctx, 1760, t, 0.28, 'sine', 0.22) // A6
+    playNote(ctx, 2093, t + 0.4, 0.28, 'sine', 0.22) // C7
+    return 800
+  },
+  bird: (ctx) => {
+    const t = ctx.currentTime
+    playChirp(ctx, t)
+    playChirp(ctx, t + 0.2)
+    playChirp(ctx, t + 0.4)
+    return 700
+  },
+  electronic: (ctx) => {
+    const t = ctx.currentTime
+    playNote(ctx, 1000, t, 0.12, 'square', 0.16)
+    playNote(ctx, 1000, t + 0.25, 0.12, 'square', 0.16)
+    playNote(ctx, 1000, t + 0.5, 0.12, 'square', 0.16)
+    return 800
+  }
+}
+
+class AlarmSounds {
+  /** 开始循环响铃（重入保护） */
+  start(type: AlarmSoundType): void {
+    if (ringing) return
+    const ctx = ensureCtx()
+    ringing = true
+    const tick = () => {
+      if (!ringing) return
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+      const fn = SOUND_FNS[type] ?? SOUND_FNS.default
+      const interval = fn(ctx)
+      tickTimer = setTimeout(tick, interval)
+    }
+    tick()
+  }
+
+  stop(): void {
+    ringing = false
+    if (tickTimer) clearTimeout(tickTimer)
+    tickTimer = null
+    if (previewTimer) clearTimeout(previewTimer)
+    previewTimer = null
+  }
+
+  isRinging(): boolean {
+    return ringing
+  }
+
+  /** 选择铃声时试听：响 1.5 秒自动停 */
+  preview(type: AlarmSoundType): void {
+    this.stop()
+    this.start(type)
+    previewTimer = setTimeout(() => {
+      previewTimer = null
+      this.stop()
+    }, 1500)
+  }
+
+  setVolume(percent: number): void {
+    volumePercent = Math.min(Math.max(percent, 0), 300)
+    if (masterGain) masterGain.gain.value = volumePercent / 100
+  }
+
+  getVolume(): number {
+    return volumePercent
+  }
+}
+
+export const alarmSounds = new AlarmSounds()

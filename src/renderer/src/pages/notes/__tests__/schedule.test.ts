@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { HubAlarm } from '../../types'
+import type { HubAlarm } from '../types'
 import { alarmKey, computeDueAlarms, nextRingInfo } from '../services/schedule'
 
 const alarm = (partial: Partial<HubAlarm>): HubAlarm => ({
