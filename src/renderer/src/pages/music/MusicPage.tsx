@@ -42,7 +42,7 @@ const MainArea = styled.div`
   display: flex;
   flex: 1;
   gap: 14px;
-  height: calc(100vh - var(--navbar-height));
+  height: 100%;
   padding: 14px;
   overflow: hidden;
   background: ${mx.paper};

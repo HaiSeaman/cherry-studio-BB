@@ -5,7 +5,7 @@ import { isLinux, isMac } from '@renderer/config/constant'
 import { DEFAULT_SIDEBAR_ICONS } from '@renderer/config/sidebar'
 import { THEMES } from '@renderer/config/themes'
 import { useTheme } from '@renderer/context/ThemeProvider'
-import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
+import { useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useUserTheme from '@renderer/hooks/useUserTheme'
 import { useAppDispatch } from '@renderer/store'
@@ -77,7 +77,6 @@ const DisplaySettings: FC = () => {
     useSystemTitleBar,
     setUseSystemTitleBar
   } = useSettings()
-  const { navbarPosition, setNavbarPosition } = useNavbarPosition()
   const { theme } = useTheme()
   const dispatch = useAppDispatch()
   const { setTimeoutTimer } = useTimer()
@@ -231,24 +230,6 @@ const DisplaySettings: FC = () => {
         )}
       </SettingGroup>
       <SettingGroup theme={theme}>
-        <SettingTitle style={{ justifyContent: 'flex-start', gap: 5 }}>
-          {'导航栏设置'} <TextBadge text="New" />
-        </SettingTitle>
-        <SettingDivider />
-        <SettingRow>
-          <SettingRowTitle>{'导航栏位置'}</SettingRowTitle>
-          <Segmented
-            value={navbarPosition}
-            shape="round"
-            onChange={setNavbarPosition}
-            options={[
-              { label: '左侧', value: 'left' },
-              { label: '顶部', value: 'top' }
-            ]}
-          />
-        </SettingRow>
-      </SettingGroup>
-      <SettingGroup theme={theme}>
         <SettingTitle>{'缩放设置'}</SettingTitle>
         <SettingDivider />
         <SettingRow>
@@ -383,24 +364,22 @@ const DisplaySettings: FC = () => {
           />
         </SettingRow>
       </SettingGroup>
-      {navbarPosition === 'left' && (
-        <SettingGroup theme={theme}>
-          <SettingTitle
-            style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{'侧边栏设置'}</span>
-            <ResetButtonWrapper>
-              <Button onClick={handleReset}>{'重置'}</Button>
-            </ResetButtonWrapper>
-          </SettingTitle>
-          <SettingDivider />
-          <SidebarIconsManager
-            visibleIcons={visibleIcons}
-            disabledIcons={disabledIcons}
-            setVisibleIcons={setVisibleIcons}
-            setDisabledIcons={setDisabledIcons}
-          />
-        </SettingGroup>
-      )}
+      <SettingGroup theme={theme}>
+        <SettingTitle
+          style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{'侧边栏设置'}</span>
+          <ResetButtonWrapper>
+            <Button onClick={handleReset}>{'重置'}</Button>
+          </ResetButtonWrapper>
+        </SettingTitle>
+        <SettingDivider />
+        <SidebarIconsManager
+          visibleIcons={visibleIcons}
+          disabledIcons={disabledIcons}
+          setVisibleIcons={setVisibleIcons}
+          setDisabledIcons={setDisabledIcons}
+        />
+      </SettingGroup>
       <SettingGroup theme={theme}>
         <SettingTitle>
           {'自定义 CSS'}

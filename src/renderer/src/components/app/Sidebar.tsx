@@ -146,15 +146,15 @@ const Container = styled.div<{ $isFullscreen: boolean }>`
   }
 `
 
-/** 磨砂玻璃背景层：blur 放在非拖拽元素上（Electron drag region + backdrop-filter 兼容） */
+/** 磨砂玻璃背景层：主题背景色半透明（blur 放在非拖拽元素上，Electron 兼容） */
 const SidebarGlass = styled.div`
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
   -webkit-app-region: none;
-  background: var(--glass-bg);
-  backdrop-filter: blur(14px) saturate(1.35);
+  background: color-mix(in srgb, var(--color-background) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
   border-right: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 `

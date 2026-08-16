@@ -1,6 +1,6 @@
 import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { useAssistants } from '@renderer/hooks/useAssistant'
-import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
+import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
@@ -17,7 +17,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import Chat from './Chat'
-import Navbar from './Navbar'
 import HomeTabs from './Tabs'
 
 let _activeAssistant: Assistant
@@ -25,7 +24,6 @@ let _activeAssistant: Assistant
 const HomePage: FC = () => {
   const { assistants } = useAssistants()
   const navigate = useNavigate()
-  const { isLeftNavbar } = useNavbarPosition()
 
   const location = useLocation()
   const state = location.state
@@ -119,16 +117,7 @@ const HomePage: FC = () => {
 
   return (
     <Container id="home-page">
-      {isLeftNavbar && (
-        <Navbar
-          activeAssistant={activeAssistant}
-          activeTopic={activeTopic}
-          setActiveTopic={setActiveTopic}
-          setActiveAssistant={setActiveAssistant}
-          position="left"
-        />
-      )}
-      <ContentContainer id={isLeftNavbar ? 'content-container' : undefined}>
+      <ContentContainer id="content-container">
         <AnimatePresence initial={false}>
           {showAssistants && (
             <ErrorBoundary>
@@ -163,6 +152,7 @@ const HomePage: FC = () => {
 }
 
 const Container = styled.div`
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;

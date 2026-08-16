@@ -228,7 +228,7 @@ const Chat: FC<Props> = (props) => {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--navbar-height));
+  height: 100%;
   flex: 1;
   overflow: hidden;
   [navbar-position='top'] & {
@@ -241,7 +241,7 @@ const Container = styled.div`
 
 const Main = styled(Flex)`
   [navbar-position='left'] & {
-    height: calc(100vh - var(--navbar-height));
+    height: 100%;
   }
   transform: translateZ(0);
   position: relative;

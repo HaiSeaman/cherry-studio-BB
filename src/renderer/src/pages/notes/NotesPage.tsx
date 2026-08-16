@@ -1,4 +1,3 @@
-import { Navbar, NavbarMain } from '@renderer/components/app/Navbar'
 import { db } from '@renderer/databases'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { type FC } from 'react'
@@ -22,9 +21,6 @@ const NotesPage: FC = () => {
 
   return (
     <Container>
-      <Navbar>
-        <NavbarMain>{'闹钟便签'}</NavbarMain>
-      </Navbar>
       <MainArea>
         <NotesPanel />
         <AlarmPanelCell>
@@ -55,7 +51,7 @@ const MainArea = styled.div`
   display: grid;
   flex: 1;
   gap: 12px;
-  height: calc(100vh - var(--navbar-height));
+  height: 100%;
   padding: 12px;
   overflow: hidden;
   background: ${mx.paper};
