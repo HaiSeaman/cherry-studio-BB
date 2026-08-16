@@ -104,6 +104,8 @@ export interface ImageMessageBlock extends BaseMessageBlock {
     prompt?: string
     negativePrompt?: string
     generateImageResponse?: GenerateImageResponse
+    /** 生成图落盘到内部存储的全部文件（批量生成时 file 字段只挂第一张，删除时按此回收） */
+    generatedFiles?: FileMetadata[]
   }
 }
 

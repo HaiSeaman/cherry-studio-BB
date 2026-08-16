@@ -64,6 +64,37 @@ export const createImageCallbacks = (deps: ImageCallbacksDependencies) => {
             status: MessageBlockStatus.SUCCESS
           }
         }
+        // 远程 URL（如百炼 OSS）有效期通常仅 24 小时，下载到内部存储持久化，
+        // 历史展示改用本地 URL，避免链接过期后聊天记录裂图；单张下载失败回退原 URL
+        if (imageData.type === 'url' && imageData.images?.some((img) => img.startsWith('http'))) {
+          const results = await Promise.all(
+            imageData.images.map(async (img) => {
+              if (!img.startsWith('http')) {
+                return { localUrl: img, file: undefined }
+              }
+              try {
+                const savedFile = await window.api.file.download(img, true)
+                await FileManager.addFile(savedFile)
+                return { localUrl: FileManager.getFileUrl(savedFile), file: savedFile }
+              } catch (error) {
+                logger.warn('远程图片下载失败，保留原 URL 展示:', { url: img.slice(0, 60), error: error as Error })
+                return { localUrl: img, file: undefined }
+              }
+            })
+          )
+          const files = results.filter((result) => result.file !== undefined).map((result) => result.file!)
+          if (files.length > 0) {
+            return {
+              file: files[0],
+              url: FileManager.getFileUrl(files[0]),
+              metadata: {
+                generateImageResponse: { type: 'url', images: results.map((result) => result.localUrl) },
+                ...(files.length > 0 ? { generatedFiles: files } : {})
+              },
+              status: MessageBlockStatus.SUCCESS
+            }
+          }
+        }
         return {
           url: imageUrl,
           metadata: { generateImageResponse: imageData },

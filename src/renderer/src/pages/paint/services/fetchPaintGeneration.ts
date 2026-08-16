@@ -1,7 +1,7 @@
 import type { PersonGeneration } from '@google/genai'
 import { loggerService } from '@logger'
 import { AiProvider } from '@renderer/aiCore'
-import { isGeminiImageModel } from '@renderer/config/models'
+import { isGeminiOfficialImageModel } from '@renderer/config/models'
 import { getRotatedApiKey } from '@renderer/services/ApiService'
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import type { Model } from '@renderer/types'
@@ -52,12 +52,18 @@ export async function fetchPaintGeneration({
   onChunkReceived
 }: PaintGenerationParams): Promise<string[]> {
   const baseProvider = getProviderByModel(model)
+  // getProviderByModel 找不到时会静默回退到默认服务商，导致用错地址/密钥报出误导性错误，
+  // 这里显式校验模型归属，给出可操作的提示
+  if (!baseProvider || baseProvider.id !== model.provider) {
+    throw new Error('该模型所属的服务商已不存在，请重新选择模型')
+  }
   const providerWithRotatedKey = {
     ...baseProvider,
     apiKey: getRotatedApiKey(baseProvider)
   }
   const aiProvider = new AiProvider(model, providerWithRotatedKey)
-  const isGemini = isGeminiImageModel(model)
+  // 与 AiProvider 内部判定标准一致：按 provider.type 识别 Gemini 官方接口
+  const isGemini = isGeminiOfficialImageModel(model, providerWithRotatedKey.type)
 
   onChunkReceived({ type: ChunkType.LLM_RESPONSE_CREATED })
   onChunkReceived({ type: ChunkType.IMAGE_CREATED })
@@ -84,6 +90,11 @@ export async function fetchPaintGeneration({
       batchSize: isGemini ? 1 : batchSize,
       ...(signal ? { signal } : {})
     })
+  }
+
+  // 空结果拦截：避免 0 张图也标记 SUCCESS（SDK 路径无兜底，DashScope 路径已有）
+  if (images.length === 0) {
+    throw new Error('模型未返回图片结果，请检查模型是否支持图像生成')
   }
 
   const imageType = images[0]?.startsWith('data:') ? 'base64' : 'url'

@@ -1,7 +1,7 @@
 import { db } from '@renderer/databases'
 import ImageBlock from '@renderer/pages/home/Messages/Blocks/ImageBlock'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
-import { MessageBlockType } from '@renderer/types/newMessage'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { getErrorMessage, isAbortError } from '@renderer/utils/error'
 import { Button, Input, Spin, Tooltip } from 'antd'
 import dayjs from 'dayjs'
@@ -130,7 +130,17 @@ const PaintContent: FC<Props> = ({ topicId }) => {
     )
   }
 
-  const assistantMessages = data.messages.filter((m) => m.role === 'assistant')
+  // 按实际成功生成的图片张数统计（一次 batchSize=4 的生成算 4 张；失败/中止批次不计入）
+  const generatedImageCount = data.blocks
+    .filter((b) => b.type === MessageBlockType.IMAGE && b.status === MessageBlockStatus.SUCCESS)
+    .reduce((total, block) => {
+      const images = (
+        block as {
+          metadata?: { generateImageResponse?: { images?: string[] } }
+        }
+      ).metadata?.generateImageResponse?.images
+      return total + (images?.length ?? 0)
+    }, 0)
 
   return (
     <Container ref={scrollRef}>
@@ -139,7 +149,7 @@ const PaintContent: FC<Props> = ({ topicId }) => {
         <SessionHeader>
           <SessionTitle>{data.topic.name || '未命名会话'}</SessionTitle>
           <SessionMeta>
-            {assistantMessages.length > 0 && <span>{`已生成 ${assistantMessages.length} 张图片`}</span>}
+            {generatedImageCount > 0 && <span>{`已生成 ${generatedImageCount} 张图片`}</span>}
             {data.topic.updatedAt && <span>{dayjs(data.topic.updatedAt).format('YYYY/MM/DD HH:mm')}</span>}
           </SessionMeta>
         </SessionHeader>
@@ -209,7 +219,17 @@ const PaintContent: FC<Props> = ({ topicId }) => {
               {imageBlocks.length > 0 && (
                 <ImagesWrap>
                   {imageBlocks.map((block) => {
-                    const images = block.metadata?.generateImageResponse?.images ?? []
+                    const images =
+                      (
+                        block as {
+                          metadata?: { generateImageResponse?: { images?: string[] } }
+                        }
+                      ).metadata?.generateImageResponse?.images ?? []
+                    // 失败的生成渲染错误占位（错误详情来自块上持久化的 error）
+                    if (block.status === MessageBlockStatus.ERROR) {
+                      const error = (block as { error?: { message?: string } }).error
+                      return <ErrorCard key={block.id}>{`生成失败：${error?.message ?? '未知错误'}`}</ErrorCard>
+                    }
                     return <ImageBlock key={block.id} block={block} isSingle={images.length <= 1} />
                   })}
                 </ImagesWrap>
@@ -389,6 +409,19 @@ const ImagesWrap = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+`
+
+const ErrorCard = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 0.5px solid var(--color-error, #d93026);
+  background-color: var(--color-background-soft);
+  color: var(--color-error, #d93026);
+  font-size: 13px;
+  max-width: 360px;
+  word-break: break-word;
 `
 
 export default PaintContent

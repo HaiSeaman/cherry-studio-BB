@@ -241,13 +241,16 @@ export const TopicManager = {
           // 删除 block 之前先从 DB 里找出来
           const blocks = await db.message_blocks.where('id').anyOf(blockIds).toArray()
 
-          // 提取文件元数据
+          // 提取文件元数据（块级 file 字段 + 生成图批量落盘的 generatedFiles，均需回收）
           filesToDelete = blocks
             .filter(
               (block): block is ImageMessageBlock | FileMessageBlock =>
                 block.type === MessageBlockType.IMAGE || block.type === MessageBlockType.FILE
             )
-            .map((block) => block.file)
+            .flatMap((block) => {
+              const generatedFiles = block.type === MessageBlockType.IMAGE ? (block.metadata?.generatedFiles ?? []) : []
+              return [block.file, ...generatedFiles]
+            })
             .filter((file) => file !== undefined)
 
           await db.message_blocks.bulkDelete(blockIds)

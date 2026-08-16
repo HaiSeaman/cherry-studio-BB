@@ -3,19 +3,19 @@ import ModelSelector from '@renderer/components/ModelSelector'
 import {
   isEmbeddingModel,
   isGeminiImageModel,
+  isGeminiOfficialImageModel,
   isGenerateImageModel,
   isRerankModel,
   isVisionModel,
   SYSTEM_MODELS
 } from '@renderer/config/models'
 import {
-  GEMINI_ASPECT_RATIOS,
-  GEMINI_IMAGE_SIZES,
   GEMINI_PERSON_GENERATION,
+  PAINT_ASPECT_RATIOS,
   PAINT_BATCH_OPTIONS,
-  PAINT_PIXEL_SIZE_GROUPS
+  PAINT_RESOLUTION_TIERS,
+  resolvePaintPixelSize
 } from '@renderer/config/paint'
-import { getStoreProviders } from '@renderer/hooks/useStore'
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
@@ -24,7 +24,7 @@ import { getErrorMessage, isAbortError } from '@renderer/utils/error'
 import { convertToBase64 } from '@renderer/utils/image'
 import { Button, Input, Modal, Select, Tooltip, Upload } from 'antd'
 import { ImagePlus, Loader2, RefreshCw, Sparkles, Square, Wand2 } from 'lucide-react'
-import { type FC, useState } from 'react'
+import { type FC, useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 import { abortCurrentGeneration, enhancePrompt, findModelByUniqId, generatePaintImage } from './services/paintService'
@@ -38,31 +38,46 @@ const PaintInputbar: FC = () => {
   const selectedModel = useAppSelector((s) => s.paint.selectedModel)
   const activeTopicId = useAppSelector((s) => s.paint.activeTopicId)
   const lastGeneration = useAppSelector((s) => s.paint.lastGeneration)
+  const storeProviders = useAppSelector((s) => s.llm.providers)
 
-  const isGemini = selectedModel ? isGeminiImageModel(selectedModel) : false
+  // 与参数层（fetchPaintGeneration/AiProvider）一致：按 provider.type 判定 Gemini 官方接口
+  const isGemini = selectedModel
+    ? isGeminiOfficialImageModel(selectedModel, getProviderByModel(selectedModel)?.type)
+    : false
 
   const [prompt, setPrompt] = useState('')
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
-  // 非 Gemini 模型：像素尺寸（如 1024x1024）
-  const [imageSize, setImageSize] = useState<string>('1024x1024')
-  // Gemini 模型：官方宽高比 + 分辨率 + 人物生成模式
+  // 统一尺寸表达：宽高比 + 分辨率档位（所有模型家族共用一套下拉）
   const [aspectRatio, setAspectRatio] = useState<string>('1:1')
-  const [geminiSize, setGeminiSize] = useState<string>('1K')
+  const [resolutionTier, setResolutionTier] = useState<string>('1K')
+  // 非 Gemini 模型的自定义像素（设置后覆盖档位映射，选择预设档位时清除）
+  const [customPixel, setCustomPixel] = useState<string | undefined>(undefined)
   const [personGeneration, setPersonGeneration] = useState<string | undefined>(undefined)
   const [batchSize, setBatchSize] = useState<number>(1)
   const [enhancing, setEnhancing] = useState(false)
 
-  // 自定义尺寸弹窗
+  // 自定义尺寸弹窗（mode 区分：比例 / 像素）
   const [customOpen, setCustomOpen] = useState(false)
+  const [customMode, setCustomMode] = useState<'ratio' | 'pixel'>('ratio')
   const [customValue, setCustomValue] = useState('')
   const [customHint, setCustomHint] = useState('')
 
   const handleModelChange = (value: string) => {
     dispatch(setSelectedModel(findModelByUniqId(value)))
+    // 切换模型家族时清除自定义像素，避免泄漏到 Gemini 的档位下拉显示
+    setCustomPixel(undefined)
   }
 
-  const openCustomSize = (hint: string) => {
-    setCustomHint(hint)
+  const openCustomRatio = () => {
+    setCustomMode('ratio')
+    setCustomHint('自定义宽高比（数字:数字，如 7:3），对 Gemini 与百炼均生效')
+    setCustomValue('')
+    setCustomOpen(true)
+  }
+
+  const openCustomPixel = () => {
+    setCustomMode('pixel')
+    setCustomHint('自定义像素尺寸（宽x高，如 1536x1024），仅对非 Gemini 模型生效')
     setCustomValue('')
     setCustomOpen(true)
   }
@@ -72,22 +87,39 @@ const PaintInputbar: FC = () => {
     if (!value) {
       return
     }
-    if (isGemini) {
-      // Gemini 自定义宽高比：x:y 数字格式
-      if (!/^\d+:\d+$/.test(value)) {
-        window.toast.warning('自定义宽高比格式：数字:数字，例如 7:3')
+    if (customMode === 'ratio') {
+      const match = /^(\d+):(\d+)$/.exec(value)
+      if (!match || Number(match[1]) === 0 || Number(match[2]) === 0) {
+        window.toast.warning('自定义宽高比格式：数字:数字（均需大于 0），例如 7:3')
+        return
+      }
+      const ratioValue = Number(match[1]) / Number(match[2])
+      if (ratioValue > 8 || ratioValue < 1 / 8) {
+        window.toast.warning('比例超出模型支持范围（1:8 ~ 8:1）')
         return
       }
       setAspectRatio(value)
     } else {
-      // 非 Gemini 自定义像素：宽x高 数字格式
-      if (!/^\d+x\d+$/i.test(value)) {
-        window.toast.warning('自定义尺寸格式：宽x高，例如 1536x1024')
+      const match = /^(\d+)x(\d+)$/i.exec(value)
+      if (!match || Number(match[1]) === 0 || Number(match[2]) === 0) {
+        window.toast.warning('自定义尺寸格式：宽x高（均需大于 0），例如 1536x1024')
         return
       }
-      setImageSize(value.toLowerCase())
+      setCustomPixel(value.toLowerCase())
     }
     setCustomOpen(false)
+  }
+
+  /**
+   * 计算传给生成链路的尺寸参数：
+   * - Gemini：直接用档位（1K/2K/4K/512，auto 传空由 SDK 省略）
+   * - 其他模型：自定义像素优先，否则按「比例×档位」映射为合法像素
+   */
+  const resolveImageSize = (): string => {
+    if (isGemini) {
+      return resolutionTier === 'auto' ? '' : resolutionTier
+    }
+    return customPixel ?? resolvePaintPixelSize(aspectRatio, resolutionTier) ?? ''
   }
 
   /** 执行生成（正常生成 / 重新生成 / 编辑重生成统一入口） */
@@ -167,7 +199,7 @@ const PaintInputbar: FC = () => {
       model,
       prompt: content,
       inputImages: uploadedImages,
-      imageSize: isGemini ? geminiSize : imageSize,
+      imageSize: resolveImageSize(),
       ...(isGemini ? { aspectRatio } : {}),
       ...(isGemini && personGeneration ? { personGeneration } : {}),
       batchSize: isGemini ? 1 : batchSize,
@@ -216,20 +248,34 @@ const PaintInputbar: FC = () => {
     }
   }
 
-  // 非 Gemini 尺寸下拉选项：分组像素尺寸 + 自定义
-  const sizeOptions = [
-    ...PAINT_PIXEL_SIZE_GROUPS.map((group) => ({
-      label: group.label,
-      options: [...group.options]
-    })),
-    { label: '自定义尺寸...', value: '__custom__' }
-  ]
-
-  // Gemini 宽高比下拉选项：官方比例 + 自定义
+  // 统一比例下拉选项：常用比例 + 自定义
   const ratioOptions = [
-    ...GEMINI_ASPECT_RATIOS.map((r) => ({ label: r, value: r })),
+    ...PAINT_ASPECT_RATIOS.map((r) => ({ label: r, value: r })),
     { label: '自定义比例...', value: '__custom__' }
   ]
+
+  // 统一档位下拉选项：自动/1K/2K/4K/512（+ 非 Gemini 的自定义像素）
+  const tierOptions = [
+    ...PAINT_RESOLUTION_TIERS.map((t) => ({ label: t.label, value: t.value })),
+    ...(isGemini ? [] : [{ label: '自定义像素...', value: '__custom__' }])
+  ]
+
+  // 非 Gemini 模型当前实际生效的像素（映射结果，展示给用户核对）
+  const effectivePixel = isGemini ? undefined : (customPixel ?? resolvePaintPixelSize(aspectRatio, resolutionTier))
+
+  // 稳定引用：避免每次渲染（如输入提示词）都触发 ModelSelector 全量重建选项
+  const enabledProviders = useMemo(() => storeProviders.filter((p) => p.enabled), [storeProviders])
+  const modelPredicate = useCallback((model: Model) => {
+    if (isEmbeddingModel(model) || isRerankModel(model)) {
+      return false
+    }
+    // 只显示用户自己添加的模型（排除系统内置默认模型）
+    if (!isUserAddedModel(model)) {
+      return false
+    }
+    // 只显示视觉 / 图像生成模型
+    return isGenerateImageModel(model) || isGeminiImageModel(model) || isVisionModel(model)
+  }, [])
 
   return (
     <Container>
@@ -237,50 +283,54 @@ const PaintInputbar: FC = () => {
       <Toolbar>
         <ModelSelector
           // 只显示已启用的 provider（未启用即使配置了 API Key 也不显示）
-          providers={getStoreProviders().filter((p) => p.enabled)}
+          providers={enabledProviders}
           style={{ minWidth: 200 }}
           placeholder={'选择绘画模型'}
           // 用户自定义 provider 的模型全部显示；系统内置 provider 只显示绘画模型（避免默认文本模型干扰）
-          predicate={(model) => {
-            if (isEmbeddingModel(model) || isRerankModel(model)) {
-              return false
-            }
-            // 只显示用户自己添加的模型（排除系统内置默认模型）
-            if (!isUserAddedModel(model)) {
-              return false
-            }
-            // 只显示视觉 / 图像生成模型
-            return isGenerateImageModel(model) || isGeminiImageModel(model) || isVisionModel(model)
-          }}
+          predicate={modelPredicate}
           value={selectedModel ? getModelUniqId(selectedModel) : undefined}
           onChange={handleModelChange}
         />
+        {/* 统一尺寸选择：宽高比 + 分辨率档位（所有模型共用一套） */}
+        <Tooltip title={'画面宽高比（Gemini 与百炼均支持；自定义比例输入 数字:数字）'} mouseEnterDelay={0.5}>
+          <Select
+            size="small"
+            style={{ width: 96 }}
+            value={aspectRatio}
+            onChange={(v) => {
+              if (v === '__custom__') {
+                openCustomRatio()
+              } else {
+                setAspectRatio(v)
+              }
+            }}
+            options={ratioOptions}
+          />
+        </Tooltip>
+        <Tooltip
+          title={
+            isGemini
+              ? 'Gemini 官方分辨率（1K/2K/4K；512 仅部分模型支持；自动=不指定）'
+              : '分辨率档位自动换算为模型合法像素，超出上限自动就近取整；自动=由模型按提示词推荐'
+          }
+          mouseEnterDelay={0.5}>
+          <Select
+            size="small"
+            style={{ width: 104 }}
+            value={isGemini ? resolutionTier : (customPixel ?? resolutionTier)}
+            onChange={(v) => {
+              if (v === '__custom__') {
+                openCustomPixel()
+              } else {
+                setCustomPixel(undefined)
+                setResolutionTier(v)
+              }
+            }}
+            options={tierOptions}
+          />
+        </Tooltip>
         {isGemini ? (
           <>
-            <Tooltip title={'Gemini 官方宽高比'} mouseEnterDelay={0.5}>
-              <Select
-                size="small"
-                style={{ width: 96 }}
-                value={aspectRatio}
-                onChange={(v) => {
-                  if (v === '__custom__') {
-                    openCustomSize('Gemini 自定义宽高比（数字:数字，如 7:3）')
-                  } else {
-                    setAspectRatio(v)
-                  }
-                }}
-                options={ratioOptions}
-              />
-            </Tooltip>
-            <Tooltip title={'Gemini 官方分辨率（大写 K）'} mouseEnterDelay={0.5}>
-              <Select
-                size="small"
-                style={{ width: 80 }}
-                value={geminiSize}
-                onChange={setGeminiSize}
-                options={GEMINI_IMAGE_SIZES.map((s) => ({ label: s, value: s }))}
-              />
-            </Tooltip>
             <Tooltip title={'人物生成模式（Gemini 官方）'} mouseEnterDelay={0.5}>
               <Select
                 size="small"
@@ -296,26 +346,19 @@ const PaintInputbar: FC = () => {
           </>
         ) : (
           <>
-            <Select
-              size="small"
-              style={{ width: 150 }}
-              value={imageSize}
-              onChange={(v) => {
-                if (v === '__custom__') {
-                  openCustomSize('自定义尺寸（宽x高，如 1536x1024）')
-                } else {
-                  setImageSize(v)
-                }
-              }}
-              options={sizeOptions}
-            />
-            <Select
-              size="small"
-              style={{ width: 72 }}
-              value={batchSize}
-              onChange={setBatchSize}
-              options={PAINT_BATCH_OPTIONS.map((n) => ({ label: `${n} 张`, value: n }))}
-            />
+            <Tooltip
+              title={uploadedImages.length > 0 ? '图生图（图像编辑）固定生成 1 张' : undefined}
+              mouseEnterDelay={0.5}>
+              <Select
+                size="small"
+                style={{ width: 72 }}
+                value={uploadedImages.length > 0 ? 1 : batchSize}
+                onChange={setBatchSize}
+                disabled={uploadedImages.length > 0}
+                options={PAINT_BATCH_OPTIONS.map((n) => ({ label: `${n} 张`, value: n }))}
+              />
+            </Tooltip>
+            {effectivePixel && <DisabledHint>{`→ ${effectivePixel}`}</DisabledHint>}
           </>
         )}
       </Toolbar>
@@ -351,11 +394,18 @@ const PaintInputbar: FC = () => {
                 window.toast.warning('参考图片最多上传 4 张')
                 return false
               }
-              void convertToBase64(file).then((dataUrl) => {
-                if (typeof dataUrl === 'string') {
-                  setUploadedImages((prev) => [...prev, dataUrl])
-                }
-              })
+              void convertToBase64(file)
+                .then((dataUrl) => {
+                  if (typeof dataUrl !== 'string') {
+                    return
+                  }
+                  // append 处兜底（updater 保持纯函数）：同批多选时 beforeUpload 闭包里的
+                  // length 不更新，超出上限的图片在此处静默丢弃
+                  setUploadedImages((prev) => (prev.length >= 4 ? prev : [...prev, dataUrl]))
+                })
+                .catch(() => {
+                  window.toast.error('图片读取失败，请重试')
+                })
               return false
             }}>
             <Tooltip title={'上传参考图片（图生图）'} mouseEnterDelay={0.5}>
@@ -388,7 +438,7 @@ const PaintInputbar: FC = () => {
             </Tooltip>
           ) : (
             <Tooltip
-              title={!selectedModel ? '请先选择绘画模型' : !prompt.trim() ? '请输入提示词' : ''}
+              title={!selectedModel ? '请先选择绘画模型' : !prompt.trim() ? '请输入提示词' : undefined}
               mouseEnterDelay={0.3}>
               <GenerateButton
                 type="primary"
@@ -405,7 +455,7 @@ const PaintInputbar: FC = () => {
       {/* 自定义尺寸弹窗 */}
       <Modal
         open={customOpen}
-        title={isGemini ? '自定义宽高比' : '自定义尺寸'}
+        title={customMode === 'ratio' ? '自定义宽高比' : '自定义像素尺寸'}
         okText={'确定'}
         cancelText={'取消'}
         centered
@@ -416,7 +466,7 @@ const PaintInputbar: FC = () => {
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
           onPressEnter={confirmCustomSize}
-          placeholder={isGemini ? '例如 7:3' : '例如 1536x1024'}
+          placeholder={customMode === 'ratio' ? '例如 7:3' : '例如 1536x1024'}
           autoFocus
         />
       </Modal>

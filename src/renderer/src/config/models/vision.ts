@@ -279,6 +279,19 @@ export function isGeminiImageModel(model: Model): boolean {
   return model.provider === 'gemini'
 }
 
+/**
+ * 判断是否为「Gemini 官方接口」的图像生成模型（统一 UI 层与参数层的判定标准）：
+ * 模型 ID 匹配 Gemini 图像系列，且 Provider 类型为 gemini。
+ * 以 provider.type 判定（而非 provider id），与 AiProvider 内部判定保持一致，
+ * 避免用户自建 Gemini 类型服务商时两处判定分叉导致参数静默失效
+ */
+export function isGeminiOfficialImageModel(model: Model, providerType?: string): boolean {
+  if (!model || !isGeminiImageModelId(model.id)) {
+    return false
+  }
+  return providerType === 'gemini'
+}
+
 export function isVisionModel(model: Model): boolean {
   if (!model || isEmbeddingModel(model) || isRerankModel(model)) {
     return false

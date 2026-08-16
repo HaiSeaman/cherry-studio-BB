@@ -160,7 +160,8 @@ export async function transformMessagesAndFetch(
       await fetchImageGeneration({
         messages: uiMessages,
         assistant,
-        onChunkReceived
+        onChunkReceived,
+        signal: request.options.signal
       })
       return
     }
@@ -328,11 +329,14 @@ async function collectImagesFromMessages(userMessage: Message, assistantMessage?
 export async function fetchImageGeneration({
   messages,
   assistant,
-  onChunkReceived
+  onChunkReceived,
+  signal
 }: {
   messages: Message[]
   assistant: Assistant
   onChunkReceived: (chunk: Chunk) => void
+  /** 中止信号（聊天页「停止」按钮），透传到图像生成请求与轮询 */
+  signal?: AbortSignal
 }) {
   // 创建 AI provider
   const baseProvider = getProviderByModel(assistant.model || getDefaultModel())
@@ -370,14 +374,16 @@ export async function fetchImageGeneration({
         model: assistant.model!.id,
         prompt: prompt || '',
         inputImages,
-        imageSize
+        imageSize,
+        ...(signal ? { signal } : {})
       })
     } else {
       images = await aiProvider.generateImage({
         model: assistant.model!.id,
         prompt: prompt || '',
         imageSize,
-        batchSize
+        batchSize,
+        ...(signal ? { signal } : {})
       })
     }
 

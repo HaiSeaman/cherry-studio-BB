@@ -5,9 +5,11 @@ import { TopicManager } from '@renderer/hooks/useTopic'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { getDefaultAssistant, getTranslateModel } from '@renderer/services/AssistantService'
 import { dbService } from '@renderer/services/db'
+import FileManager from '@renderer/services/FileManager'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import store from '@renderer/store'
 import type { Assistant, Model } from '@renderer/types'
+import type { FileMetadata } from '@renderer/types'
 import { TopicType } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
@@ -68,7 +70,11 @@ export async function enhancePrompt(prompt: string): Promise<string> {
     if (chunk.type === ChunkType.TEXT_DELTA) {
       optimizedText = chunk.text
     } else if (chunk.type === ChunkType.TEXT_COMPLETE) {
-      // noop
+      // 非累积模式的模型 TEXT_DELTA 是增量片段，以完成回调的全文为准；
+      // 完成回调文本为空串时保留已累积的增量（adapter 的 ?? 不会拦截空串）
+      if (chunk.text) {
+        optimizedText = chunk.text
+      }
     } else if (chunk.type === ChunkType.ERROR) {
       error = chunk.error
     }
@@ -131,9 +137,21 @@ export function getImageSavePath(): string {
 /**
  * 将生成的图片自动保存到用户设置的目录
  * 保存失败不抛出（静默降级），历史记录仍保留在应用内部存储
+ * @param images 展示用图片列表（data URL / file:// 本地 URL / 远程 URL）
+ * @param files 已下载到内部存储的文件（优先从本地转存，避免二次下载远程 URL）
  */
-export async function saveGeneratedImages(images: string[]): Promise<void> {
+export async function saveGeneratedImages(images: string[], files: FileMetadata[] = []): Promise<void> {
   const savePath = getImageSavePath()
+
+  for (const file of files) {
+    try {
+      // base64Image 按物理文件名（uuid+ext）解析，需传 file.name 而非 file.id
+      const { data } = await window.api.file.base64Image(file.name)
+      await window.api.file.saveImageToDirectory(data, savePath)
+    } catch (error) {
+      logger.warn('自动保存图片失败（不影响历史记录）:', { fileId: file.id, error: error as Error })
+    }
+  }
 
   for (const image of images) {
     try {
@@ -141,7 +159,7 @@ export async function saveGeneratedImages(images: string[]): Promise<void> {
         // base64 直存
         await window.api.file.saveImageToDirectory(image, savePath)
       } else if (image.startsWith('file://')) {
-        // 内部存储文件，跳过（历史展示已依赖内部路径）
+        // 内部存储文件，已通过 files 参数保存
         continue
       } else {
         // 远程 URL：下载后转 base64 再保存
@@ -157,6 +175,39 @@ export async function saveGeneratedImages(images: string[]): Promise<void> {
     } catch (error) {
       logger.warn('自动保存图片失败（不影响历史记录）:', { image: image.slice(0, 50), error: error as Error })
     }
+  }
+}
+
+/**
+ * 将远程 URL 图片（百炼 OSS 等，有效期通常仅 24 小时）下载到应用内部存储持久化，
+ * 返回本地展示 URL 与文件元数据；下载失败时回退原 URL（历史展示在过期后可能失效）。
+ * 并行下载以缩短批量生成的等待时间
+ */
+async function persistRemoteImages(images: string[]): Promise<{ displayImages: string[]; files: FileMetadata[] }> {
+  if (!images.some((image) => image.startsWith('http'))) {
+    return { displayImages: images, files: [] }
+  }
+  const results = await Promise.all(
+    images.map(async (image) => {
+      if (!image.startsWith('http')) {
+        return { localUrl: image, file: undefined as FileMetadata | undefined }
+      }
+      try {
+        const file = await window.api.file.download(image, true)
+        await FileManager.addFile(file)
+        return { localUrl: FileManager.getFileUrl(file), file }
+      } catch (error) {
+        logger.warn('远程图片下载失败，保留原 URL（过期后历史图可能失效）:', {
+          image: image.slice(0, 60),
+          error: error as Error
+        })
+        return { localUrl: image, file: undefined as FileMetadata | undefined }
+      }
+    })
+  )
+  return {
+    displayImages: results.map((result) => result.localUrl),
+    files: results.filter((result) => result.file !== undefined).map((result) => result.file!)
   }
 }
 
@@ -238,11 +289,11 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
   await dbService.appendMessage(currentTopicId, assistantMessage, [imageBlock])
   await db.topics.update(currentTopicId, { updatedAt: new Date().toISOString() })
 
-  // 首次生成时用提示词命名会话
+  // 首次生成时用提示词命名会话（按 Unicode 码点切分，避免 emoji 代理对被截断产生乱码）
   const topicRow = await db.topics.get(currentTopicId)
   if (topicRow && (!topicRow.name || topicRow.name === '新的绘画会话')) {
     await db.topics.update(currentTopicId, {
-      name: prompt.slice(0, 20),
+      name: Array.from(prompt).slice(0, 20).join(''),
       updatedAt: new Date().toISOString()
     })
   }
@@ -261,24 +312,25 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
         // 生成期间用户可能删除会话导致块不存在，更新失败需静默忽略
         try {
           if (chunk.type === ChunkType.IMAGE_COMPLETE && chunk.image) {
+            // 远程 URL（百炼 OSS 等）有效期有限，先下载到内部存储持久化，
+            // 历史记录与缩略图改用本地 URL，避免链接过期后裂图
+            const { displayImages, files } = await persistRemoteImages(chunk.image.images)
             await db.message_blocks.update(imageBlock.id, {
               status: MessageBlockStatus.SUCCESS,
-              metadata: { generateImageResponse: chunk.image }
+              ...(files.length > 0 ? { file: files[0] } : {}),
+              metadata: {
+                generateImageResponse: { ...chunk.image, images: displayImages },
+                // 批量落盘的全部文件：删除会话时按此回收（file 字段只挂第一张）
+                ...(files.length > 0 ? { generatedFiles: files } : {})
+              }
             })
             await dbService.updateMessage(currentTopicId, assistantMessage.id, {
               status: AssistantMessageStatus.SUCCESS
             })
             // 自动保存到用户设置目录（失败静默，不影响历史记录）
-            void saveGeneratedImages(chunk.image.images)
-          } else if (chunk.type === ChunkType.ERROR) {
-            await db.message_blocks.update(imageBlock.id, {
-              status: MessageBlockStatus.ERROR,
-              error: toSerializedError(chunk.error)
-            })
-            await dbService.updateMessage(currentTopicId, assistantMessage.id, {
-              status: AssistantMessageStatus.ERROR
-            })
+            void saveGeneratedImages(displayImages, files)
           }
+          // 注：错误统一在 catch 分支落 ERROR 块，此处不再处理 ERROR chunk
         } catch {
           // 会话已被删除等场景，忽略块更新失败
         }

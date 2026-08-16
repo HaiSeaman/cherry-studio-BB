@@ -13,6 +13,7 @@ import { adaptProvider, getActualProvider, providerToAiSdkConfig } from './provi
 import { listModels } from './services/listModels'
 import type { AppProviderSettingsMap, CompletionsResult, ProviderConfig } from './types'
 import type { AiSdkMiddlewareConfig } from './types/middlewareConfig'
+import { generateDashScopeImage, isDashScopeProvider } from './utils/dashscopeImage'
 
 const logger = loggerService.withContext('AiProvider')
 
@@ -277,8 +278,22 @@ export default class AiProvider {
   /**
    * 生成图像
    * 使用现代化 AI SDK 实现，不再 fallback 到 legacy
+   *
+   * 阿里云百炼（DashScope）不提供 OpenAI /images/generations 端点，改走原生协议
    */
   public async generateImage(params: GenerateImageParams): Promise<string[]> {
+    // DashScope 原生协议不依赖 SDK config，先于 ensureConfig 判断，
+    // 避免模型未列入 provider.models 时被无关校验拦截
+    if (isDashScopeProvider(this.actualProvider)) {
+      return generateDashScopeImage({
+        provider: this.actualProvider,
+        model: params.model,
+        prompt: params.prompt,
+        imageSize: params.imageSize,
+        batchSize: params.batchSize,
+        ...(params.signal ? { signal: params.signal } : {})
+      })
+    }
     await this.ensureConfig(params.model)
     return await this.modernGenerateImage(params, this.config!)
   }
@@ -286,8 +301,20 @@ export default class AiProvider {
   /**
    * 编辑图像 - 基于输入图像和文本提示生成新图像
    * 内部使用 AI SDK 的 generateImage，通过 prompt.images 参数实现编辑功能
+   *
+   * 阿里云百炼（DashScope）不提供 OpenAI /images/edits 端点，改走原生协议
    */
   public async editImage(params: EditImageParams): Promise<string[]> {
+    if (isDashScopeProvider(this.actualProvider)) {
+      return generateDashScopeImage({
+        provider: this.actualProvider,
+        model: params.model,
+        prompt: params.prompt,
+        inputImages: params.inputImages,
+        imageSize: params.imageSize,
+        ...(params.signal ? { signal: params.signal } : {})
+      })
+    }
     await this.ensureConfig(params.model)
     return await this.modernEditImage(params, this.config!)
   }
@@ -329,10 +356,12 @@ export default class AiProvider {
       return this.convertImageResult(result)
     }
 
+    // imageSize 为空（「自动」档位）时不传 size，由模型按提示词自行决定，
+    // 避免强制 1024x1024 丢掉用户选择的宽高比
     const result = await executor.generateImage({
       model,
       prompt,
-      size: (imageSize || '1024x1024') as `${number}x${number}`,
+      ...(imageSize ? { size: imageSize as `${number}x${number}` } : {}),
       n: batchSize || 1,
       ...(signal && { abortSignal: signal })
     })
@@ -375,6 +404,7 @@ export default class AiProvider {
     }
 
     // 使用 AI SDK 的 generateImage，通过 prompt.images 实现编辑
+    // imageSize 为空（「自动」档位）时不传 size，由模型自行决定
     const result = await executor.generateImage({
       model: model,
       prompt: {
@@ -382,7 +412,7 @@ export default class AiProvider {
         images: inputImages, // 输入图像（必需）
         ...(mask && { mask }) // 可选的 mask（用于 inpainting）
       },
-      size: (imageSize || '1024x1024') as `${number}x${number}`,
+      ...(imageSize ? { size: imageSize as `${number}x${number}` } : {}),
       ...(signal && { abortSignal: signal })
     })
 
