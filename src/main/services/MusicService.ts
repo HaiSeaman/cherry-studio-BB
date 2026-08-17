@@ -168,7 +168,7 @@ export class MusicService {
     }
   }
 
-  public ensureThumbs = async (_: IpcMainInvokeEvent): Promise<MusicThumbsResponse> => {
+  public ensureThumbs = async (): Promise<MusicThumbsResponse> => {
     try {
       const coversDir = await this.ensureCoversDir()
       const thumbDir = path.join(coversDir, 'thumb')

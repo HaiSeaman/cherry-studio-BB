@@ -16,9 +16,8 @@ import { MockLanguageModelV3 } from 'ai/test'
 import { vi } from 'vitest'
 import * as z from 'zod'
 
-import type { StreamTextParams, StreamTextResult } from '../../src/core/plugins'
+import type { AiRequestContext, StreamTextParams, StreamTextResult } from '../../src/core/plugins'
 import type { RegisteredProviderId } from '../../src/core/providers/types'
-import type { AiRequestContext } from '../../src/types'
 
 /**
  * Type for partial overrides that allows omitting the model field

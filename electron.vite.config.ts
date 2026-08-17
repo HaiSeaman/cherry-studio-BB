@@ -85,8 +85,7 @@ export default defineConfig({
         '@logger': resolve('src/renderer/src/services/LoggerService'),
         '@cherrystudio/ai-core/provider': resolve('packages/aiCore/src/core/providers'),
         '@cherrystudio/ai-core/built-in/plugins': resolve('packages/aiCore/src/core/plugins/built-in'),
-        '@cherrystudio/ai-core': resolve('packages/aiCore/src'),
-        '@cherrystudio/ai-sdk-provider': resolve('packages/ai-sdk-provider/src')
+        '@cherrystudio/ai-core': resolve('packages/aiCore/src')
       }
     },
     optimizeDeps: {
@@ -117,7 +116,7 @@ export default defineConfig({
             if (!id.includes('node_modules')) return undefined
             if (id.includes('antd') || id.includes('@ant-design') || id.includes('rc-')) return 'vendor-antd'
             if (id.includes('react') || id.includes('scheduler')) return 'vendor-react'
-            if (id.includes('motion') || id.includes('framer-motion')) return 'vendor-motion'
+            if (id.includes('motion')) return 'vendor-motion'
             if (id.includes('highlight')) return 'vendor-highlight'
             if (id.includes('lodash')) return 'vendor-lodash'
             if (id.includes('redux') || id.includes('@reduxjs') || id.includes('reselect')) return 'vendor-redux'

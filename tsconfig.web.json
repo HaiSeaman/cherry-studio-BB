@@ -7,7 +7,6 @@
     "src/preload/*.d.ts",
     "tests/__mocks__/**/*",
     "packages/aiCore/src/**/*",
-    "packages/ai-sdk-provider/**/*",
     "packages/shared/**/*"
   ],
   "exclude": ["packages/aiCore/src/**/__tests__/**"],
@@ -25,8 +24,7 @@
       "@cherrystudio/ai-core/provider": ["./packages/aiCore/src/core/providers/index.ts"],
       "@cherrystudio/ai-core/built-in/plugins": ["./packages/aiCore/src/core/plugins/built-in/index.ts"],
       "@cherrystudio/ai-core/*": ["./packages/aiCore/src/*"],
-      "@cherrystudio/ai-core": ["./packages/aiCore/src/index.ts"],
-      "@cherrystudio/ai-sdk-provider": ["./packages/ai-sdk-provider/src/index.ts"]
+      "@cherrystudio/ai-core": ["./packages/aiCore/src/index.ts"]
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

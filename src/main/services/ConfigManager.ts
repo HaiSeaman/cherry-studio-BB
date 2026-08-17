@@ -142,16 +142,8 @@ export class ConfigManager {
     return this.get<boolean>(ConfigKeys.ClickTrayToShowQuickAssistant, false)
   }
 
-  setClickTrayToShowQuickAssistant(value: boolean) {
-    this.set(ConfigKeys.ClickTrayToShowQuickAssistant, value)
-  }
-
   getEnableQuickAssistant(): boolean {
     return this.get(ConfigKeys.EnableQuickAssistant, false)
-  }
-
-  setEnableQuickAssistant(value: boolean) {
-    this.setAndNotify(ConfigKeys.EnableQuickAssistant, value)
   }
 
   // Selection Assistant: is enabled the selection assistant
@@ -223,14 +215,6 @@ export class ConfigManager {
 
   setAndNotify(key: string, value: unknown) {
     this.set(key, value, true)
-  }
-
-  getEnableDeveloperMode(): boolean {
-    return this.get<boolean>(ConfigKeys.EnableDeveloperMode, false)
-  }
-
-  setEnableDeveloperMode(value: boolean) {
-    this.set(ConfigKeys.EnableDeveloperMode, value)
   }
 
   set(key: string, value: unknown, isNotify: boolean = false) {

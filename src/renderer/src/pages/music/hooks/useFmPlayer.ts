@@ -89,16 +89,13 @@ export function useFmPlayer(stations: RadioStation[]) {
     [clearTimers, handleStreamError]
   )
 
-  const next = useCallback(
-    (_auto?: boolean) => {
-      const list = stationsRef.current
-      if (list.length === 0) return
-      const idx = list.findIndex((s) => s.url === currentUrlRef.current)
-      const nextIdx = idx < 0 ? 0 : (idx + 1) % list.length
-      play(list[nextIdx].url)
-    },
-    [play]
-  )
+  const next = useCallback(() => {
+    const list = stationsRef.current
+    if (list.length === 0) return
+    const idx = list.findIndex((s) => s.url === currentUrlRef.current)
+    const nextIdx = idx < 0 ? 0 : (idx + 1) % list.length
+    play(list[nextIdx].url)
+  }, [play])
   nextRef.current = next
 
   const prev = useCallback(() => {

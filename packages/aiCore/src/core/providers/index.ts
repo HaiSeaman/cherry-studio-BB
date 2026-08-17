@@ -9,6 +9,9 @@ export { coreExtensions, hasProviderConfig } from './core/initialization'
 
 // ==================== 基础数据和类型 ====================
 
+// CherryIn Provider
+export { cherryIn, createCherryIn, type CherryInProvider, type CherryInProviderSettings } from './cherryin'
+
 // 类型定义
 export type { AiSdkModel, ProviderError } from './types'
 

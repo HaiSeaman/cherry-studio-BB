@@ -207,7 +207,7 @@ const LocalMusicPlayer: FC = () => {
         favoritesActive={player.favoritesActive}
         onToggle={player.toggle}
         onPrev={player.prev}
-        onNext={() => player.next(false)}
+        onNext={() => player.next()}
         onSeek={player.seek}
         onSeekingChange={player.setSeeking}
         onToggleMode={player.togglePlayMode}

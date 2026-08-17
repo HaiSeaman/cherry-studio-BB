@@ -247,36 +247,6 @@ class VersionService {
       logger.error('Failed to record current version:', error as Error)
     }
   }
-
-  /**
-   * Gets the previous version record (last record with different version than current)
-   * Reads from the last 1KB of version.log to find the most recent different version
-   * Useful for detecting version upgrades and running migrations
-   * @returns {VersionRecord | null} Previous version record or null if not available
-   */
-  getPreviousVersion(): VersionRecord | null {
-    try {
-      const lines = this.readLastVersionLines()
-      if (lines.length === 0) {
-        return null
-      }
-
-      const currentVersion = app.getVersion()
-
-      // Read from the end backwards to find the first different version
-      for (let i = lines.length - 1; i >= 0; i--) {
-        const record = this.parseVersionLine(lines[i])
-        if (record && record.version !== currentVersion) {
-          return record
-        }
-      }
-
-      return null
-    } catch (error) {
-      logger.error('Failed to get previous version:', error as Error)
-      return null
-    }
-  }
 }
 
 /**

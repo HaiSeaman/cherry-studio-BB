@@ -38,9 +38,6 @@ const minAppsSlice = createSlice({
     setMinApps: (state, action: PayloadAction<MinAppType[]>) => {
       state.enabled = action.payload.map((app) => ({ ...app, logo: undefined }))
     },
-    addMinApp: (state, action: PayloadAction<MinAppType>) => {
-      state.enabled.push(action.payload)
-    },
     setDisabledMinApps: (state, action: PayloadAction<MinAppType[]>) => {
       state.disabled = action.payload.map((app) => ({ ...app, logo: undefined }))
     },
@@ -50,6 +47,6 @@ const minAppsSlice = createSlice({
   }
 })
 
-export const { setMinApps, addMinApp, setDisabledMinApps, setPinnedMinApps } = minAppsSlice.actions
+export const { setMinApps, setDisabledMinApps, setPinnedMinApps } = minAppsSlice.actions
 
 export default minAppsSlice.reducer

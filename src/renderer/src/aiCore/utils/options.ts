@@ -582,7 +582,7 @@ function buildAIGatewayOptions(
   // Proxy providers (CherryIN, NewAPI) may annotate model.endpoint_type to force a specific protocol.
   // Keys here must stay aligned with the language-model class each SDK layer builds, otherwise
   // AI SDK drops the custom provider options. See:
-  //   - packages/ai-sdk-provider/src/cherryin-provider.ts (createChatModel)
+  //   - packages/aiCore/src/core/providers/cherryin/cherryin-provider.ts (createChatModel)
   //   - src/renderer/src/aiCore/provider/custom/newapi-provider.ts (createChatModel)
   //
   //   endpoint_type      | SDK language-model class           | AI SDK providerOptions key

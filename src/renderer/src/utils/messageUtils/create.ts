@@ -5,8 +5,6 @@ import type { SerializedError } from '@renderer/types/error'
 import type {
   BaseMessageBlock,
   CitationMessageBlock,
-  CodeMessageBlock,
-  CompactMessageBlock,
   ErrorMessageBlock,
   FileMessageBlock,
   ImageMessageBlock,
@@ -77,26 +75,6 @@ export function createMainTextBlock(
  * @param messageId - The ID of the parent message.
  * @param content - The code content.
  * @param language - The programming language of the code.
- * @param overrides - Optional properties to override the defaults.
- * @returns A CodeMessageBlock object.
- */
-export function createCodeBlock(
-  messageId: string,
-  content: string,
-  language: string,
-  overrides: Partial<Omit<CodeMessageBlock, 'id' | 'messageId' | 'type' | 'content' | 'language'>> = {}
-): CodeMessageBlock {
-  const baseBlock = createBaseMessageBlock(messageId, MessageBlockType.CODE, overrides)
-  return {
-    ...baseBlock,
-    content,
-    language
-  }
-}
-
-/**
- * Creates an Image Message Block.
- * @param messageId - The ID of the parent message.
  * @param overrides - Optional properties to override the defaults.
  * @returns An ImageMessageBlock object.
  */
@@ -296,28 +274,6 @@ export function createVideoBlock(
  * @param content - The summary text.
  * @param compactedContent - The compacted content extracted from XML tags.
  * @param overrides - Optional properties to override the defaults.
- * @returns A CompactMessageBlock object.
- */
-export function createCompactBlock(
-  messageId: string,
-  content: string,
-  compactedContent: string,
-  overrides: Partial<Omit<CompactMessageBlock, 'id' | 'messageId' | 'type' | 'content' | 'compactedContent'>> = {}
-): CompactMessageBlock {
-  const baseBlock = createBaseMessageBlock(messageId, MessageBlockType.COMPACT, overrides)
-  return {
-    ...baseBlock,
-    content,
-    compactedContent
-  }
-}
-
-/**
- * Creates a new Message object
- * @param role - The role of the message sender ('user' or 'assistant').
- * @param topicId - The ID of the topic this message belongs to.
- * @param assistantId - The ID of the assistant (relevant for assistant messages).
- * @param overrides - Optional properties to override the defaults. Initial blocks can be passed here.
  * @returns A Message object.
  */
 export function createMessage(

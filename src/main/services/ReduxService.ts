@@ -105,24 +105,6 @@ export class ReduxService {
       throw error
     }
   }
-
-  // Get entire state tree
-  async getState(): Promise<any> {
-    try {
-      const webContents = await this.getWebContents()
-      return await webContents.executeJavaScript(`window.store.getState()`)
-    } catch (error) {
-      logger.error('Failed to get state:', error as Error)
-      throw error
-    }
-  }
-
-  // Batch dispatch actions
-  async batch(actions: any[]): Promise<void> {
-    for (const action of actions) {
-      await this.dispatch(action)
-    }
-  }
 }
 
 export const reduxService = new ReduxService()

@@ -11,18 +11,12 @@ import selectionService from './SelectionService'
 import { windowService } from './WindowService'
 
 export class TrayService {
-  private static instance: TrayService
   private tray: Tray | null = null
   private contextMenu: Menu | null = null
 
   constructor() {
     this.watchConfigChanges()
     this.updateTray()
-    TrayService.instance = this
-  }
-
-  public static getInstance() {
-    return TrayService.instance
   }
 
   private createTray() {

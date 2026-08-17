@@ -1,9 +1,5 @@
 import styled from 'styled-components'
 
-interface ContainerProps {
-  padding?: string
-}
-
 type PxValue = number | string
 
 export interface BoxProps {
@@ -135,25 +131,3 @@ export const VStack = styled(Stack)<StackProps>`
   flex-direction: column;
 `
 
-export const BaseTypography = styled(Box)<{
-  fontSize?: number
-  lineHeight?: string
-  fontWeigth?: number | string
-  color?: string
-  textAlign?: string
-}>`
-  font-size: ${(props) => (props.fontSize ? getElementValue(props.fontSize) : '16px')};
-  line-height: ${(props) => (props.lineHeight ? getElementValue(props.lineHeight) : 'normal')};
-  font-weight: ${(props) => props.fontWeigth || 'normal'};
-  color: ${(props) => props.color || '#fff'};
-  text-align: ${(props) => props.textAlign || 'left'};
-`
-
-export const Container = styled.main<ContainerProps>`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  box-sizing: border-box;
-  flex: 1;
-  padding: ${(p) => p.padding ?? '0 18px'};
-`

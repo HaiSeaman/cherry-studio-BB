@@ -141,18 +141,6 @@ export function getFileType(ext: string): FileType {
   return fileTypeMap.get(ext) || FILE_TYPE.OTHER
 }
 
-export function getFileDir(filePath: string) {
-  return path.dirname(filePath)
-}
-
-export function getFileName(filePath: string) {
-  return path.basename(filePath)
-}
-
-export function getFileExt(filePath: string) {
-  return path.extname(filePath)
-}
-
 export function getAllFiles(dirPath: string, arrayOfFiles: FileMetadata[] = []): FileMetadata[] {
   const files = fs.readdirSync(dirPath)
 
@@ -200,15 +188,6 @@ export function getTempDir() {
 
 export function getFilesDir() {
   return path.join(app.getPath('userData'), 'Data', 'Files')
-}
-
-export function getNotesDir() {
-  const notesDir = path.join(app.getPath('userData'), 'Data', 'Notes')
-  if (!fs.existsSync(notesDir)) {
-    fs.mkdirSync(notesDir, { recursive: true })
-    logger.info(`Notes directory created at: ${notesDir}`)
-  }
-  return notesDir
 }
 
 export function getConfigDir() {
@@ -457,36 +436,12 @@ export function sanitizeFilename(fileName: string, replacement = '_'): string {
 }
 
 /**
- * Check if a directory exists at the given path
- */
-export async function directoryExists(dirPath: string): Promise<boolean> {
-  try {
-    const stats = await fs.promises.stat(dirPath)
-    return stats.isDirectory()
-  } catch {
-    return false
-  }
-}
-
-/**
  * Check if a path exists (file or directory)
  */
 export async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await fs.promises.access(targetPath, fs.constants.R_OK)
     return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Check if a file exists at the given path
- */
-export async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    const stats = await fs.promises.stat(filePath)
-    return stats.isFile()
   } catch {
     return false
   }

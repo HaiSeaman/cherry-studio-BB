@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 import Assistants from './AssistantsTab'
-import Topics from './TopicsTab'
+import { Topics } from './components/Topics'
 
 interface Props {
   activeAssistant: Assistant
@@ -18,7 +18,6 @@ interface Props {
   setActiveAssistant: (assistant: Assistant) => void
   setActiveTopic: (topic: Topic) => void
   position: 'left' | 'right'
-  forceToSeeAllTab?: boolean
   style?: React.CSSProperties
 }
 
@@ -30,7 +29,6 @@ const HomeTabs: FC<Props> = ({
   setActiveAssistant,
   setActiveTopic,
   position,
-  forceToSeeAllTab,
   style
 }) => {
   const { addAssistant } = useAssistants()
@@ -82,7 +80,7 @@ const HomeTabs: FC<Props> = ({
     if (position === 'left' && topicPosition === 'right' && tab === 'topic') {
       setTab('assistants')
     }
-  }, [position, tab, topicPosition, forceToSeeAllTab])
+  }, [position, tab, topicPosition])
 
   return (
     <Container

@@ -167,10 +167,6 @@ export class SelectionService {
     return null
   }
 
-  public getSelectionHook(): SelectionHookInstance | null {
-    return this.selectionHook
-  }
-
   public getLinuxEnvInfo(): {
     isLinuxWaylandDisplay: boolean
     isLinuxXWaylandMode: boolean

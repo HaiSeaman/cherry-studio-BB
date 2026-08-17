@@ -49,14 +49,6 @@ export function getDataPath(subPath?: string) {
   return dataPath
 }
 
-export function getInstanceName(baseURL: string) {
-  try {
-    return new URL(baseURL).host.split('.')[0]
-  } catch (error) {
-    return ''
-  }
-}
-
 export function debounce(func: (...args: any[]) => void, wait: number, immediate: boolean = false) {
   let timeout: NodeJS.Timeout | null = null
   return function (...args: any[]) {

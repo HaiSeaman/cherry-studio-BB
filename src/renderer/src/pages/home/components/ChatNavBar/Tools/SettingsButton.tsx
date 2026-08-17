@@ -5,7 +5,7 @@ import type { FC } from 'react'
 import { useState } from 'react'
 
 import NavbarIcon from '../../../../../components/NavbarIcon'
-import { AssistantSettingsTab } from './SettingsTab'
+import AssistantSettingsTab from './SettingsTab/AssistantSettingsTab'
 
 interface Props {
   assistant?: Assistant

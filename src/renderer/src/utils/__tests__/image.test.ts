@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  captureElement,
   captureScrollable,
   captureScrollableAsBlob,
   captureScrollableAsDataURL,
@@ -46,20 +45,6 @@ describe('utils/image', () => {
       const result = await compressImage(file)
       expect(result).toBeInstanceOf(File)
       expect(result.name).toBe('compressed.png')
-    })
-  })
-
-  describe('captureElement', () => {
-    it('should return image data url when elRef.current exists', async () => {
-      const ref = { current: document.createElement('div') } as React.RefObject<HTMLDivElement>
-      const result = await captureElement(ref)
-      expect(result).toMatch(/^data:image\/png;base64/)
-    })
-
-    it('should return undefined when elRef.current is null', async () => {
-      const ref = { current: null } as unknown as React.RefObject<HTMLDivElement>
-      const result = await captureElement(ref)
-      expect(result).toBeUndefined()
     })
   })
 

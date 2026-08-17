@@ -7,7 +7,7 @@ import type { MCPTool } from '@types'
 
 import { formatAsText, schemaToJSDoc } from './format'
 import { formatListResultAsText, listTools } from './list'
-import { callMcpTool, clearToolMap, listAllTools, syncToolMapFromHubTools, syncToolMapFromTools } from './mcp-bridge'
+import { callMcpTool, listAllTools, syncToolMapFromHubTools, syncToolMapFromTools } from './mcp-bridge'
 import { Runtime } from './runtime'
 import { buildToolNameMapping, resolveToolId } from './toolname'
 import type { ExecInput, HubTool, InspectInput, InvokeInput, ListInput } from './types'
@@ -194,12 +194,6 @@ export class HubServer {
         } satisfies HubTool
       })
       .sort((a, b) => a.id.localeCompare(b.id))
-  }
-
-  invalidateCache(): void {
-    CacheService.remove(TOOLS_CACHE_KEY)
-    clearToolMap()
-    logger.debug('Tools cache invalidated')
   }
 
   private async handleList(input: ListInput) {

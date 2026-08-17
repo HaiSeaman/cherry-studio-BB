@@ -29,11 +29,3 @@ export async function getIpCountry(): Promise<string> {
   }
 }
 
-/**
- * 检查用户是否在中国
- * @returns 如果用户在中国返回true，否则返回false
- */
-export async function isUserInChina(): Promise<boolean> {
-  const country = await getIpCountry()
-  return country.toLowerCase() === 'cn'
-}

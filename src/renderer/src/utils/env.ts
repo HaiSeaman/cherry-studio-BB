@@ -1,7 +1,11 @@
-import { parse } from 'dotenv'
+import dotenv from 'dotenv'
 
-export const parseKeyValueString = (str: string): Record<string, string> => {
-  return parse(str)
+export function parseKeyValueString(str: string): Record<string, string> {
+  try {
+    return dotenv.parse(str)
+  } catch {
+    return {}
+  }
 }
 
 /**

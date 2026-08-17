@@ -465,7 +465,7 @@ const StationRow: FC<StationRowProps> = memo(function StationRow({
         title={favored ? '取消收藏' : '收藏'}
         onClick={(e) => {
           e.stopPropagation()
-          void onToggleFavorite(s)
+          onToggleFavorite(s)
         }}>
         {favored ? '★' : '☆'}
       </FavBtn>

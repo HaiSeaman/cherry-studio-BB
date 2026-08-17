@@ -18,17 +18,3 @@ export function droppableReorder<T>(list: T[], sourceIndex: number, destIndex: n
   }
   return result
 }
-
-/**
- * 首字母为英文的字符串排在前面。
- * @param {string} a 字符串
- * @param {string} b 字符串
- * @returns {number} 排序后的字符串
- */
-export function sortByEnglishFirst(a: string, b: string): number {
-  const isAEnglish = /^[a-zA-Z]/.test(a)
-  const isBEnglish = /^[a-zA-Z]/.test(b)
-  if (isAEnglish && !isBEnglish) return -1
-  if (!isAEnglish && isBEnglish) return 1
-  return a.localeCompare(b)
-}

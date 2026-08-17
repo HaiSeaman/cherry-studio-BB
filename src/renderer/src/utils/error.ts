@@ -80,11 +80,6 @@ export function getErrorMessage(error: unknown): string {
   }
 }
 
-export function formatErrorMessageWithPrefix(error: unknown, prefix: string): string {
-  const msg = getErrorMessage(error)
-  return `${prefix}: ${msg}`
-}
-
 export const isTimeoutError = (error: any): boolean => {
   if (error instanceof DOMException && error.name === 'TimeoutError') {
     return true

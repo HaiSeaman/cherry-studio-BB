@@ -45,13 +45,8 @@ export interface WebSearchState {
   excludeDomains: string[]
   // 订阅源列表
   subscribeSources: SubscribeSource[]
-  // 是否覆盖服务商搜索
-  /** @deprecated 支持在快捷菜单中自选搜索供应商，所以这个不再适用 */
-  overwrite: boolean
   // 搜索结果压缩
   compressionConfig?: CompressionConfig
-  // 具体供应商的配置
-  providerConfig: Record<string, any>
 }
 
 export type CherryWebSearchConfig = Pick<WebSearchState, 'searchWithTime' | 'maxResults' | 'excludeDomains'>
@@ -63,12 +58,10 @@ export const initialState: WebSearchState = {
   maxResults: 5,
   excludeDomains: [],
   subscribeSources: [],
-  overwrite: false,
   compressionConfig: {
     method: 'none',
     cutoffUnit: 'char'
-  },
-  providerConfig: {}
+  }
 }
 
 export const defaultWebSearchProviders = initialState.providers
@@ -79,9 +72,6 @@ const websearchSlice = createSlice({
   reducers: {
     setDefaultProvider: (state, action: PayloadAction<string>) => {
       state.defaultProvider = action.payload
-    },
-    setWebSearchProviders: (state, action: PayloadAction<WebSearchProvider[]>) => {
-      state.providers = action.payload
     },
     updateWebSearchProviders: (state, action: PayloadAction<WebSearchProvider[]>) => {
       state.providers = action.payload
@@ -128,9 +118,6 @@ const websearchSlice = createSlice({
     setSubscribeSources: (state, action: PayloadAction<SubscribeSource[]>) => {
       state.subscribeSources = action.payload
     },
-    setOverwrite: (state, action: PayloadAction<boolean>) => {
-      state.overwrite = action.payload
-    },
     addWebSearchProvider: (state, action: PayloadAction<WebSearchProvider>) => {
       // Check if provider with same ID already exists
       const exists = state.providers.some((provider) => provider.id === action.payload.id)
@@ -148,18 +135,11 @@ const websearchSlice = createSlice({
         ...state.compressionConfig,
         ...action.payload
       } as CompressionConfig
-    },
-    setProviderConfig: (state, action: PayloadAction<Record<string, any>>) => {
-      state.providerConfig = action.payload
-    },
-    updateProviderConfig: (state, action: PayloadAction<Record<string, any>>) => {
-      state.providerConfig = { ...state.providerConfig, ...action.payload }
     }
   }
 })
 
 export const {
-  setWebSearchProviders,
   updateWebSearchProvider,
   updateWebSearchProviders,
   setDefaultProvider,
@@ -170,12 +150,9 @@ export const {
   removeSubscribeSource,
   updateSubscribeBlacklist,
   setSubscribeSources,
-  setOverwrite,
   addWebSearchProvider,
   setCompressionConfig,
-  updateCompressionConfig,
-  setProviderConfig,
-  updateProviderConfig
+  updateCompressionConfig
 } = websearchSlice.actions
 
 export default websearchSlice.reducer

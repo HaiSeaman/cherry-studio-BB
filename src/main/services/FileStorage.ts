@@ -155,7 +155,6 @@ class FileStorage {
   private currentWatchPath?: string
   private debounceTimer?: NodeJS.Timeout
   private watcherConfig: Required<FileWatcherConfig> = DEFAULT_WATCHER_CONFIG
-  private isPaused = false
 
   private get tempDir(): string {
     if (!fs.existsSync(this._tempDir)) {
@@ -1433,65 +1432,6 @@ class FileStorage {
     return filenameResults.slice(0, options.maxEntries)
   }
 
-  public validateNotesDirectory = async (_: Electron.IpcMainInvokeEvent, dirPath: string): Promise<boolean> => {
-    try {
-      if (!dirPath || typeof dirPath !== 'string') {
-        return false
-      }
-
-      // Normalize path
-      const normalizedPath = path.resolve(dirPath)
-
-      // Check if directory exists
-      if (!fs.existsSync(normalizedPath)) {
-        return false
-      }
-
-      // Check if it's actually a directory
-      const stats = fs.statSync(normalizedPath)
-      if (!stats.isDirectory()) {
-        return false
-      }
-
-      // Get app paths to prevent selection of restricted directories
-      const appDataPath = path.resolve(process.env.APPDATA || path.join(require('os').homedir(), '.config'))
-      const filesDir = path.resolve(getFilesDir())
-
-      // Prevent selecting app data directories
-      if (normalizedPath.startsWith(filesDir) || normalizedPath.startsWith(appDataPath)) {
-        logger.warn(`Invalid directory selection: ${normalizedPath} (app data directory)`)
-        return false
-      }
-
-      // Prevent selecting system root directories
-      const isSystemRoot =
-        process.platform === 'win32'
-          ? /^[a-zA-Z]:[\\/]?$/.test(normalizedPath)
-          : normalizedPath === '/' ||
-            normalizedPath === '/usr' ||
-            normalizedPath === '/etc' ||
-            normalizedPath === '/System'
-
-      if (isSystemRoot) {
-        logger.warn(`Invalid directory selection: ${normalizedPath} (system root directory)`)
-        return false
-      }
-
-      // Check write permissions
-      try {
-        fs.accessSync(normalizedPath, fs.constants.W_OK)
-      } catch (error) {
-        logger.warn(`Directory not writable: ${normalizedPath}`)
-        return false
-      }
-
-      return true
-    } catch (error) {
-      logger.error('Failed to validate notes directory:', error as Error)
-      return false
-    }
-  }
-
   public save = async (
     _: Electron.IpcMainInvokeEvent,
     fileName: string,
@@ -1816,12 +1756,6 @@ class FileStorage {
 
   private createChangeHandler() {
     return (eventType: string, filePath: string) => {
-      // Skip processing if watcher is paused
-      if (this.isPaused) {
-        logger.debug('File change ignored (watcher paused)', { eventType, filePath })
-        return
-      }
-
       if (!this.shouldWatchFile(filePath, eventType)) {
         return
       }
@@ -2123,33 +2057,6 @@ class FileStorage {
     } catch (error) {
       logger.error('Batch upload failed:', error as Error)
       throw error
-    }
-  }
-
-  /**
-   * Pause file watcher to prevent events during batch operations
-   */
-  public pauseFileWatcher = async (): Promise<void> => {
-    if (this.watcher) {
-      logger.debug('Pausing file watcher')
-      this.isPaused = true
-      // Clear any pending debounced notifications
-      if (this.debounceTimer) {
-        clearTimeout(this.debounceTimer)
-        this.debounceTimer = undefined
-      }
-    }
-  }
-
-  /**
-   * Resume file watcher and trigger a refresh
-   */
-  public resumeFileWatcher = async (): Promise<void> => {
-    if (this.watcher && this.currentWatchPath) {
-      logger.debug('Resuming file watcher')
-      this.isPaused = false
-      // Send a synthetic refresh event to trigger tree reload
-      this.notifyChange('refresh', this.currentWatchPath)
     }
   }
 }

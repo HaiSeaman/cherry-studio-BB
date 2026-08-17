@@ -17,13 +17,6 @@ export class AppMenuService {
     configManager.subscribe('language', this.languageChangeCallback)
   }
 
-  public destroy(): void {
-    // Clean up subscription to prevent memory leaks
-    if (this.languageChangeCallback) {
-      configManager.unsubscribe('language', this.languageChangeCallback)
-    }
-  }
-
   public setupApplicationMenu(): void {
     const locale = locales[configManager.getLanguage()]
     const { appMenu } = locale.translation

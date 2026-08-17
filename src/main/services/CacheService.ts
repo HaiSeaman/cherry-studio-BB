@@ -64,13 +64,6 @@ export class CacheService {
   }
 
   /**
-   * Clear all cache
-   */
-  static clear(): void {
-    this.cache.clear()
-  }
-
-  /**
    * Check if cache exists and is valid
    * @param key Cache key
    * @returns boolean

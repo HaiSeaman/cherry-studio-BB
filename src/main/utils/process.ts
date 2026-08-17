@@ -1,17 +1,15 @@
 import { loggerService } from '@logger'
 import type { GitBashPathInfo, GitBashPathSource } from '@shared/config/constant'
 import { HOME_CHERRY_DIR } from '@shared/config/constant'
-import chardet from 'chardet'
 import { type ChildProcess, execFileSync, spawn, type SpawnOptions } from 'child_process'
 import fs from 'fs'
-import iconv from 'iconv-lite'
 import os from 'os'
 import path from 'path'
 
 import { isWin } from '../constant'
 import { ConfigKeys, configManager } from '../services/ConfigManager'
 import { getResourcePath } from '.'
-import getShellEnv, { refreshShellEnv } from './shell-env'
+import getShellEnv from './shell-env'
 
 const logger = loggerService.withContext('Utils:Process')
 
@@ -437,80 +435,6 @@ export function crossPlatformSpawn(
 }
 
 /**
- * Decode a Buffer from a shell process.
- * On Chinese Windows, cmd.exe outputs in the OEM code page (typically GBK/CP936).
- * Uses chardet to detect the actual encoding and iconv-lite to decode.
- */
-export function decodeBufferFromShell(buf: Buffer): string {
-  if (!isWin) return buf.toString('utf8')
-  const detected = chardet.detect(buf)
-  if (detected && detected !== 'UTF-8') {
-    try {
-      return iconv.decode(buf, detected)
-    } catch {
-      return buf.toString('utf8')
-    }
-  }
-  return buf.toString('utf8')
-}
-
-/**
- * Execute a command and return its output.
- * Uses crossPlatformSpawn internally for proper Windows .cmd handling.
- * If no env is provided, automatically uses the shell environment.
- */
-export async function executeCommand(
-  command: string,
-  args: string[],
-  options?: {
-    /** Capture and return stdout (default: false) */
-    capture?: boolean
-    /** Environment variables (defaults to getShellEnv()) */
-    env?: Record<string, string>
-    /** Timeout in milliseconds */
-    timeout?: number
-  }
-): Promise<string> {
-  const env = options?.env ?? (await getShellEnv())
-
-  return new Promise<string>((resolve, reject) => {
-    const child = crossPlatformSpawn(command, args, { env })
-    let stdout = ''
-    let stderr = ''
-
-    child.stdout?.on('data', (chunk) => {
-      stdout += chunk.toString()
-    })
-
-    child.stderr?.on('data', (chunk) => {
-      stderr += chunk.toString()
-    })
-
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-    if (options?.timeout) {
-      timeoutId = setTimeout(() => {
-        child.kill('SIGKILL')
-        reject(new Error(`Command timed out after ${options.timeout}ms`))
-      }, options.timeout)
-    }
-
-    child.on('error', (err) => {
-      if (timeoutId) clearTimeout(timeoutId)
-      reject(err)
-    })
-
-    child.on('close', (code) => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (code === 0) {
-        resolve(options?.capture ? stdout : '')
-      } else {
-        reject(new Error(stderr || `Command failed with code ${code}`))
-      }
-    })
-  })
-}
-
-/**
  * Common Git installation root directories on Windows
  * Used by findExecutable() (git special case) and findGitBash() to check fallback paths
  */
@@ -520,18 +444,6 @@ function getCommonGitRoots(): string[] {
     path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Git'),
     ...(process.env.LOCALAPPDATA ? [path.join(process.env.LOCALAPPDATA, 'Programs', 'Git')] : [])
   ]
-}
-
-/**
- * Check if git is available in the user's environment
- * Refreshes shell env cache to detect newly installed Git
- * @returns Object with availability status and path to git executable
- */
-export async function checkGitAvailable(): Promise<{ available: boolean; path: string | null }> {
-  await refreshShellEnv()
-  const gitPath = await findExecutableInEnv('git')
-  logger.debug(`git check result: ${gitPath ? `found at ${gitPath}` : 'not found'}`)
-  return { available: gitPath !== null, path: gitPath }
 }
 
 /**

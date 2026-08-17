@@ -151,18 +151,6 @@ describe('HubServer Integration', () => {
 
       expect(secondCallCount).toBe(firstCallCount) // Should use cache
     })
-
-    it('refreshes tools after cache invalidation', async () => {
-      await (hubServer as any).handleList({ limit: 100, offset: 0 })
-      const firstCallCount = vi.mocked(mcpService.listAllActiveServerTools).mock.calls.length
-
-      hubServer.invalidateCache()
-
-      await (hubServer as any).handleList({ limit: 100, offset: 0 })
-      const secondCallCount = vi.mocked(mcpService.listAllActiveServerTools).mock.calls.length
-
-      expect(secondCallCount).toBe(firstCallCount + 1)
-    })
   })
 
   describe('error handling', () => {

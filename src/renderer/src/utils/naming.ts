@@ -180,58 +180,6 @@ export function getFirstCharacter(str: string): string {
 }
 
 /**
- * 用于简化文本。按照给定长度限制截断文本，考虑语义边界。
- * @param {string} text 输入文本
- * @param {number} [maxLength=50] 最大长度，默认为 50
- * @returns {string} 处理后的简短文本
- */
-export function getBriefInfo(text: string, maxLength: number = 50): string {
-  // 去除空行
-  const noEmptyLinesText = text.replace(/\n\s*\n/g, '\n')
-
-  // 检查文本是否超过最大长度
-  if (noEmptyLinesText.length <= maxLength) {
-    return noEmptyLinesText
-  }
-
-  // 找到最近的单词边界
-  let truncatedText = noEmptyLinesText.slice(0, maxLength)
-  const lastSpaceIndex = truncatedText.lastIndexOf(' ')
-
-  if (lastSpaceIndex !== -1) {
-    truncatedText = truncatedText.slice(0, lastSpaceIndex)
-  }
-
-  // 截取前面的内容，并在末尾添加 "..."
-  return truncatedText + '...'
-}
-
-/**
- * 清理 provider 名称，用于环境变量名：
- * - 只保留 [a-zA-Z0-9_\s.-]（白名单）
- * - 空格转短横线（下游会把 - 和 . 再转 _）
- * - 清理后为空时用 hash 兜底
- * @param {string} name 输入字符串
- * @returns {string} 清理后的字符串
- */
-export function sanitizeProviderName(name: string): string {
-  if (!name) return name
-
-  const sanitized = name
-    .replace(/[^a-zA-Z0-9_\s.-]/g, '') // whitelist: only keep env-var-safe chars
-    .replace(/\s+/g, '-') // spaces -> dashes
-
-  if (!sanitized) {
-    let hash = 0
-    for (let i = 0; i < name.length; i++) {
-      hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
-    }
-    return 'p_' + Math.abs(hash).toString(36)
-  }
-  return sanitized
-}
-
-/**
  * Truncate text while preserving sentence boundaries where possible.
  *
  * Logic:

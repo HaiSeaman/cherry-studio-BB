@@ -56,12 +56,6 @@ const mcpSlice = createSlice({
     setIsBunInstalled: (state, action: PayloadAction<boolean>) => {
       state.isBunInstalled = action.payload
     }
-  },
-  selectors: {
-    getActiveServers: (state) => {
-      return state.servers.filter((server) => server.isActive)
-    },
-    getAllServers: (state) => state.servers
   }
 })
 
@@ -74,12 +68,6 @@ export const {
   setIsBunInstalled,
   setIsUvInstalled
 } = mcpSlice.actions
-
-// Export the generated selectors from the slice
-export const { getActiveServers, getAllServers } = mcpSlice.selectors
-
-// Type-safe selector for accessing this slice from the root state
-export const selectMCP = (state: { mcp: MCPConfig }) => state.mcp
 
 export { mcpSlice }
 // Export the reducer as default export

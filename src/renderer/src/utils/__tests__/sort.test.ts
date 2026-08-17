@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { droppableReorder, sortByEnglishFirst } from '../sort'
+import { droppableReorder } from '../sort'
 
 describe('sort', () => {
   describe('droppableReorder', () => {
@@ -67,44 +67,6 @@ describe('sort', () => {
       const list = [{ id: 1 }, { id: 2 }, { id: 3 }]
       const result = droppableReorder(list, 0, 2)
       expect(result).toEqual([{ id: 2 }, { id: 3 }, { id: 1 }])
-    })
-  })
-
-  describe('sortByEnglishFirst', () => {
-    it('should place English characters before non-English', () => {
-      expect(sortByEnglishFirst('apple', '苹果')).toBe(-1)
-      expect(sortByEnglishFirst('苹果', 'apple')).toBe(1)
-    })
-
-    it('should sort two English strings alphabetically', () => {
-      const result = sortByEnglishFirst('banana', 'apple')
-      expect(result).toBeGreaterThan(0) // 'banana' comes after 'apple'
-    })
-
-    it('should sort two non-English strings using localeCompare', () => {
-      const result = sortByEnglishFirst('苹果', '香蕉')
-      // 由于依赖localeCompare，具体结果取决于当前环境，但应该是一致的
-      expect(typeof result).toBe('number')
-    })
-
-    it('should handle empty strings', () => {
-      expect(sortByEnglishFirst('', 'a')).toBeGreaterThan(0) // 空字符串不是英文字母开头
-      expect(sortByEnglishFirst('a', '')).toBeLessThan(0)
-    })
-
-    it('should handle strings starting with numbers', () => {
-      expect(sortByEnglishFirst('1apple', 'apple')).toBeGreaterThan(0) // 数字不算英文字母
-      expect(sortByEnglishFirst('apple', '1apple')).toBeLessThan(0)
-    })
-
-    it('should handle uppercase and lowercase English letters', () => {
-      expect(sortByEnglishFirst('Apple', 'banana')).toBeLessThan(0) // 大写字母也是英文
-      expect(sortByEnglishFirst('apple', 'Banana')).toBeLessThan(0) // 按字母顺序排序
-    })
-
-    it('should handle special characters', () => {
-      expect(sortByEnglishFirst('#apple', 'banana')).toBeGreaterThan(0) // 特殊字符不算英文字母
-      expect(sortByEnglishFirst('apple', '#banana')).toBeLessThan(0)
     })
   })
 })

@@ -30,16 +30,13 @@ export interface AssistantsState {
   assistants: Assistant[]
   tagsOrder: string[]
   collapsedTags: Record<string, boolean>
-  /** @deprecated should be removed in v2 */
-  unifiedListOrder: Array<{ type: 'agent' | 'assistant'; id: string }>
 }
 
 const initialState: AssistantsState = {
   defaultAssistant: getDefaultAssistant(),
   assistants: [getDefaultAssistant()],
   tagsOrder: [],
-  collapsedTags: {},
-  unifiedListOrder: []
+  collapsedTags: {}
 }
 
 const normalizeTopics = (topics: unknown): Topic[] => (Array.isArray(topics) ? topics : [])
@@ -116,9 +113,6 @@ const assistantsSlice = createSlice({
         ...prev,
         [tag]: !prev[tag]
       }
-    },
-    setUnifiedListOrder: (state, action: PayloadAction<Array<{ type: 'agent' | 'assistant'; id: string }>>) => {
-      state.unifiedListOrder = action.payload
     },
     addTopic: (state, action: PayloadAction<{ assistantId: string; topic: Topic }>) => {
       const topic = action.payload.topic
@@ -222,8 +216,7 @@ export const {
   setModel,
   setTagsOrder,
   updateAssistantSettings,
-  updateTagCollapse,
-  setUnifiedListOrder
+  updateTagCollapse
 } = assistantsSlice.actions
 
 export const selectAllTopics = createSelector([(state: RootState) => state.assistants.assistants], (assistants) =>

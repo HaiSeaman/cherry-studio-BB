@@ -28,49 +28,18 @@ export const DEFAULT_CHERRYIN_GEMINI_BASE_URL = 'https://open.cherryin.net/v1bet
 
 const ANTHROPIC_PREFIX = /^anthropic\//i
 const GEMINI_PREFIX = /^google\//i
-// const GEMINI_EXCLUDED_SUFFIXES = ['-nothink', '-search']
 
 type HeaderValue = string | undefined
 
 type HeadersInput = Record<string, HeaderValue> | (() => Record<string, HeaderValue>)
 
 export interface CherryInProviderSettings {
-  /**
-   * CherryIN API key.
-   *
-   * If omitted, the provider will read the `CHERRYIN_API_KEY` environment variable.
-   */
   apiKey?: string
-  /**
-   * Optional custom fetch implementation.
-   */
   fetch?: FetchFunction
-  /**
-   * Base URL for OpenAI-compatible CherryIN endpoints.
-   *
-   * Defaults to `https://open.cherryin.net/v1`.
-   */
   baseURL?: string
-  /**
-   * Base URL for Anthropic-compatible endpoints.
-   *
-   * Defaults to `https://open.cherryin.net/anthropic`.
-   */
   anthropicBaseURL?: string
-  /**
-   * Base URL for Gemini-compatible endpoints.
-   *
-   * Defaults to `https://open.cherryin.net/gemini/v1beta`.
-   */
   geminiBaseURL?: string
-  /**
-   * Optional static headers applied to every request.
-   */
   headers?: HeadersInput
-  /**
-   * Optional endpoint type to distinguish different endpoint behaviors.
-   * "image-generation" is also openai endpoint, but specifically for image generation.
-   */
   endpointType?: 'openai' | 'openai-response' | 'anthropic' | 'gemini' | 'image-generation' | 'jina-rerank'
 }
 
@@ -116,6 +85,7 @@ const createCustomFetch = (originalFetch?: any) => {
     return originalFetch ? originalFetch(url, options) : fetch(url, options)
   }
 }
+
 class CherryInOpenAIChatLanguageModel extends OpenAICompatibleChatLanguageModel {
   constructor(modelId: string, settings: any) {
     super(modelId, {

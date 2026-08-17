@@ -13,9 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@test-utils': path.resolve(__dirname, './test_utils'),
-      // Mock external packages that may not be available in test environment
-      '@cherrystudio/ai-sdk-provider': path.resolve(__dirname, './test_utils/mocks/ai-sdk-provider.ts')
+      '@test-utils': path.resolve(__dirname, './test_utils')
     }
   },
   esbuild: {

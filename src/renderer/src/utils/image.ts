@@ -32,25 +32,6 @@ export const compressImage = async (file: File): Promise<File> => {
 }
 
 /**
- * 捕获指定元素的图像数据。
- * @param elRef 元素的引用
- * @returns Promise<string | undefined> 图像数据 URL，如果失败则返回 undefined
- */
-export async function captureElement(elRef: React.RefObject<HTMLElement>) {
-  if (elRef.current) {
-    try {
-      const canvas = await htmlToImage.toCanvas(elRef.current)
-      const imageData = canvas.toDataURL('image/png')
-      return imageData
-    } catch (error) {
-      logger.error('Error capturing element:', error as Error)
-      return Promise.reject()
-    }
-  }
-  return Promise.resolve(undefined)
-}
-
-/**
  * 捕获可滚动元素的完整内容图像。
  * @param elRef 可滚动元素的引用
  * @returns Promise<HTMLCanvasElement | undefined> 捕获的画布对象，如果失败则返回 undefined

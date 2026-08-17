@@ -1,7 +1,7 @@
 import { loggerService } from '@logger'
 import { nanoid } from '@reduxjs/toolkit'
 import CollapsibleSearchBar from '@renderer/components/CollapsibleSearchBar'
-import { Sortable, useDndReorder } from '@renderer/components/dnd'
+import { DraggableList, useDraggableReorder } from '@renderer/components/DraggableList'
 import { EditIcon } from '@renderer/components/Icons'
 import Scrollbar from '@renderer/components/Scrollbar'
 import { useMCPServers } from '@renderer/hooks/useMCPServers'
@@ -52,7 +52,7 @@ const McpServersList: FC = () => {
     })
   }, [mcpServers, searchText])
 
-  const { onSortEnd } = useDndReorder({
+  const { onDragEnd } = useDraggableReorder({
     originalList: mcpServers,
     filteredList: filteredMcpServers,
     onUpdate: updateMcpServers,
@@ -239,19 +239,14 @@ const McpServersList: FC = () => {
           </Dropdown>
         </ButtonGroup>
       </ListHeader>
-      <Sortable
-        items={filteredMcpServers}
+      <DraggableList
+        list={filteredMcpServers}
         itemKey="id"
-        onSortEnd={onSortEnd}
-        layout="list"
-        horizontal={false}
-        listStyle={{ display: 'flex', flexDirection: 'column', width: '100%' }}
-        itemStyle={{ width: '100%' }}
-        gap="12px"
-        restrictions={{ scrollableAncestor: true }}
-        useDragOverlay
-        showGhost
-        renderItem={(server) => (
+        onDragEnd={onDragEnd}
+        onUpdate={updateMcpServers}
+        style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '12px' }}
+        listStyle={{ width: '100%' }}>
+        {(server) => (
           <McpServerCard
             server={server}
             version={serverVersions[server.id]}
@@ -262,7 +257,7 @@ const McpServersList: FC = () => {
             onOpenUrl={(url) => window.open(url, '_blank')}
           />
         )}
-      />
+      </DraggableList>
       {(mcpServers.length === 0 || filteredMcpServers.length === 0) && (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}

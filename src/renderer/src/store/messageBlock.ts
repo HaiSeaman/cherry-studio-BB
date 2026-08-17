@@ -17,7 +17,7 @@
 import type { WebSearchResultBlock } from '@anthropic-ai/sdk/resources'
 import type OpenAI from '@cherrystudio/openai'
 import type { GroundingMetadata } from '@google/genai'
-import { createEntityAdapter, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createEntityAdapter, createSelector, createSlice } from '@reduxjs/toolkit'
 import type { TodoItem, TodoWriteToolInput } from '@renderer/pages/home/Messages/Tools/MessageAgentTools/types'
 import type {
   AISDKWebSearchResult,
@@ -40,11 +40,7 @@ type MessageBlockEntity = MessageBlock
 const messageBlocksAdapter = createEntityAdapter<MessageBlockEntity>()
 
 // 2. 使用适配器定义初始状态 (Initial State)
-// 如果需要，可以在规范化实体的旁边添加其他状态属性。
-const initialState = messageBlocksAdapter.getInitialState({
-  loadingState: 'idle' as 'idle' | 'loading' | 'succeeded' | 'failed',
-  error: null as string | null
-})
+const initialState = messageBlocksAdapter.getInitialState()
 
 // 3. 创建 Slice
 // @ts-ignore ignore
@@ -70,15 +66,6 @@ export const messageBlocksSlice = createSlice({
     /** 移除所有块。用于完全重置。 */
     removeAllBlocks: messageBlocksAdapter.removeAll,
 
-    // 你可以为其他状态属性（如加载/错误）添加自定义 reducer
-    setMessageBlocksLoading: (state, action: PayloadAction<'idle' | 'loading'>) => {
-      state.loadingState = action.payload
-      state.error = null
-    },
-    setMessageBlocksError: (state, action: PayloadAction<string>) => {
-      state.loadingState = 'failed'
-      state.error = action.payload
-    },
     // 注意：如果只想更新现有块，也可以使用 `updateOne`
     updateOneBlock: messageBlocksAdapter.updateOne // 期望 { id: EntityId, changes: Partial<MessageBlock> }
   }
@@ -86,16 +73,8 @@ export const messageBlocksSlice = createSlice({
 })
 
 // 4. 导出 Actions 和 Reducer
-export const {
-  upsertOneBlock,
-  upsertManyBlocks,
-  removeOneBlock,
-  removeManyBlocks,
-  removeAllBlocks,
-  setMessageBlocksLoading,
-  setMessageBlocksError,
-  updateOneBlock
-} = messageBlocksSlice.actions
+export const { upsertOneBlock, upsertManyBlocks, removeOneBlock, removeManyBlocks, removeAllBlocks, updateOneBlock } =
+  messageBlocksSlice.actions
 
 export const messageBlocksSelectors = messageBlocksAdapter.getSelectors<RootState>(
   (state) => state.messageBlocks // Ensure this matches the key in the root reducer

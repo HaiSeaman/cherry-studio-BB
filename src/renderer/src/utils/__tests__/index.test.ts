@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { runAsyncFunction } from '../index'
-import { hasPath, isValidProxyUrl, removeQuotes, removeSpecialCharacters } from '../index'
+import { hasPath, isValidProxyUrl, removeSpecialCharacters } from '../index'
 
 vi.mock('@renderer/store', () => ({
   default: {
@@ -28,27 +28,9 @@ describe('Unclassified Utils', () => {
       // 验证异步函数抛出错误
       await expect(
         runAsyncFunction(async () => {
-          throw new Error('Test error')
+          throw new Error('async error')
         })
-      ).rejects.toThrow('Test error')
-    })
-  })
-
-  describe('removeQuotes', () => {
-    it('should remove all single and double quotes', () => {
-      expect(removeQuotes('"hello"')).toBe('hello')
-      expect(removeQuotes("'hello'")).toBe('hello')
-      expect(removeQuotes('"hello"')).toBe('hello')
-      expect(removeQuotes('noquotes')).toBe('noquotes')
-    })
-
-    it('should handle empty string', () => {
-      expect(removeQuotes('')).toBe('')
-    })
-
-    it('should handle string with only quotes', () => {
-      expect(removeQuotes('""')).toBe('')
-      expect(removeQuotes("''")).toBe('')
+      ).rejects.toThrow('async error')
     })
   })
 

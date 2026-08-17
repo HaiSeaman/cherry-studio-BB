@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest'
 import {
   firstLetter,
   getBaseModelName,
-  getBriefInfo,
   getDefaultGroupName,
   getFancyProviderName,
   getFirstCharacter,
@@ -13,7 +12,6 @@ import {
   isEmoji,
   removeLeadingEmoji,
   removeSpecialCharactersForTopicName,
-  sanitizeProviderName,
   truncateText
 } from '../naming'
 
@@ -270,33 +268,6 @@ describe('naming', () => {
     })
   })
 
-  describe('getBriefInfo', () => {
-    it('should return original text if under max length', () => {
-      // 验证文本长度小于最大长度时返回原始文本
-      const text = 'Short text'
-      expect(getBriefInfo(text, 20)).toBe('Short text')
-    })
-
-    it('should truncate text at word boundary with ellipsis', () => {
-      // 验证在单词边界处截断文本并添加省略号
-      const text = 'This is a long text that needs truncation'
-      const result = getBriefInfo(text, 10)
-      expect(result).toBe('This is a...')
-    })
-
-    it('should handle empty lines by removing them', () => {
-      // 验证移除空行
-      const text = 'Line1\n\nLine2'
-      expect(getBriefInfo(text, 20)).toBe('Line1\nLine2')
-    })
-
-    it('should handle custom max length', () => {
-      // 验证自定义最大长度
-      const text = 'This is a long text'
-      expect(getBriefInfo(text, 5)).toBe('This...')
-    })
-  })
-
   describe('getFancyProviderName', () => {
     it('should get i18n name for system provider', () => {
       const mockSystemProvider: SystemProvider = {
@@ -322,60 +293,6 @@ describe('naming', () => {
         models: []
       }
       expect(getFancyProviderName(mockProvider)).toBe('好名字')
-    })
-  })
-
-  describe('sanitizeProviderName', () => {
-    it('should replace spaces with dashes', () => {
-      expect(sanitizeProviderName('My Provider')).toBe('My-Provider')
-    })
-
-    it('should strip characters outside env-var-safe whitelist', () => {
-      expect(sanitizeProviderName('Provider/Name')).toBe('ProviderName')
-    })
-
-    it('should handle mixed special characters', () => {
-      expect(sanitizeProviderName('My Provider <test>:name')).toBe('My-Provider-testname')
-    })
-
-    it('should return empty string for empty input', () => {
-      expect(sanitizeProviderName('')).toBe('')
-    })
-
-    it('should fall back to hash for pure non-ASCII names', () => {
-      expect(sanitizeProviderName('测试')).toMatch(/^p_[a-z0-9]+$/)
-      // deterministic: same input produces same hash
-      expect(sanitizeProviderName('测试')).toBe(sanitizeProviderName('测试'))
-    })
-
-    it('should handle various non-ASCII characters', () => {
-      // Chinese
-      expect(sanitizeProviderName('测试')).toMatch(/^p_[a-z0-9]+$/)
-      // Japanese
-      expect(sanitizeProviderName('プロバイダー')).toMatch(/^p_[a-z0-9]+$/)
-      // Korean
-      expect(sanitizeProviderName('공급자')).toMatch(/^p_[a-z0-9]+$/)
-      // Emoji
-      expect(sanitizeProviderName('🎉provider')).toBe('provider')
-    })
-
-    it('should produce a valid env var identifier for mixed ASCII and non-ASCII', () => {
-      expect(sanitizeProviderName('日本語Provider')).toBe('Provider')
-      expect(sanitizeProviderName('My 测试 Provider')).toBe('My-Provider')
-    })
-
-    it('should strip ASCII symbols not allowed in env var names', () => {
-      expect(sanitizeProviderName('foo@bar')).toBe('foobar')
-      expect(sanitizeProviderName('foo@bar+baz(test)')).toBe('foobarbaztest')
-      expect(sanitizeProviderName('my$provider!name')).toBe('myprovidername')
-      expect(sanitizeProviderName('a#b%c&d')).toBe('abcd')
-    })
-
-    it('should keep allowed env-var-safe characters', () => {
-      expect(sanitizeProviderName('my-provider')).toBe('my-provider')
-      expect(sanitizeProviderName('my_provider')).toBe('my_provider')
-      expect(sanitizeProviderName('my.provider')).toBe('my.provider')
-      expect(sanitizeProviderName('Provider123')).toBe('Provider123')
     })
   })
 

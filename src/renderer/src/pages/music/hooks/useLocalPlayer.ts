@@ -97,27 +97,24 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
   }, [])
 
   /** 自动/手动切下一首（池内按模式选择；pendingReturn 时落回收藏池） */
-  const next = useCallback(
-    (_auto = true) => {
-      const list = tracksRef.current
-      if (list.length === 0) return
-      let pool = getPool()
-      let curIdx = list.findIndex((t) => t.id === currentIdRef.current)
-      if (pendingReturnToFavorites.current) {
-        // 当前曲非收藏且已播完：从收藏池头部继续
-        pendingReturnToFavorites.current = false
-        curIdx = -1
-        pool = favoriteIndicesRef.current.length > 0 ? favoriteIndicesRef.current : pool
-        if (pool.length === 0) return stopPlayback()
-      }
+  const next = useCallback(() => {
+    const list = tracksRef.current
+    if (list.length === 0) return
+    let pool = getPool()
+    let curIdx = list.findIndex((t) => t.id === currentIdRef.current)
+    if (pendingReturnToFavorites.current) {
+      // 当前曲非收藏且已播完：从收藏池头部继续
+      pendingReturnToFavorites.current = false
+      curIdx = -1
+      pool = favoriteIndicesRef.current.length > 0 ? favoriteIndicesRef.current : pool
       if (pool.length === 0) return stopPlayback()
-      const mode = playModeRef.current === 'shuffle' ? 'shuffle' : 'sequential'
-      const nextIdx = nextIndexInPool(pool, curIdx, mode)
-      if (nextIdx < 0) return stopPlayback()
-      playIndex(nextIdx)
-    },
-    [getPool, playIndex, stopPlayback]
-  )
+    }
+    if (pool.length === 0) return stopPlayback()
+    const mode = playModeRef.current === 'shuffle' ? 'shuffle' : 'sequential'
+    const nextIdx = nextIndexInPool(pool, curIdx, mode)
+    if (nextIdx < 0) return stopPlayback()
+    playIndex(nextIdx)
+  }, [getPool, playIndex, stopPlayback])
 
   const nextRef = useRef(next)
   nextRef.current = next
@@ -129,7 +126,7 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       audioEngine.play().catch(() => {})
       return
     }
-    nextRef.current(true)
+    nextRef.current()
   }, [])
 
   /** 加载失败：计数累计，全列表失败则停止，否则自动跳下一首 */
@@ -142,7 +139,7 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       showTip('全部曲目均无法播放')
       return
     }
-    nextRef.current(true)
+    nextRef.current()
   }, [showTip, stopPlayback])
 
   const prev = useCallback(() => {
@@ -164,7 +161,7 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
 
   const toggle = useCallback(() => {
     if (currentIdRef.current == null) {
-      next(false)
+      next()
       return
     }
     if (audioEngine.paused) {
