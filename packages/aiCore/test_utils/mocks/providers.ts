@@ -150,37 +150,4 @@ export const mockProviderConfigs = {
   }
 } as const
 
-/**
- * Mock provider instances for testing
- */
-export const mockProviderInstances = {
-  openai: {
-    name: 'openai-mock',
-    languageModel: createMockLanguageModel({ provider: 'openai', modelId: 'gpt-4' }),
-    imageModel: createMockImageModel({ provider: 'openai', modelId: 'dall-e-3' })
-  },
-
-  anthropic: {
-    name: 'anthropic-mock',
-    languageModel: createMockLanguageModel({ provider: 'anthropic', modelId: 'claude-3-5-sonnet-20241022' })
-  },
-
-  google: {
-    name: 'google-mock',
-    languageModel: createMockLanguageModel({ provider: 'google', modelId: 'gemini-2.0-flash-exp' }),
-    imageModel: createMockImageModel({ provider: 'google', modelId: 'imagen-3.0-generate-001' })
-  },
-
-  xai: {
-    name: 'xai-mock',
-    languageModel: createMockLanguageModel({ provider: 'xai', modelId: 'grok-2-latest' }),
-    imageModel: createMockImageModel({ provider: 'xai', modelId: 'grok-2-image-latest' })
-  },
-
-  deepseek: {
-    name: 'deepseek-mock',
-    languageModel: createMockLanguageModel({ provider: 'deepseek', modelId: 'deepseek-chat' })
-  }
-}
-
 export type ProviderId = keyof typeof mockProviderConfigs

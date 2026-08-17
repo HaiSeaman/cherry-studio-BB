@@ -29,11 +29,6 @@ vi.mock('@renderer/hooks/useSettings', () => ({
   getStoreSetting: vi.fn(() => ({}))
 }))
 
-// Mock uuid to prevent errors
-vi.mock('uuid', () => ({
-  v4: vi.fn(() => 'test-uuid')
-}))
-
 // Mock AssistantService to prevent uuid errors
 vi.mock('@renderer/services/AssistantService', () => ({
   getDefaultAssistant: vi.fn(() => ({

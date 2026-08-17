@@ -19,6 +19,8 @@ import { createSlice } from '@reduxjs/toolkit'
 import { DEFAULT_STREAM_OPTIONS_INCLUDE_USAGE, isMac, LATEST_PRIVACY_POLICY_VERSION } from '@renderer/config/constant'
 import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
 import { DEFAULT_SIDEBAR_ICONS } from '@renderer/config/sidebar'
+import type { ThemeId } from '@renderer/config/themes'
+import { getThemeMode } from '@renderer/config/themes'
 import type {
   AssistantsSortType,
   CodeStyleVarious,
@@ -30,15 +32,12 @@ import type {
   SidebarIcon,
   TranslateLanguageCode
 } from '@renderer/types'
-import { getThemeMode } from '@renderer/config/themes'
-import type { ThemeId } from '@renderer/config/themes'
 import { ThemeMode } from '@renderer/types'
 import type {
   OpenAICompletionsStreamOptions,
   OpenAIReasoningSummary,
   OpenAIVerbosity
 } from '@renderer/types/aiCoreTypes'
-import { v4 as uuid } from 'uuid'
 
 export type SendMessageShortcut = 'Enter' | 'Shift+Enter' | 'Ctrl+Enter' | 'Command+Enter' | 'Alt+Enter'
 
@@ -251,7 +250,7 @@ export const initialState: SettingsState = {
   proxyUrl: undefined,
   proxyBypassRules: undefined,
   userName: '',
-  userId: uuid(),
+  userId: crypto.randomUUID(),
   showPrompt: true,
   showMessageDivider: true,
   messageFont: 'system',

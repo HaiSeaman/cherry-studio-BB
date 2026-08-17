@@ -1,12 +1,11 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import type { ToolQuickPanelApi, ToolQuickPanelController } from '@renderer/pages/home/Inputbar/types'
 import type { FileMetadata, Model } from '@renderer/types'
-import { Tooltip } from 'antd'
 import { AtSign } from 'lucide-react'
 import type { FC } from 'react'
 import type React from 'react'
 import { memo } from 'react'
 
+import ToolActionIconButton from './ToolActionIconButton'
 import { useMentionModelsPanel } from './useMentionModelsPanel'
 
 interface Props {
@@ -42,11 +41,9 @@ const MentionModelsButton: FC<Props> = ({
   )
 
   return (
-    <Tooltip placement="top" title={'选择模型'} mouseLeaveDelay={0} arrow>
-      <ActionIconButton onClick={handleOpenQuickPanel} active={mentionedModels.length > 0} aria-label={'选择模型'}>
-        <AtSign size={18} />
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton tooltip="选择模型" onClick={handleOpenQuickPanel} active={mentionedModels.length > 0}>
+      <AtSign size={18} />
+    </ToolActionIconButton>
   )
 }
 

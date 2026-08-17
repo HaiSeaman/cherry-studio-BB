@@ -39,8 +39,6 @@ export enum ConfigKeys {
   UseSystemTitleBar = 'useSystemTitleBar',
   Proxy = 'proxy',
   EnableDeveloperMode = 'enableDeveloperMode',
-  GitBashPath = 'gitBashPath',
-  GitBashPathSource = 'gitBashPathSource', // 'manual' | 'auto' | null
   // Master switch for the hub `exec` tool (arbitrary JS execution). Defaults
   // to off so that prompt-injected tool calls cannot reach code execution.
   HubExecEnabled = 'hubExecEnabled'

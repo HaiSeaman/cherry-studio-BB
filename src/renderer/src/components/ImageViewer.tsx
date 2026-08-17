@@ -14,7 +14,6 @@ import { convertImageToPng } from '@renderer/utils/image'
 import { parseDataUrl } from '@shared/utils'
 import type { ImageProps as AntImageProps } from 'antd'
 import { Dropdown, Image as AntImage, Space } from 'antd'
-import { Base64 } from 'js-base64'
 import { DownloadIcon } from 'lucide-react'
 import mime from 'mime'
 import React from 'react'
@@ -40,7 +39,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ src, style, ...props }) => {
         if (!parseResult || !parseResult.mediaType || !parseResult.isBase64) {
           throw new Error('Invalid base64 image format')
         }
-        const byteArray = Base64.toUint8Array(parseResult.data)
+        const byteArray = Uint8Array.from(atob(parseResult.data), (c) => c.charCodeAt(0))
         blob = new Blob([byteArray.slice()], { type: parseResult.mediaType })
       } else if (src.startsWith('file://')) {
         // 处理本地文件路径

@@ -11,7 +11,6 @@ import chardet from 'chardet'
 import { app } from 'electron'
 import iconv from 'iconv-lite'
 import type StreamZip from 'node-stream-zip'
-import { v4 as uuidv4 } from 'uuid'
 
 const logger = loggerService.withContext('Utils:File')
 
@@ -164,7 +163,7 @@ export function getAllFiles(dirPath: string, arrayOfFiles: FileMetadata[] = []):
       const size = fs.statSync(fullPath).size
 
       const fileItem: FileMetadata = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         name,
         path: fullPath,
         size,

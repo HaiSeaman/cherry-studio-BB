@@ -164,17 +164,33 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       next()
       return
     }
+    // 引擎被 FM 抢占后 audioEngine.paused 反映的是 FM 流状态：
+    // 此时主按钮应抢回引擎重播当前曲，而不是误暂停/恢复 FM
+    if (audioEngine.snapshot().owner !== 'local') {
+      const idx = tracksRef.current.findIndex((t) => t.id === currentIdRef.current)
+      if (idx >= 0) return playIndex(idx)
+      return next()
+    }
     if (audioEngine.paused) {
       audioEngine.play().catch(() => {})
     } else {
       audioEngine.pause()
     }
-  }, [next])
+  }, [next, playIndex])
 
-  const seek = useCallback((time: number) => {
-    audioEngine.seek(time)
-    setCurrentTime(time)
-  }, [])
+  const seek = useCallback(
+    (time: number) => {
+      // 同上：引擎被 FM 抢占时不作用于 FM 直播流，而是抢回引擎定位到拖动位置
+      if (audioEngine.snapshot().owner !== 'local') {
+        const idx = tracksRef.current.findIndex((t) => t.id === currentIdRef.current)
+        if (idx < 0) return
+        playIndex(idx)
+      }
+      audioEngine.seek(time)
+      setCurrentTime(time)
+    },
+    [playIndex]
+  )
 
   /** 播放模式循环切换：顺序 → 随机 → 单曲 */
   const togglePlayMode = useCallback(() => {
@@ -294,10 +310,8 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       })
     ]
     audioEngine.onStop('local', () => {
-      setCurrentId(null)
       setIsPlaying(false)
       setCurrentTime(0)
-      setDuration(0)
     })
     return () => {
       offs.forEach((off) => off())

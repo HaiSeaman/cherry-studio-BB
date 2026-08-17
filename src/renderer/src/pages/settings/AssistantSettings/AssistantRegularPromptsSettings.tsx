@@ -8,7 +8,6 @@ import { PlusIcon } from 'lucide-react'
 import type { FC } from 'react'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
-import { v4 as uuidv4 } from 'uuid'
 
 import { SettingDivider, SettingRow, SettingTitle } from '..'
 
@@ -60,7 +59,7 @@ const AssistantRegularPromptsSettings: FC<AssistantRegularPromptsSettingsProps> 
       )
     } else {
       const newPrompt: QuickPhrase = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         ...formData

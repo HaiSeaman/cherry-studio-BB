@@ -5,7 +5,7 @@ import { Bell, CalendarDays, ChevronLeft, ChevronRight, Flame, Plus } from 'luci
 import { type FC, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
-import { ALARM_SOUND_OPTIONS } from '../services/alarmSounds'
+import { soundLabel } from '../services/alarmSounds'
 import { buildMonthCells, heatmapRange, hmLevel, toISODate } from '../services/calendarUtils'
 import type { HubAlarm } from '../types'
 import { mx, MXDialog } from './mx'
@@ -81,14 +81,6 @@ const CalendarPanel: FC = () => {
     .filter((a) => a.date === selected)
     .sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
   const selectedDayNotes = (dayNotes ?? []).filter((n) => n.date === selected).sort((a, b) => b.createdAt - a.createdAt)
-
-  /** 铃声展示名：内置查表，自定义查自定义声音列表 */
-  const soundLabel = (sound: string) => {
-    if (sound.startsWith('custom:')) {
-      return customSounds.find((s) => `custom:${s.id}` === sound)?.name ?? '自定义声音'
-    }
-    return ALARM_SOUND_OPTIONS.find((o) => o.value === sound)?.label ?? sound
-  }
 
   const addDayAlarm = async () => {
     // 清空时间字段会得到空串：直接忽略，避免误建 00:00:00 的午夜闹钟
@@ -237,7 +229,7 @@ const CalendarPanel: FC = () => {
                 <DetailItem key={a.id}>
                   <span className="time">{`${String(a.h).padStart(2, '0')}:${String(a.m).padStart(2, '0')}`}</span>
                   <span className="label">{a.label || '闹钟'}</span>
-                  <span className="meta">{soundLabel(a.sound)}</span>
+                  <span className="meta">{soundLabel(a.sound, customSounds)}</span>
                   <Del onClick={() => a.id != null && void db.hub_alarms.delete(a.id)}>✕</Del>
                 </DetailItem>
               ))

@@ -1,12 +1,13 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { getEffectiveMcpMode } from '@renderer/types'
 import { isToolUseModeFunction } from '@renderer/utils/assistant'
-import { Tooltip } from 'antd'
 import { Link } from 'lucide-react'
 import type { FC } from 'react'
 import { memo, useCallback } from 'react'
+
+import ToolActionIconButton from './ToolActionIconButton'
+
 export interface UrlContextButtonRef {
   openQuickPanel: () => void
 }
@@ -44,15 +45,13 @@ const UrlContextButton: FC<Props> = ({ assistantId }) => {
   }, [setTimeoutTimer, assistant, urlContentNewState, updateAssistant])
 
   return (
-    <Tooltip placement="top" title={'网页上下文'} arrow>
-      <ActionIconButton
-        onClick={handleToggle}
-        active={assistant.enableUrlContext}
-        aria-label={'网页上下文'}
-        aria-pressed={assistant.enableUrlContext}>
-        <Link size={18} />
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton
+      tooltip="网页上下文"
+      onClick={handleToggle}
+      active={assistant.enableUrlContext}
+      aria-pressed={assistant.enableUrlContext}>
+      <Link size={18} />
+    </ToolActionIconButton>
   )
 }
 

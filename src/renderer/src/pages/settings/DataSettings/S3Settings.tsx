@@ -1,7 +1,6 @@
-import { FolderOpenOutlined, InfoCircleOutlined, SaveOutlined, SyncOutlined, WarningOutlined } from '@ant-design/icons'
+import { FolderOpenOutlined, InfoCircleOutlined, SaveOutlined } from '@ant-design/icons'
 import { HStack } from '@renderer/components/Layout'
-import { S3BackupManager } from '@renderer/components/S3BackupManager'
-import { S3BackupModal, useS3BackupModal } from '@renderer/components/S3Modals'
+import { S3BackupManager, S3BackupModal, useS3BackupModal } from '@renderer/components/BackupManager'
 import Selector from '@renderer/components/Selector'
 import { AppLogo } from '@renderer/config/env'
 import { useTheme } from '@renderer/context/ThemeProvider'
@@ -12,9 +11,10 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setS3Partial } from '@renderer/store/settings'
 import type { S3Config } from '@renderer/types'
 import { Button, Input, Switch, Tooltip } from 'antd'
-import dayjs from 'dayjs'
 import type { FC } from 'react'
 import { useState } from 'react'
+
+import { SyncStatus } from './SyncStatus'
 
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
 
@@ -82,26 +82,7 @@ const S3Settings: FC = () => {
 
   const renderSyncStatus = () => {
     if (!endpoint) return null
-
-    if (!s3Sync?.lastSyncTime && !s3Sync?.syncing && !s3Sync?.lastSyncError) {
-      return <span style={{ color: 'var(--text-secondary)' }}>{'未同步'}</span>
-    }
-
-    return (
-      <HStack gap="5px" alignItems="center">
-        {s3Sync?.syncing && <SyncOutlined spin />}
-        {!s3Sync?.syncing && s3Sync?.lastSyncError && (
-          <Tooltip title={`同步错误: ${s3Sync.lastSyncError}`}>
-            <WarningOutlined style={{ color: 'red' }} />
-          </Tooltip>
-        )}
-        {s3Sync?.lastSyncTime && (
-          <span style={{ color: 'var(--text-secondary)' }}>
-            {`上次同步: ${dayjs(s3Sync.lastSyncTime).format('HH:mm:ss')}`}
-          </span>
-        )}
-      </HStack>
-    )
+    return <SyncStatus sync={s3Sync} emptyLabel="未同步" syncedLabel="上次同步: " errorLabel="同步错误" />
   }
 
   const { isModalVisible, handleBackup, handleCancel, backuping, customFileName, setCustomFileName, showBackupModal } =
@@ -222,15 +203,15 @@ const S3Settings: FC = () => {
           disabled={!endpoint || !accessKeyId || !secretAccessKey}
           options={[
             { label: '关闭', value: 0 },
-            { label: `每 ${1} 分钟`, value: 1 },
-            { label: `每 ${1} 分钟`, value: 5 },
-            { label: `每 ${1} 分钟`, value: 15 },
-            { label: `每 ${1} 分钟`, value: 30 },
-            { label: `每 ${1} 小时`, value: 60 },
-            { label: `每 ${1} 小时`, value: 120 },
-            { label: `每 ${1} 小时`, value: 360 },
-            { label: `每 ${1} 小时`, value: 720 },
-            { label: `每 ${1} 小时`, value: 1440 }
+            { label: '每 1 分钟', value: 1 },
+            { label: '每 5 分钟', value: 5 },
+            { label: '每 15 分钟', value: 15 },
+            { label: '每 30 分钟', value: 30 },
+            { label: '每 1 小时', value: 60 },
+            { label: '每 2 小时', value: 120 },
+            { label: '每 6 小时', value: 360 },
+            { label: '每 12 小时', value: 720 },
+            { label: '每 24 小时', value: 1440 }
           ]}
         />
       </SettingRow>

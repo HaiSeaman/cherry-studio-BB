@@ -25,9 +25,7 @@ vi.mock('node:fs')
 vi.mock('node:fs/promises')
 vi.mock('node:os')
 vi.mock('node:path')
-vi.mock('uuid', () => ({
-  v4: () => 'mock-uuid'
-}))
+vi.stubGlobal('crypto', { ...globalThis.crypto, randomUUID: () => '123e4567-e89b-12d3-a456-426614174000' })
 vi.mock('electron', () => ({
   app: {
     getPath: vi.fn((key) => {
@@ -166,7 +164,7 @@ describe('file', () => {
       const result = getAllFiles('/test')
 
       expect(result).toHaveLength(4)
-      expect(result[0].id).toBe('mock-uuid')
+      expect(result[0].id).toBe('123e4567-e89b-12d3-a456-426614174000')
       expect(result[0].name).toBe('file1.txt')
       expect(result[0].type).toBe(FILE_TYPE.TEXT)
       expect(result[1].name).toBe('file2.pdf')

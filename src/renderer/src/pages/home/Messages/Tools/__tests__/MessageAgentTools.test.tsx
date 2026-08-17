@@ -1,9 +1,13 @@
 import type { NormalToolResponse } from '@renderer/types'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { parse as parsePartialJson } from 'partial-json'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { isValidAgentToolsType, MessageAgentTools } from '../MessageAgentTools'
+
+const queryClient = new QueryClient()
+const wrap = (ui: React.ReactElement) => <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
 
 vi.mock('@renderer/services/AssistantService', () => ({
   getDefaultAssistant: vi.fn(() => ({
@@ -186,7 +190,7 @@ describe('MessageAgentTools', () => {
         partialArguments: '{"file_path": "/test.ts"'
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       // Should render the DEDICATED ReadTool component, not StreamingToolContent
       // ReadTool uses '读取文件' as label, not just '读取文件'
@@ -202,7 +206,7 @@ describe('MessageAgentTools', () => {
         partialArguments: '{"file_path": "/path/to/myfile.ts", "offset": 10'
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       // Should use dedicated ReadTool renderer
       expect(screen.getByText('读取文件')).toBeInTheDocument()
@@ -217,7 +221,7 @@ describe('MessageAgentTools', () => {
         partialArguments: '{"file_path": "/test/partial'
       })
 
-      const { rerender } = render(<MessageAgentTools toolResponse={initialResponse} />)
+      const { rerender } = render(wrap(<MessageAgentTools toolResponse={initialResponse} />))
 
       // Should use dedicated renderer even with partial path
       expect(screen.getByText('读取文件')).toBeInTheDocument()
@@ -229,7 +233,7 @@ describe('MessageAgentTools', () => {
         partialArguments: '{"file_path": "/test/complete.ts", "limit": 100}'
       })
 
-      rerender(<MessageAgentTools toolResponse={updatedResponse} />)
+      rerender(wrap(<MessageAgentTools toolResponse={updatedResponse} />))
 
       // When pending with no permission, shows ToolStatusIndicator with loading icon
       expect(screen.getByTestId('loading-icon')).toBeInTheDocument()
@@ -245,7 +249,7 @@ describe('MessageAgentTools', () => {
         response: 'file content here'
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       // Should render the complete tool with output
       expect(screen.getByText('读取文件')).toBeInTheDocument()
@@ -259,7 +263,7 @@ describe('MessageAgentTools', () => {
         response: 'File not found'
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       // Should still render the tool component
       expect(screen.getByText('读取文件')).toBeInTheDocument()
@@ -273,7 +277,7 @@ describe('MessageAgentTools', () => {
         partialArguments: undefined
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       // Should show the ToolStatusIndicator with loading icon
       expect(screen.getByTestId('loading-icon')).toBeInTheDocument()
@@ -288,7 +292,7 @@ describe('MessageAgentTools', () => {
         partialArguments: '{"command": "npm install",'
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       // Should render the DEDICATED BashTool component
       expect(screen.getByText('执行命令')).toBeInTheDocument()
@@ -305,7 +309,7 @@ describe('MessageAgentTools', () => {
         response: `${'x'.repeat(50000)}TAIL`
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       const container = screen.getByTestId('collapse-content-Bash')
       expect(container.textContent).toContain('pnpm test')
@@ -323,7 +327,7 @@ describe('MessageAgentTools', () => {
         response: 'Directory: C:\\workspace'
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       expect(screen.getByText('PowerShell')).toBeInTheDocument()
       expect(screen.getByTestId('terminal-icon')).toBeInTheDocument()
@@ -342,7 +346,7 @@ describe('MessageAgentTools', () => {
         response: 'future output'
       })
 
-      render(<MessageAgentTools toolResponse={toolResponse} />)
+      render(wrap(<MessageAgentTools toolResponse={toolResponse} />))
 
       expect(screen.getByText('FutureTool')).toBeInTheDocument()
       expect(screen.getByTestId('wrench-icon')).toBeInTheDocument()

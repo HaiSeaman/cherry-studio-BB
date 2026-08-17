@@ -4,7 +4,6 @@ import * as fs from 'fs'
 import StreamZip from 'node-stream-zip'
 import * as os from 'os'
 import * as path from 'path'
-import { v4 as uuidv4 } from 'uuid'
 
 const logger = loggerService.withContext('DxtService')
 
@@ -321,7 +320,7 @@ class DxtService {
   }
 
   public async uploadDxt(_: Electron.IpcMainInvokeEvent, filePath: string): Promise<DxtUploadResult> {
-    const tempExtractDir = path.join(this.tempDir, `dxt_${uuidv4()}`)
+    const tempExtractDir = path.join(this.tempDir, `dxt_${crypto.randomUUID()}`)
 
     try {
       // Validate file exists

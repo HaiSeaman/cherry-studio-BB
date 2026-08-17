@@ -7,6 +7,8 @@
 
 export type AlarmSoundType = 'default' | 'apple' | 'android' | 'nokia' | 'crystal' | 'bird' | 'electronic'
 
+import type { CustomSound } from '../store/hubSettingsSlice'
+
 export const ALARM_SOUND_OPTIONS: { value: AlarmSoundType; label: string }[] = [
   { value: 'default', label: '默认叮咚' },
   { value: 'apple', label: '苹果风格' },
@@ -16,6 +18,14 @@ export const ALARM_SOUND_OPTIONS: { value: AlarmSoundType; label: string }[] = [
   { value: 'bird', label: '鸟鸣' },
   { value: 'electronic', label: '电子闹钟' }
 ]
+
+/** 铃声展示名：内置选项查表，自定义声音查自定义列表 */
+export function soundLabel(sound: string, customs: CustomSound[]): string {
+  if (sound.startsWith('custom:')) {
+    return customs.find((s) => `custom:${s.id}` === sound)?.name ?? '自定义声音'
+  }
+  return ALARM_SOUND_OPTIONS.find((o) => o.value === sound)?.label ?? sound
+}
 
 let audioCtx: AudioContext | null = null
 let masterGain: GainNode | null = null

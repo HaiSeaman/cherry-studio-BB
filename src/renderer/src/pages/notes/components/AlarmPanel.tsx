@@ -7,9 +7,9 @@ import styled, { keyframes } from 'styled-components'
 
 import { useCountdown } from '../hooks/useCountdown'
 import { alarmScheduler } from '../services/alarmScheduler'
-import { ALARM_SOUND_OPTIONS, alarmSounds } from '../services/alarmSounds'
+import { alarmSounds, soundLabel } from '../services/alarmSounds'
 import { nextRingInfo } from '../services/schedule'
-import { type CustomSound, setAlarmVolume } from '../store/hubSettingsSlice'
+import { setAlarmVolume } from '../store/hubSettingsSlice'
 import type { HubAlarm } from '../types'
 import { mx, MXGhostPill, MXTabs, reduceMotion } from './mx'
 import SoundPicker from './SoundPicker'
@@ -23,14 +23,6 @@ const pad2 = (n: number) => String(n).padStart(2, '0')
 const clampNum = (v: string, max: number) => Math.min(Math.max(parseInt(v, 10) || 0, 0), max)
 const fmtHMS = (s: number) => `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor((s % 3600) / 60))}:${pad2(s % 60)}`
 const fmtRingInfo = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)} 分 ${sec % 60} 秒后` : `${sec} 秒后`)
-
-/** 铃声展示名：内置选项查表，自定义声音查自定义列表 */
-const soundLabel = (sound: string, customs: CustomSound[]): string => {
-  if (sound.startsWith('custom:')) {
-    return customs.find((s) => `custom:${s.id}` === sound)?.name ?? '自定义声音'
-  }
-  return ALARM_SOUND_OPTIONS.find((o) => o.value === sound)?.label ?? sound
-}
 
 interface AlarmPanelProps {
   ringing: { label: string; sound: string; fromTimer?: boolean } | null
@@ -110,6 +102,36 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
   const sortedAlarms = regularAlarms.slice().sort((a, b) => a.h * 3600 + a.m * 60 - (b.h * 3600 + b.m * 60))
   const anyRinging = ringing != null
   const timerProgress = cd.totalSec > 0 ? cd.remainSec / cd.totalSec : 0
+
+  const renderAlarmItem = (a: HubAlarm, isCalendar: boolean) => {
+    const info = nextRingInfo(a, now)
+    return (
+      <AlarmItem key={a.id} className={!a.enabled ? 'off' : ''}>
+        <Toggle
+          className={a.enabled ? 'on' : ''}
+          onClick={() => void toggleAlarm(a)}
+          role="switch"
+          aria-checked={a.enabled}>
+          <span />
+        </Toggle>
+        <AlarmInfo>
+          <AlarmTime>{isCalendar ? `📅 ${a.date} ` : ''}{`${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`}</AlarmTime>
+          <AlarmMeta>
+            {[
+              a.label || '闹钟',
+              soundLabel(a.sound, customSounds),
+              a.enabled && info != null ? fmtRingInfo(info) : null
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </AlarmMeta>
+        </AlarmInfo>
+        <DelBtn onClick={() => void deleteAlarm(a)} title={isCalendar ? '删除日历闹钟' : '删除闹钟'}>
+          ✕
+        </DelBtn>
+      </AlarmItem>
+    )
+  }
 
   return (
     <Panel data-no-dnd>
@@ -235,35 +257,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
             {sortedAlarms.length === 0 ? (
               <EmptyHint>还没有定时闹钟，设一个叫醒自己</EmptyHint>
             ) : (
-              sortedAlarms.map((a) => {
-                const info = nextRingInfo(a, now)
-                return (
-                  <AlarmItem key={a.id} className={!a.enabled ? 'off' : ''}>
-                    <Toggle
-                      className={a.enabled ? 'on' : ''}
-                      onClick={() => void toggleAlarm(a)}
-                      role="switch"
-                      aria-checked={a.enabled}>
-                      <span />
-                    </Toggle>
-                    <AlarmInfo>
-                      <AlarmTime>{`${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`}</AlarmTime>
-                      <AlarmMeta>
-                        {[
-                          a.label || '闹钟',
-                          soundLabel(a.sound, customSounds),
-                          a.enabled && info != null ? fmtRingInfo(info) : null
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </AlarmMeta>
-                    </AlarmInfo>
-                    <DelBtn onClick={() => void deleteAlarm(a)} title="删除闹钟">
-                      ✕
-                    </DelBtn>
-                  </AlarmItem>
-                )
-              })
+              sortedAlarms.map((a) => renderAlarmItem(a, false))
             )}
           </AlarmList>
         </AlarmBody>
@@ -273,37 +267,7 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
             {calAlarms.length === 0 ? (
               <EmptyHint>日历闹钟会显示在这里，在日历页选中日期即可添加</EmptyHint>
             ) : (
-              calAlarms.map((a) => {
-                const info = nextRingInfo(a, now)
-                return (
-                  <AlarmItem key={a.id} className={!a.enabled ? 'off' : ''}>
-                    <Toggle
-                      className={a.enabled ? 'on' : ''}
-                      onClick={() => void toggleAlarm(a)}
-                      role="switch"
-                      aria-checked={a.enabled}>
-                      <span />
-                    </Toggle>
-                    <AlarmInfo>
-                      <AlarmTime>
-                        📅 {a.date} {`${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`}
-                      </AlarmTime>
-                      <AlarmMeta>
-                        {[
-                          a.label || '闹钟',
-                          soundLabel(a.sound, customSounds),
-                          a.enabled && info != null ? fmtRingInfo(info) : null
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </AlarmMeta>
-                    </AlarmInfo>
-                    <DelBtn onClick={() => void deleteAlarm(a)} title="删除日历闹钟">
-                      ✕
-                    </DelBtn>
-                  </AlarmItem>
-                )
-              })
+              calAlarms.map((a) => renderAlarmItem(a, true))
             )}
           </AlarmList>
         </AlarmBody>

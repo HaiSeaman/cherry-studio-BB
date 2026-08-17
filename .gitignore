@@ -1,6 +1,6 @@
 # ============================================================
 # Cherry-Studio-BB .gitignore
-# 忽略非源码文件与环境依赖，保持仓库干净，仅上传源码
+# 忽略非源码文件、环境依赖、编译产物与本地临时数据，保持仓库干净
 # ============================================================
 
 # ---------- 依赖 ----------
@@ -16,11 +16,12 @@ node_modules/
 .pnp.*
 .pnp.loader.mjs
 
-# ---------- 构建产物 ----------
+# ---------- 构建与打包产物 ----------
 dist/
 out/
 release/
 build-output/
+app-builds/
 *.exe
 *.msi
 *.dmg
@@ -29,6 +30,7 @@ build-output/
 *.rpm
 *.zip
 *.tar.gz
+*.7z
 stats.html
 
 # ---------- 缓存与临时文件 ----------
@@ -54,7 +56,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# ---------- 环境变量与密钥（保留 .env.example 模板） ----------
+# ---------- 环境变量与敏感密钥（保留 .env.example 模板） ----------
 .env
 .env.*
 !.env.example
@@ -62,41 +64,55 @@ lerna-debug.log*
 *.key
 *.p12
 *.pfx
+*.keystore
+*.jks
 id_rsa
 id_ed25519
 credentials.json
 secrets.json
 
-# ---------- 测试产物 ----------
+# ---------- 测试产物与报告 ----------
 coverage/
+.nyc_output/
 .vitest-cache/
 vitest.config.*.timestamp-*
 playwright-report/
 test-results/
 tests/e2e/.artifacts/
 
-# ---------- 编辑器与 IDE ----------
+# ---------- 编辑器与 IDE 配置 ----------
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json.example
+!.vscode/launch.json.example
 .idea/
+*.iws
+*.iml
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 .vim/
-*.iml
 
-# ---------- 本地 AI 工具配置 ----------
+# ---------- 本地 AI / 智能体工具缓存与配置 ----------
+.reasonix/
 .aider*
+.cursor/
 .cursorrules
-.cursor/*
 .claude/*
 !.claude/skills/
 !.claude/skills/**
 .gemini/*
 .qwen/*
 .trae/*
+.cline/
+.roo/
+.windsurf/
+.windsurfrules
+.continue/
+.void/
+.copilot/
 .claude-code-router/*
 .codebuddy/*
 .antigravitycli/*
@@ -104,17 +120,29 @@ tests/e2e/.artifacts/
 !.zed/settings.json.example
 CLAUDE.local.md
 AGENTS.override.md
+subagent/
 
 # ---------- 本地数据与运行时目录 ----------
 local/
+local_*/
 mcp_server/
 resources/binaries/
 .sessions/
 ui-shots/
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
 
-# ---------- 系统文件 ----------
+# ---------- 操作系统临时文件 ----------
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 Thumbs.db
+ehthumbs.db
 desktop.ini
+Desktop.ini
+$RECYCLE.BIN/
 .directory
 *.local

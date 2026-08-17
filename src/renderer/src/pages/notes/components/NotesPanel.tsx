@@ -6,7 +6,18 @@ import styled from 'styled-components'
 
 import type { HubNote } from '../types'
 import FolderModal from './FolderModal'
-import { mx } from './mx'
+import {
+  CountChip,
+  EmptyText as Empty,
+  HeaderBtns,
+  IconBtn,
+  MiniActionBtn as MiniBtn,
+  mx,
+  PanelHeader as Header,
+  PanelTitle as Title,
+  ScrollList as List,
+  TitleIcon
+} from './mx'
 import NoteEditor from './NoteEditor'
 
 /** 左上卡片：便签列表（搜索/新建/归档/垃圾桶）+ 编辑器 */
@@ -246,65 +257,6 @@ const ListCol = styled.div`
   padding-right: 10px;
 `
 
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`
-
-const Title = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: ${mx.text};
-`
-
-const TitleIcon = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: ${mx.accentSoft};
-  color: ${mx.accent};
-`
-
-const CountChip = styled.span`
-  font-size: 10.5px;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-  color: ${mx.text3};
-  background: ${mx.soft};
-  border-radius: 999px;
-  padding: 1px 7px;
-`
-
-const HeaderBtns = styled.div`
-  display: flex;
-  gap: 4px;
-`
-
-const IconBtn = styled.button<{ $accent?: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 27px;
-  height: 27px;
-  border: 1px solid ${mx.border};
-  border-radius: 8px;
-  background: ${(p) => (p.$accent ? mx.gradient : mx.card)};
-  color: ${(p) => (p.$accent ? '#fff' : mx.text2)};
-  cursor: pointer;
-  transition: all 0.15s ease;
-  &:hover {
-    border-color: ${mx.accent};
-    color: ${(p) => (p.$accent ? '#fff' : mx.accent)};
-  }
-`
-
 const SearchBox = styled.div`
   display: flex;
   align-items: center;
@@ -326,31 +278,6 @@ const SearchBox = styled.div`
       color: ${mx.text3};
     }
   }
-`
-
-const List = styled.div`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: ${mx.border};
-    border-radius: 3px;
-  }
-`
-
-const Empty = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  font-size: 12px;
-  color: ${mx.text3};
 `
 
 const Item = styled.div`
@@ -393,21 +320,6 @@ const ItemActions = styled.div`
   transition: opacity 0.15s ease;
   ${Item}:hover & {
     opacity: 1;
-  }
-`
-
-const MiniBtn = styled.button<{ $danger?: boolean }>`
-  border: none;
-  background: none;
-  color: ${mx.text3};
-  font-size: 12px;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  cursor: pointer;
-  &:hover {
-    background: ${(p) => (p.$danger ? 'rgba(239,83,80,0.1)' : mx.card)};
-    color: ${(p) => (p.$danger ? mx.danger : mx.accent)};
   }
 `
 

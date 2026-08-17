@@ -16,7 +16,7 @@ import { hasObjectKey } from '@renderer/utils'
 import { Flex, Tag } from 'antd'
 import { Search } from 'lucide-react'
 import type { FC } from 'react'
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import WebSearchGeneralSettings from './WebSearchGeneralSettings'

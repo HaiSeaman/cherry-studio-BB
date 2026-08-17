@@ -1,4 +1,3 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import type { QuickPanelListItem } from '@renderer/components/QuickPanel'
 import { QuickPanelReservedSymbol, useQuickPanel } from '@renderer/components/QuickPanel'
 import { isGemini3Model, isGeminiModel } from '@renderer/config/models'
@@ -12,11 +11,13 @@ import type { McpMode, MCPPrompt, MCPResource, MCPServer } from '@renderer/types
 import { getEffectiveMcpMode } from '@renderer/types'
 import { isToolUseModeFunction } from '@renderer/utils/assistant'
 import { isGeminiWebSearchProvider, isSupportUrlContextProvider } from '@renderer/utils/provider'
-import { Form, Input, Tooltip } from 'antd'
+import { Form, Input } from 'antd'
 import { CircleX, Hammer, Plus, Sparkles } from 'lucide-react'
 import type { FC } from 'react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate } from 'react-router-dom'
+
+import ToolActionIconButton from './ToolActionIconButton'
 
 interface Props {
   assistantId: string
@@ -551,11 +552,9 @@ const MCPToolsButton: FC<Props> = ({ quickPanel, setInputValue, resizeTextArea, 
   }
 
   return (
-    <Tooltip placement="top" title={'MCP 服务器'} mouseLeaveDelay={0} arrow>
-      <ActionIconButton onClick={handleOpenQuickPanel} active={isActive} aria-label={'MCP 服务器'}>
-        {getButtonIcon()}
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton tooltip="MCP 服务器" onClick={handleOpenQuickPanel} active={isActive}>
+      {getButtonIcon()}
+    </ToolActionIconButton>
   )
 }
 

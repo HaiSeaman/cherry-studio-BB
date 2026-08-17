@@ -31,7 +31,6 @@ import inputToolsReducer from './inputTools'
 import llm from './llm'
 import mcp from './mcp'
 import messageBlocksReducer from './messageBlock'
-import migrate from './migrate'
 import minapps from './minapps'
 import newMessagesReducer from './newMessage'
 import runtime from './runtime'
@@ -67,13 +66,14 @@ const rootReducer = combineReducers({
   toolPermissions
 })
 
+// ponytail: version 基线重置为 0。旧版持久化数据为当前 reducer 同构格式，
+// redux-persist 无 migrate 时原样放行，数据零丢失；历史 216 个迁移函数已整体移除。
 const persistedReducer = persistReducer(
   {
     key: 'cherry-studio',
     storage,
-    version: 216,
-    blacklist: ['runtime', 'messages', 'messageBlocks', 'tabs', 'toolPermissions', 'paint'],
-    migrate
+    version: 0,
+    blacklist: ['runtime', 'messages', 'messageBlocks', 'tabs', 'toolPermissions', 'paint']
   },
   rootReducer
 )

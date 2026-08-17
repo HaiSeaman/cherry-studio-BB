@@ -1,8 +1,8 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import { useShortcutDisplay } from '@renderer/hooks/useShortcuts'
 import { defineTool, registerTool, TopicType } from '@renderer/pages/home/Inputbar/types'
-import { Tooltip } from 'antd'
 import { PaintbrushVertical } from 'lucide-react'
+
+import ToolActionIconButton from './components/ToolActionIconButton'
 
 const clearTopicTool = defineTool({
   key: 'clear_topic',
@@ -16,11 +16,9 @@ const clearTopicTool = defineTool({
     const clearTopicShortcut = useShortcutDisplay('clear_topic')
 
     return (
-      <Tooltip placement="top" title={`清空消息 ${clearTopicShortcut}`} mouseLeaveDelay={0} arrow>
-        <ActionIconButton onClick={actions.clearTopic}>
-          <PaintbrushVertical size={18} />
-        </ActionIconButton>
-      </Tooltip>
+      <ToolActionIconButton tooltip={`清空消息 ${clearTopicShortcut}`} onClick={actions.clearTopic}>
+        <PaintbrushVertical size={18} />
+      </ToolActionIconButton>
     )
   }
 })

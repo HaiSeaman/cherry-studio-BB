@@ -1,5 +1,10 @@
-import useSWRImmutable from 'swr/immutable'
+import { useQuery } from '@tanstack/react-query'
 
 export function useExternalApps() {
-  return useSWRImmutable('external-apps/installed', async () => window.api.externalApps.detectInstalled())
+  return useQuery({
+    queryKey: ['external-apps', 'installed'],
+    queryFn: () => window.api.externalApps.detectInstalled(),
+    staleTime: Infinity,
+    retry: false
+  })
 }

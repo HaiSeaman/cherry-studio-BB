@@ -1,7 +1,6 @@
 import { loggerService } from '@logger'
 import db from '@renderer/databases'
 import type { QuickPhrase } from '@renderer/types'
-import { v4 as uuidv4 } from 'uuid'
 
 const logger = loggerService.withContext('QuickPhraseService')
 
@@ -41,7 +40,7 @@ export class QuickPhraseService {
     )
 
     const phrase: QuickPhrase = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       title: data.title,
       content: data.content,
       createdAt: now,

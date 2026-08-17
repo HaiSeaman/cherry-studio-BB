@@ -39,6 +39,14 @@ function fakeElState(state: { paused?: boolean; duration?: number; currentTime?:
   }
 }
 
+/** 同 fakeElState，但属性可写（seek 测试需要 audioEngine.seek 真正写入 currentTime） */
+function fakeWritableElState(state: { duration?: number; currentTime?: number }) {
+  const el = (audioEngine as unknown as { el: HTMLAudioElement }).el
+  for (const [key, value] of Object.entries(state)) {
+    Object.defineProperty(el, key, { value, configurable: true, writable: true })
+  }
+}
+
 beforeEach(() => {
   // 复位引擎：避免测试间相互污染
   audioEngine.stop()
@@ -88,5 +96,97 @@ describe('useLocalPlayer 切页返回恢复', () => {
 
     expect(result.current.currentId).toBeNull()
     expect(result.current.isPlaying).toBe(false)
+  })
+
+  it('切换到 FM 电台时保留当前曲目信息，仅停止播放', () => {
+    // 1. 本地播放曲目
+    audioEngine.load('local', 'file:///D:/Music/a.mp3', { trackId: 7 })
+    fakeElState({ paused: false, duration: 123, currentTime: 50 })
+
+    const { result } = renderHook((props: { tracks: MusicTrack[] }) => useLocalPlayer(props.tracks), {
+      initialProps: { tracks: [TRACK] }
+    })
+    expect(result.current.currentId).toBe(7)
+    expect(result.current.isPlaying).toBe(true)
+
+    // 2. FM 电台抢占音频引擎
+    act(() => {
+      audioEngine.load('fm', 'https://example.com/stream')
+    })
+
+    // 3. 验证本地播放器状态：currentId 和 currentTrack 保留，isPlaying 变为 false
+    expect(result.current.currentId).toBe(7)
+    expect(result.current.currentTrack).toEqual(TRACK)
+    expect(result.current.isPlaying).toBe(false)
+  })
+})
+
+describe('useLocalPlayer FM 抢占后的播放舱控制', () => {
+  it('FM 播放中点本地主按钮：抢回引擎重播当前曲，而不是暂停 FM 流', () => {
+    audioEngine.load('local', 'file:///D:/Music/a.mp3', { trackId: 7 })
+    fakeElState({ paused: false, duration: 123, currentTime: 50 })
+
+    const { result } = renderHook((props: { tracks: MusicTrack[] }) => useLocalPlayer(props.tracks), {
+      initialProps: { tracks: [TRACK] }
+    })
+
+    act(() => {
+      audioEngine.load('fm', 'https://example.com/stream')
+    })
+    // FM 播放中（引擎 paused=false）：修复前 toggle 会误执行 audioEngine.pause() 暂停 FM
+    fakeElState({ paused: false })
+
+    act(() => {
+      result.current.toggle()
+    })
+
+    const snap = audioEngine.snapshot()
+    expect(snap.owner).toBe('local')
+    expect(snap.url).toBe('file:///D:/Music/a.mp3')
+    expect(result.current.currentId).toBe(7)
+  })
+
+  it('FM 暂停中点本地主按钮：抢回引擎重播当前曲，而不是恢复 FM 流', () => {
+    audioEngine.load('local', 'file:///D:/Music/a.mp3', { trackId: 7 })
+    fakeElState({ paused: false, duration: 123, currentTime: 50 })
+
+    const { result } = renderHook((props: { tracks: MusicTrack[] }) => useLocalPlayer(props.tracks), {
+      initialProps: { tracks: [TRACK] }
+    })
+
+    act(() => {
+      audioEngine.load('fm', 'https://example.com/stream')
+    })
+    // FM 暂停中（引擎 paused=true）：修复前 toggle 会误执行 audioEngine.play() 恢复 FM
+    fakeElState({ paused: true })
+
+    act(() => {
+      result.current.toggle()
+    })
+
+    expect(audioEngine.snapshot().owner).toBe('local')
+    expect(audioEngine.snapshot().url).toBe('file:///D:/Music/a.mp3')
+  })
+
+  it('FM 抢占后拖动进度条：抢回引擎并定位到拖动位置，而不是作用于 FM 直播流', () => {
+    audioEngine.load('local', 'file:///D:/Music/a.mp3', { trackId: 7 })
+    fakeWritableElState({ duration: 123, currentTime: 50 })
+    fakeElState({ paused: false })
+
+    const { result } = renderHook((props: { tracks: MusicTrack[] }) => useLocalPlayer(props.tracks), {
+      initialProps: { tracks: [TRACK] }
+    })
+
+    act(() => {
+      audioEngine.load('fm', 'https://example.com/stream')
+    })
+
+    act(() => {
+      result.current.seek(80)
+    })
+
+    expect(audioEngine.snapshot().owner).toBe('local')
+    expect(audioEngine.currentTime).toBe(80)
+    expect(result.current.currentTime).toBe(80)
   })
 })

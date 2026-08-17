@@ -82,43 +82,6 @@ export function createMockContext(overrides?: ContextOverrides): AiRequestContex
 }
 
 /**
- * Creates a mock embedding model with customizable behavior
- * Compliant with AI SDK v3 specification
- *
- * @example
- * ```ts
- * const embeddingModel = createMockEmbeddingModel({
- *   provider: 'openai',
- *   modelId: 'text-embedding-3-small',
- *   maxEmbeddingsPerCall: 2048
- * })
- * ```
- */
-export function createMockEmbeddingModel(overrides?: Partial<EmbeddingModelV3>): EmbeddingModelV3 {
-  return {
-    specificationVersion: 'v3',
-    provider: 'mock-provider',
-    modelId: 'mock-embedding-model',
-    maxEmbeddingsPerCall: 100,
-    supportsParallelCalls: true,
-
-    doEmbed: vi.fn().mockResolvedValue({
-      embeddings: [
-        [0.1, 0.2, 0.3, 0.4, 0.5],
-        [0.6, 0.7, 0.8, 0.9, 1.0]
-      ],
-      usage: {
-        inputTokens: 10,
-        totalTokens: 10
-      },
-      rawResponse: { headers: {} }
-    }),
-
-    ...overrides
-  } as EmbeddingModelV3
-}
-
-/**
  * Creates a complete mock ProviderV3 with all model types
  * Useful for testing provider registration and management
  *
@@ -319,32 +282,3 @@ export function createMockStreamParams(overrides?: Partial<StreamTextParams>): S
     ...overrides
   } as StreamTextParams
 }
-
-/**
- * Common mock model instances for quick testing
- */
-export const mockModels = {
-  /** Standard language model for general testing */
-  language: new MockLanguageModelV3({
-    provider: 'test-provider',
-    modelId: 'test-model'
-  }),
-
-  /** Mock OpenAI GPT-4 model */
-  gpt4: new MockLanguageModelV3({
-    provider: 'openai',
-    modelId: 'gpt-4'
-  }),
-
-  /** Mock Anthropic Claude model */
-  claude: new MockLanguageModelV3({
-    provider: 'anthropic',
-    modelId: 'claude-3-5-sonnet-20241022'
-  }),
-
-  /** Mock Google Gemini model */
-  gemini: new MockLanguageModelV3({
-    provider: 'google',
-    modelId: 'gemini-2.0-flash-exp'
-  })
-} as const

@@ -7,13 +7,7 @@ import { loggerService } from '@logger'
 import { isLinux, isMac, isPortable, isWin } from '@main/constant'
 import { generateSignature } from '@main/integration/cherryai'
 import { getIpCountry } from '@main/utils/ipService'
-import {
-  autoDiscoverGitBash,
-  getGitBashPathInfo,
-  isBinaryExists,
-  runInstallScript,
-  validateGitBashPath
-} from '@main/utils/process'
+import { isBinaryExists, runInstallScript } from '@main/utils/process'
 import { handleZoomFactor } from '@main/utils/zoom'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -25,7 +19,7 @@ import fontList from 'font-list'
 
 import appService from './services/AppService'
 import BackupManager from './services/BackupManager'
-import { ConfigKeys, configManager } from './services/ConfigManager'
+import { configManager } from './services/ConfigManager'
 import DxtService from './services/DxtService'
 import { ExportService } from './services/ExportService'
 import { externalAppsService } from './services/ExternalAppsService'
@@ -50,7 +44,7 @@ import { calculateDirectorySize, getResourcePath } from './utils'
 import { decrypt, encrypt } from './utils/aes'
 import { getCacheDir, getConfigDir, getFilesDir, hasWritePermission, isPathInside, untildify } from './utils/file'
 import { updateAppDataConfig } from './utils/init'
-import { getCpuName, getDeviceType, getHostname } from './utils/system'
+import { getDeviceType, getHostname } from './utils/system'
 import { compress, decompress } from './utils/zip'
 
 const logger = loggerService.withContext('IPC')
@@ -392,66 +386,6 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   // system
   ipcMain.handle(IpcChannel.System_GetDeviceType, getDeviceType)
   ipcMain.handle(IpcChannel.System_GetHostname, getHostname)
-  ipcMain.handle(IpcChannel.System_GetCpuName, getCpuName)
-  ipcMain.handle(IpcChannel.System_CheckGitBash, () => {
-    if (!isWin) {
-      return true // Non-Windows systems don't need Git Bash
-    }
-
-    try {
-      // Use autoDiscoverGitBash to handle auto-discovery and persistence
-      const bashPath = autoDiscoverGitBash()
-      if (bashPath) {
-        logger.info('Git Bash is available', { path: bashPath })
-        return true
-      }
-
-      logger.warn('Git Bash not found. Please install Git for Windows from https://git-scm.com/downloads/win')
-      return false
-    } catch (error) {
-      logger.error('Unexpected error checking Git Bash', error as Error)
-      return false
-    }
-  })
-
-  ipcMain.handle(IpcChannel.System_GetGitBashPath, () => {
-    if (!isWin) {
-      return null
-    }
-
-    const customPath = configManager.get(ConfigKeys.GitBashPath) as string | undefined
-    return customPath ?? null
-  })
-
-  // Returns { path, source } where source is 'manual' | 'auto' | null
-  ipcMain.handle(IpcChannel.System_GetGitBashPathInfo, () => {
-    return getGitBashPathInfo()
-  })
-
-  ipcMain.handle(IpcChannel.System_SetGitBashPath, (_, newPath: string | null) => {
-    if (!isWin) {
-      return false
-    }
-
-    if (!newPath) {
-      // Clear manual setting and re-run auto-discovery
-      configManager.set(ConfigKeys.GitBashPath, null)
-      configManager.set(ConfigKeys.GitBashPathSource, null)
-      // Re-run auto-discovery to restore auto-discovered path if available
-      autoDiscoverGitBash()
-      return true
-    }
-
-    const validated = validateGitBashPath(newPath)
-    if (!validated) {
-      return false
-    }
-
-    // Set path with 'manual' source
-    configManager.set(ConfigKeys.GitBashPath, validated)
-    configManager.set(ConfigKeys.GitBashPathSource, 'manual')
-    return true
-  })
 
   ipcMain.handle(IpcChannel.System_ToggleDevTools, (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)

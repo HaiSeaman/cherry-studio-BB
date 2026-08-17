@@ -1,9 +1,10 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import { isGenerateImageModel } from '@renderer/config/models'
 import type { Assistant, Model } from '@renderer/types'
-import { Tooltip } from 'antd'
 import { Image } from 'lucide-react'
 import type { FC } from 'react'
+
+import ToolActionIconButton from './ToolActionIconButton'
+
 interface Props {
   assistant: Assistant
   model: Model
@@ -14,16 +15,14 @@ const GenerateImageButton: FC<Props> = ({ model, assistant, onEnableGenerateImag
   const ariaLabel = isGenerateImageModel(model) ? '生成图片' : '模型不支持生成图片'
 
   return (
-    <Tooltip placement="top" title={ariaLabel} mouseLeaveDelay={0} arrow>
-      <ActionIconButton
-        onClick={onEnableGenerateImage}
-        active={assistant.enableGenerateImage}
-        disabled={!isGenerateImageModel(model)}
-        aria-label={ariaLabel}
-        aria-pressed={assistant.enableGenerateImage}>
-        <Image size={18} />
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton
+      tooltip={ariaLabel}
+      onClick={onEnableGenerateImage}
+      active={assistant.enableGenerateImage}
+      disabled={!isGenerateImageModel(model)}
+      aria-pressed={assistant.enableGenerateImage}>
+      <Image size={18} />
+    </ToolActionIconButton>
   )
 }
 

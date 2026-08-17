@@ -1,4 +1,3 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import {
   type QuickPanelListItem,
   type QuickPanelOpenOptions,
@@ -11,10 +10,12 @@ import { useTimer } from '@renderer/hooks/useTimer'
 import type { ToolQuickPanelApi } from '@renderer/pages/home/Inputbar/types'
 import QuickPhraseService from '@renderer/services/QuickPhraseService'
 import type { QuickPhrase } from '@renderer/types'
-import { Input, Modal, Radio, Space, Tooltip } from 'antd'
+import { Input, Modal, Radio, Space } from 'antd'
 import { BotMessageSquare, Plus, Zap } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
+
+import ToolActionIconButton from './ToolActionIconButton'
 
 interface Props {
   quickPanel: ToolQuickPanelApi
@@ -247,11 +248,9 @@ const QuickPhrasesButton = ({ quickPanel, setInputValue, resizeTextArea, assista
 
   return (
     <>
-      <Tooltip placement="top" title={'快捷短语'} mouseLeaveDelay={0} arrow>
-        <ActionIconButton onClick={handleOpenQuickPanel} aria-label={'快捷短语'}>
-          <Zap size={18} />
-        </ActionIconButton>
-      </Tooltip>
+      <ToolActionIconButton tooltip="快捷短语" onClick={handleOpenQuickPanel}>
+        <Zap size={18} />
+      </ToolActionIconButton>
 
       <Modal
         title={'添加短语'}

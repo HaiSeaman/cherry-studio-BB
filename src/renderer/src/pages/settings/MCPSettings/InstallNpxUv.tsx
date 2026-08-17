@@ -5,7 +5,7 @@ import { setIsBunInstalled, setIsUvInstalled } from '@renderer/store/mcp'
 import { Alert, Button } from 'antd'
 import type { FC } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { SettingDescription, SettingRow, SettingSubtitle } from '..'

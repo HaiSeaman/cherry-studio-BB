@@ -21,7 +21,7 @@ import { hasObjectKey } from '@renderer/utils'
 import { Slider, Switch, Tooltip } from 'antd'
 import { Info } from 'lucide-react'
 import type { FC } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate } from 'react-router-dom'
 
 import { SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
 

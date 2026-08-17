@@ -1,9 +1,8 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import type { ToolQuickPanelController } from '@renderer/pages/home/Inputbar/types'
-import { Tooltip } from 'antd'
 import type { FC } from 'react'
 import { memo, useCallback } from 'react'
 
+import ToolActionIconButton from './ToolActionIconButton'
 import { useWebSearchPanelController, WebSearchProviderIcon } from './WebSearchQuickPanelManager'
 
 interface Props {
@@ -26,15 +25,9 @@ const WebSearchButton: FC<Props> = ({ quickPanelController, assistantId }) => {
   const ariaLabel = enableWebSearch ? '关闭' : '网络搜索'
 
   return (
-    <Tooltip placement="top" title={ariaLabel} mouseLeaveDelay={0} arrow>
-      <ActionIconButton
-        onClick={onClick}
-        active={!!enableWebSearch}
-        aria-label={ariaLabel}
-        aria-pressed={!!enableWebSearch}>
-        <WebSearchProviderIcon pid={selectedProviderId} />
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton tooltip={ariaLabel} onClick={onClick} active={!!enableWebSearch} aria-pressed={!!enableWebSearch}>
+      <WebSearchProviderIcon pid={selectedProviderId} />
+    </ToolActionIconButton>
   )
 }
 

@@ -53,7 +53,6 @@ import {
 } from '@types'
 import { app, net } from 'electron'
 import { EventEmitter } from 'events'
-import { v4 as uuidv4 } from 'uuid'
 
 import { CacheService } from './CacheService'
 import DxtService from './DxtService'
@@ -959,7 +958,7 @@ class McpService {
     _: Electron.IpcMainInvokeEvent,
     { server, name, args, callId }: CallToolArgs
   ): Promise<MCPCallToolResponse> {
-    const toolCallId = callId || uuidv4()
+    const toolCallId = callId || crypto.randomUUID()
     const abortController = new AbortController()
     this.activeToolCalls.set(toolCallId, abortController)
 

@@ -8,6 +8,12 @@ import { useLocalPlayer } from '../hooks/useLocalPlayer'
 import { addFilesToLibrary, addFolderToLibrary, reorderTracks, rescanFolders } from '../services/musicLibrary'
 import type { MusicTrack } from '../types'
 import { mx, MXCard, MXDialog, MXIconButton, MXPrimaryButton, MXSearchInput } from './mx'
+import {
+  CountChip as RawCountChip,
+  PanelHeader as RawHeader,
+  PanelTitle as RawHeaderTitle,
+  TitleIcon as RawHeaderIcon
+} from './mx'
 import PlayerControls from './PlayerControls'
 import Playlist from './Playlist'
 
@@ -227,40 +233,24 @@ const LocalMusicPlayer: FC = () => {
   )
 }
 
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+// 头部四件套基础样式取自 mx 设计系统；仅此处按音乐页观感微调尺寸/间距（薄包装，视觉不变）
+const Header = styled(RawHeader)`
   margin-bottom: 10px;
 `
 
-const HeaderTitle = styled.div`
-  display: flex;
-  align-items: center;
+const HeaderTitle = styled(RawHeaderTitle)`
   gap: 8px;
   font-size: 15px;
-  font-weight: 600;
-  color: ${mx.text};
 `
 
-const HeaderIcon = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+const HeaderIcon = styled(RawHeaderIcon)`
   width: 28px;
   height: 28px;
   border-radius: 9px;
-  background: ${mx.accentSoft};
-  color: ${mx.accent};
 `
 
-const CountChip = styled.span`
+const CountChip = styled(RawCountChip)`
   font-size: 11px;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-  color: ${mx.text3};
-  background: ${mx.soft};
-  border-radius: 999px;
   padding: 2px 8px;
 `
 

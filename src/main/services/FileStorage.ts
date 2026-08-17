@@ -27,7 +27,6 @@ import { isBinaryFile } from 'isbinaryfile'
 import officeParser from 'officeparser'
 import * as path from 'path'
 import { PDFDocument } from 'pdf-lib'
-import { v4 as uuidv4 } from 'uuid'
 import WordExtractor from 'word-extractor'
 
 const logger = loggerService.withContext('FileStorage')
@@ -265,7 +264,7 @@ class FileStorage {
       const fileType = await this.getFileType(filePath)
 
       return {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         origin_name: path.basename(filePath),
         name: path.basename(filePath),
         path: filePath,
@@ -313,7 +312,7 @@ class FileStorage {
       return duplicateFile
     }
 
-    const uuid = uuidv4()
+    const uuid = crypto.randomUUID()
     const origin_name = path.basename(file.path)
     const ext = path.extname(origin_name).toLowerCase()
     const destPath = path.join(this.storageDir, uuid + ext)
@@ -356,7 +355,7 @@ class FileStorage {
     const fileType = await this.getFileType(filePath)
 
     return {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       origin_name: path.basename(filePath),
       name: path.basename(filePath),
       path: filePath,
@@ -628,7 +627,7 @@ class FileStorage {
     if (!safeName || safeName === '.' || safeName === '..') {
       throw new Error('Invalid file name')
     }
-    return path.join(this.tempDir, `temp_file_${uuidv4()}_${safeName}`)
+    return path.join(this.tempDir, `temp_file_${crypto.randomUUID()}_${safeName}`)
   }
 
   public writeFile = async (
@@ -693,7 +692,7 @@ class FileStorage {
       const ext = parseResult?.mediaType ? this.getExtensionFromMimeType(parseResult.mediaType) : '.png'
 
       const buffer = Buffer.from(base64String, 'base64')
-      const uuid = uuidv4()
+      const uuid = crypto.randomUUID()
       const destPath = path.join(this.storageDir, uuid + ext)
 
       logger.debug('Saving base64 image:', {
@@ -759,7 +758,7 @@ class FileStorage {
         .toISOString()
         .replace(/[-:.TZ]/g, '')
         .slice(0, 15)
-      const shortId = uuidv4().slice(0, 8)
+      const shortId = crypto.randomUUID().slice(0, 8)
       const fileName = `cherry_${timestamp}_${shortId}${ext}`
       const destPath = path.join(dirPath, fileName)
 
@@ -792,7 +791,7 @@ class FileStorage {
     extension?: string
   ): Promise<FileMetadata> => {
     try {
-      const uuid = uuidv4()
+      const uuid = crypto.randomUUID()
       const ext = extension || '.png'
       const destPath = path.join(this.storageDir, uuid + ext)
 
@@ -839,7 +838,7 @@ class FileStorage {
   private async compressImageBuffer(imageBuffer: Buffer, destPath: string, ext: string): Promise<void> {
     try {
       // 创建临时文件
-      const tempPath = path.join(this.tempDir, `temp_${uuidv4()}${ext}`)
+      const tempPath = path.join(this.tempDir, `temp_${crypto.randomUUID()}${ext}`)
       await fs.promises.writeFile(tempPath, imageBuffer)
 
       // 使用现有的压缩方法
@@ -1542,7 +1541,7 @@ class FileStorage {
         filename += ext
       }
 
-      const uuid = uuidv4()
+      const uuid = crypto.randomUUID()
       const ext = path.extname(filename)
       const destPath = path.join(this.storageDir, uuid + ext)
 

@@ -21,7 +21,6 @@ import {
   MessageBlockType,
   UserMessageStatus
 } from '@renderer/types/newMessage'
-import { v4 as uuidv4 } from 'uuid'
 
 type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
 
@@ -41,7 +40,7 @@ export function createBaseMessageBlock<T extends MessageBlockType>(
 ): BaseMessageBlock & { type: T } {
   const now = new Date().toISOString()
   return {
-    id: uuidv4(),
+    id: crypto.randomUUID(),
     messageId,
     type,
     createdAt: now,
@@ -283,7 +282,7 @@ export function createMessage(
   overrides: PartialBy<Omit<Message, 'role' | 'topicId' | 'assistantId' | 'createdAt' | 'status'>, 'blocks' | 'id'> = {}
 ): Message {
   const now = new Date().toISOString()
-  const messageId = overrides.id || uuidv4()
+  const messageId = overrides.id || crypto.randomUUID()
 
   const { blocks: initialBlocks, id, ...restOverrides } = overrides
 
@@ -321,7 +320,7 @@ export function createAssistantMessage(
   overrides: Partial<Omit<Message, 'id' | 'role' | 'assistantId' | 'topicId' | 'createdAt' | 'type' | 'status'>> = {}
 ): Message {
   const now = new Date().toISOString()
-  const messageId = uuidv4()
+  const messageId = crypto.randomUUID()
 
   return {
     id: messageId,

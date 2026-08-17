@@ -13,7 +13,7 @@ import { Button, Dropdown, Empty } from 'antd'
 import { Plus } from 'lucide-react'
 import type { FC } from 'react'
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { SettingTitle } from '..'

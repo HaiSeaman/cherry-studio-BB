@@ -3,7 +3,6 @@ import { FileState, GoogleGenAI } from '@google/genai'
 import { loggerService } from '@logger'
 import { fileStorage } from '@main/services/FileStorage'
 import type { FileListResponse, FileMetadata, FileUploadResponse, Provider } from '@types'
-import { v4 as uuidv4 } from 'uuid'
 
 import { CacheService } from '../CacheService'
 import { BaseFileService } from './BaseFileService'
@@ -146,7 +145,7 @@ export class GeminiService extends BaseFileService {
           .map((file) => {
             // 更新单个文件的缓存
             const fileResponse: FileUploadResponse = {
-              fileId: file.name || uuidv4(),
+              fileId: file.name || crypto.randomUUID(),
               displayName: file.displayName || '',
               status: 'success',
               originalFile: {
@@ -161,7 +160,7 @@ export class GeminiService extends BaseFileService {
             )
 
             return {
-              id: file.name || uuidv4(),
+              id: file.name || crypto.randomUUID(),
               displayName: file.displayName || '',
               size: Number(file.sizeBytes),
               status: 'success',

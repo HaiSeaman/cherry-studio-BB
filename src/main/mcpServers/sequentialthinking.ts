@@ -5,8 +5,6 @@ import { loggerService } from '@logger'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-// Fixed chalk import for ESM
-import chalk from 'chalk'
 
 const logger = loggerService.withContext('MCPServer:SequentialThinkingServer')
 
@@ -63,13 +61,13 @@ class SequentialThinkingServer {
     let context: string
 
     if (isRevision) {
-      prefix = chalk.yellow('🔄 Revision')
+      prefix = '🔄 Revision'
       context = ` (revising thought ${revisesThought})`
     } else if (branchFromThought) {
-      prefix = chalk.green('🌿 Branch')
+      prefix = '🌿 Branch'
       context = ` (from thought ${branchFromThought}, ID: ${branchId})`
     } else {
-      prefix = chalk.blue('💭 Thought')
+      prefix = '💭 Thought'
       context = ''
     }
 

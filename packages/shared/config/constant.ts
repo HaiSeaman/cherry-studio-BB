@@ -209,14 +209,6 @@ export const defaultByPassRules = 'localhost,127.0.0.1,::1'
 // resources/scripts should be maintained manually
 export const HOME_CHERRY_DIR = '.cherrystudio'
 
-// Git Bash path configuration types
-export type GitBashPathSource = 'manual' | 'auto'
-
-export interface GitBashPathInfo {
-  path: string | null
-  source: GitBashPathSource | null
-}
-
 // CherryIN OAuth configuration
 export const CHERRYIN_CONFIG = {
   CLIENT_ID: '2a348c87-bae1-4756-a62f-b2e97200fd6d',

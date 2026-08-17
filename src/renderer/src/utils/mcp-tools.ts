@@ -3,7 +3,6 @@ import store from '@renderer/store'
 import { addMCPServer, hubMCPServer } from '@renderer/store/mcp'
 import type { MCPCallToolResponse, MCPServer, MCPTool, MCPToolResponse } from '@renderer/types'
 import { BuiltinMCPServerNames } from '@renderer/types'
-import { nanoid } from 'nanoid'
 
 const logger = loggerService.withContext('Utils:MCPTools')
 
@@ -28,7 +27,7 @@ export async function callMCPTool(toolResponse: MCPToolResponse): Promise<MCPCal
     if (toolResponse.tool.serverName === BuiltinMCPServerNames.mcpAutoInstall) {
       if (resp.data) {
         const mcpServer: MCPServer = {
-          id: `f${nanoid()}`,
+          id: `f${crypto.randomUUID()}`,
           name: resp.data.name,
           description: resp.data.description,
           baseUrl: resp.data.baseUrl,

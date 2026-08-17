@@ -1,7 +1,7 @@
 import { useTheme } from '@renderer/context/ThemeProvider'
 import type { WebSearchProviderId } from '@renderer/types'
 import type { FC } from 'react'
-import { useParams } from 'react-router'
+import { useParams } from 'react-router-dom'
 
 import { SettingContainer, SettingGroup } from '..'
 import WebSearchProviderSetting from './WebSearchProviderSetting'

@@ -1,8 +1,7 @@
-import { FolderOpenOutlined, SaveOutlined, SyncOutlined, WarningOutlined } from '@ant-design/icons'
+import { FolderOpenOutlined, SaveOutlined } from '@ant-design/icons'
 import { HStack } from '@renderer/components/Layout'
 import Selector from '@renderer/components/Selector'
-import { WebdavBackupManager } from '@renderer/components/WebdavBackupManager'
-import { useWebdavBackupModal, WebdavBackupModal } from '@renderer/components/WebdavModals'
+import { useWebdavBackupModal, WebdavBackupManager, WebdavBackupModal } from '@renderer/components/BackupManager'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { startAutoSync, stopAutoSync } from '@renderer/services/BackupService'
@@ -19,10 +18,11 @@ import {
   setWebdavSyncInterval as _setWebdavSyncInterval,
   setWebdavUser as _setWebdavUser
 } from '@renderer/store/settings'
-import { Button, Input, Switch, Tooltip } from 'antd'
-import dayjs from 'dayjs'
+import { Button, Input, Switch } from 'antd'
 import type { FC } from 'react'
 import { useState } from 'react'
+
+import { SyncStatus } from './SyncStatus'
 
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
 
@@ -89,26 +89,7 @@ const WebDavSettings: FC = () => {
 
   const renderSyncStatus = () => {
     if (!webdavHost) return null
-
-    if (!webdavSync.lastSyncTime && !webdavSync.syncing && !webdavSync.lastSyncError) {
-      return <span style={{ color: 'var(--text-secondary)' }}>{'等待下次备份'}</span>
-    }
-
-    return (
-      <HStack gap="5px" alignItems="center">
-        {webdavSync.syncing && <SyncOutlined spin />}
-        {!webdavSync.syncing && webdavSync.lastSyncError && (
-          <Tooltip title={`${'备份错误'}: ${webdavSync.lastSyncError}`}>
-            <WarningOutlined style={{ color: 'red' }} />
-          </Tooltip>
-        )}
-        {webdavSync.lastSyncTime && (
-          <span style={{ color: 'var(--text-secondary)' }}>
-            {'上次备份时间'}: {dayjs(webdavSync.lastSyncTime).format('HH:mm:ss')}
-          </span>
-        )}
-      </HStack>
-    )
+    return <SyncStatus sync={webdavSync} emptyLabel="等待下次备份" syncedLabel="上次备份时间: " errorLabel="备份错误" />
   }
 
   const { isModalVisible, handleBackup, handleCancel, backuping, customFileName, setCustomFileName, showBackupModal } =
@@ -203,15 +184,15 @@ const WebDavSettings: FC = () => {
           disabled={!webdavHost}
           options={[
             { label: '关闭', value: 0 },
-            { label: `${1} 分钟`, value: 1 },
-            { label: `${1} 分钟`, value: 5 },
-            { label: `${1} 分钟`, value: 15 },
-            { label: `${1} 分钟`, value: 30 },
-            { label: `${1} 小时`, value: 60 },
-            { label: `${1} 小时`, value: 120 },
-            { label: `${1} 小时`, value: 360 },
-            { label: `${1} 小时`, value: 720 },
-            { label: `${1} 小时`, value: 1440 }
+            { label: '1 分钟', value: 1 },
+            { label: '5 分钟', value: 5 },
+            { label: '15 分钟', value: 15 },
+            { label: '30 分钟', value: 30 },
+            { label: '1 小时', value: 60 },
+            { label: '2 小时', value: 120 },
+            { label: '6 小时', value: 360 },
+            { label: '12 小时', value: 720 },
+            { label: '24 小时', value: 1440 }
           ]}
         />
       </SettingRow>

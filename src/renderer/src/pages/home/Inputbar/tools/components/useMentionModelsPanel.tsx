@@ -15,7 +15,7 @@ import { first, sortBy } from 'lodash'
 import { AtSign, CircleX, Plus } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 export type MentionTriggerInfo = { type: 'input' | 'button'; position?: number; originalText?: string }

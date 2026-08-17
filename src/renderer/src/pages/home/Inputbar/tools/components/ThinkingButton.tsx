@@ -1,4 +1,3 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import {
   MdiLightbulbAutoOutline,
   MdiLightbulbOffOutline,
@@ -21,9 +20,11 @@ import {
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import type { ToolQuickPanelApi } from '@renderer/pages/home/Inputbar/types'
 import type { Model, ThinkingOption } from '@renderer/types'
-import { Tooltip } from 'antd'
 import type { FC, ReactElement } from 'react'
 import { useCallback, useEffect, useMemo } from 'react'
+
+import ToolActionIconButton from './ToolActionIconButton'
+
 interface Props {
   quickPanel: ToolQuickPanelApi
   model: Model
@@ -212,16 +213,14 @@ const ThinkingButton: FC<Props> = ({
   const ariaLabel = isFixedReasoning ? '思考' : hasMultipleLevels || !isThinkingEnabled ? '思维链长度' : '关闭'
 
   return (
-    <Tooltip placement="top" title={ariaLabel} mouseLeaveDelay={0} arrow>
-      <ActionIconButton
-        onClick={handleOpenQuickPanel}
-        active={isFixedReasoning || currentReasoningEffort !== 'none'}
-        aria-label={ariaLabel}
-        aria-pressed={currentReasoningEffort !== 'none'}
-        style={isFixedReasoning ? { cursor: 'default' } : undefined}>
-        {ThinkingIcon({ option: currentReasoningEffort, isFixedReasoning })}
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton
+      tooltip={ariaLabel}
+      onClick={handleOpenQuickPanel}
+      active={isFixedReasoning || currentReasoningEffort !== 'none'}
+      aria-pressed={currentReasoningEffort !== 'none'}
+      style={isFixedReasoning ? { cursor: 'default' } : undefined}>
+      {ThinkingIcon({ option: currentReasoningEffort, isFixedReasoning })}
+    </ToolActionIconButton>
   )
 }
 

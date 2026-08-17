@@ -6,6 +6,7 @@
     "src/main/integration/cherryai/index.js",
     "src/preload/*.d.ts",
     "tests/__mocks__/**/*",
+    "tests/renderer.setup.ts",
     "packages/aiCore/src/**/*",
     "packages/shared/**/*"
   ],

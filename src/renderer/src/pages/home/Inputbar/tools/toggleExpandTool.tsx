@@ -1,9 +1,9 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import type { ToolRenderContext } from '@renderer/pages/home/Inputbar/types'
 import { defineTool, registerTool, TopicType } from '@renderer/pages/home/Inputbar/types'
-import { Tooltip } from 'antd'
 import { Maximize, Minimize } from 'lucide-react'
 import React, { useCallback } from 'react'
+
+import ToolActionIconButton from './components/ToolActionIconButton'
 
 type ToggleExpandRenderContext = ToolRenderContext<readonly ['isExpanded'], readonly ['toggleExpanded']>
 
@@ -16,11 +16,9 @@ const ToggleExpandTool: React.FC<{ context: ToggleExpandRenderContext }> = ({ co
   }, [actions])
 
   return (
-    <Tooltip placement="top" title={isExpanded ? '收起' : '展开'} mouseLeaveDelay={0} arrow>
-      <ActionIconButton onClick={handleToggle}>
-        {isExpanded ? <Minimize size={18} /> : <Maximize size={18} />}
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton tooltip={isExpanded ? '收起' : '展开'} onClick={handleToggle}>
+      {isExpanded ? <Minimize size={18} /> : <Maximize size={18} />}
+    </ToolActionIconButton>
   )
 }
 

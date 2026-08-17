@@ -1,8 +1,8 @@
-import { memo, type FC, useRef } from 'react'
+import { memo, type FC, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 
-import { DynamicVirtualList } from '@renderer/components/VirtualList'
-import { toFileUrl } from '../services/playLogic'
+import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
+import { formatTime, toFileUrl } from '../services/playLogic'
 import type { MusicTrack } from '../types'
 import { Eq, mx } from './mx'
 
@@ -39,6 +39,19 @@ export const Playlist: FC<PlaylistProps> = memo(function Playlist({
   onReorder
 }) {
   const dragSrcId = useRef<number | null>(null)
+  const listRef = useRef<DynamicVirtualListRef>(null)
+  const tracksRef = useRef(tracks)
+  tracksRef.current = tracks
+
+  // 自动滚动：仅在切歌（currentId 变化）或恢复播放（isPlaying 变 true）时把当前曲滚入视口。
+  // 刻意不依赖 tracks —— 收藏/删除/拖拽重排/重扫产生的列表刷新不应打断用户正在浏览的位置
+  useEffect(() => {
+    if (currentId == null || !isPlaying) return
+    const idx = tracksRef.current.findIndex((t) => t.id === currentId)
+    if (idx >= 0) {
+      listRef.current?.scrollToIndex(idx, { align: 'auto', behavior: 'smooth' })
+    }
+  }, [currentId, isPlaying])
 
   const handleDrop = (e: React.DragEvent, targetId: number | null) => {
     e.preventDefault()
@@ -55,7 +68,7 @@ export const Playlist: FC<PlaylistProps> = memo(function Playlist({
 
   return (
     <ListWrap role="listbox">
-      <DynamicVirtualList list={tracks} estimateSize={() => ROW_HEIGHT} size="100%">
+      <DynamicVirtualList ref={listRef} list={tracks} estimateSize={() => ROW_HEIGHT} size="100%">
         {(t) => {
           const playing = t.id === currentId
           return (
@@ -92,7 +105,7 @@ export const Playlist: FC<PlaylistProps> = memo(function Playlist({
                 <Meta>{[t.artist, t.album].filter(Boolean).join(' · ') || '未知艺术家'}</Meta>
             </Info>
             <Duration>
-              {playing ? <Eq paused={!isPlaying} /> : t.duration > 0 ? formatDuration(t.duration) : ''}
+              {playing ? <Eq paused={!isPlaying} /> : t.duration > 0 ? formatTime(t.duration) : ''}
             </Duration>
             <FavBtn
               className={t.favorite === 1 ? 'favorited' : ''}
@@ -122,10 +135,7 @@ export const Playlist: FC<PlaylistProps> = memo(function Playlist({
 /** 行高 = Item 52px（封面 40 + padding 12）+ 下边距 2px；虚拟列表估算必须与实测一致，否则首帧滚动位置偏移 */
 const ROW_HEIGHT = 54
 
-function formatDuration(sec: number): string {
-  const s = Math.floor(sec)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-}
+
 
 const ListWrap = styled.div`
   flex: 1;

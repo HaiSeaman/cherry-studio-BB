@@ -49,31 +49,6 @@ export function getDataPath(subPath?: string) {
   return dataPath
 }
 
-export function debounce(func: (...args: any[]) => void, wait: number, immediate: boolean = false) {
-  let timeout: NodeJS.Timeout | null = null
-  return function (...args: any[]) {
-    if (timeout) clearTimeout(timeout)
-    if (immediate) {
-      func(...args)
-    } else {
-      timeout = setTimeout(() => func(...args), wait)
-    }
-  }
-}
-
-// NOTE: It's an unused function. localStorage should not be accessed in main process.
-// export function dumpPersistState() {
-//   const persistState = JSON.parse(localStorage.getItem('persist:cherry-studio') || '{}')
-//   for (const key in persistState) {
-//     persistState[key] = JSON.parse(persistState[key])
-//   }
-//   return JSON.stringify(persistState)
-// }
-
-export const runAsyncFunction = async (fn: () => Promise<void>) => {
-  await fn()
-}
-
 export function makeSureDirExists(dir: string) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true })

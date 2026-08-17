@@ -1,6 +1,5 @@
 import { DEFAULT_CONTEXTCOUNT, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from '@renderer/config/constant'
 import type { Assistant, AssistantSettings, Topic } from '@renderer/types'
-import { v4 as uuid } from 'uuid'
 
 /**
  * Default assistant settings configuration template.
@@ -53,7 +52,7 @@ export function getDefaultAssistant(): Assistant {
 
 export function getDefaultTopic(assistantId: string): Topic {
   return {
-    id: uuid(),
+    id: crypto.randomUUID(),
     assistantId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

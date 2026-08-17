@@ -1,5 +1,3 @@
-import axios from 'axios'
-import * as htmlparser2 from 'htmlparser2'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function useMetaDataParser<T extends string>(
@@ -31,28 +29,23 @@ export function useMetaDataParser<T extends string>(
     setError(null)
 
     try {
-      const response = await axios.get(link, { timeout, signal: controller.signal })
-
-      const htmlContent = response.data
+      const response = await fetch(link, {
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(timeout)])
+      })
+      const htmlContent = await response.text()
       const parsedMetadata = {} as Record<T, string>
 
-      const parser = new htmlparser2.Parser({
-        onopentag(tagName, attributes) {
-          if (tagName === 'meta') {
-            const { name: metaName, property: metaProperty, content } = attributes
-            const metaKey = metaName || metaProperty
-            if (!metaKey || !properties.includes(metaKey as T)) return
-            parsedMetadata[metaKey as T] = content
-          }
-        }
+      const doc = new DOMParser().parseFromString(htmlContent, 'text/html')
+      doc.querySelectorAll('meta').forEach((meta) => {
+        const metaKey = meta.getAttribute('name') || meta.getAttribute('property')
+        if (!metaKey || !properties.includes(metaKey as T)) return
+        parsedMetadata[metaKey as T] = meta.getAttribute('content') || ''
       })
-
-      parser.parseComplete(htmlContent)
 
       setMetadata(parsedMetadata)
     } catch (err) {
       // Don't set error if request was aborted
-      if (axios.isCancel(err) || (err instanceof Error && err.name === 'AbortError')) {
+      if (err instanceof Error && err.name === 'AbortError') {
         return
       }
       setError(err instanceof Error ? err : new Error('Failed to fetch HTML'))

@@ -1,12 +1,13 @@
-import { ActionIconButton } from '@renderer/components/Buttons'
 import { QuickPanelReservedSymbol, useQuickPanel } from '@renderer/components/QuickPanel'
 import type { ToolQuickPanelApi } from '@renderer/pages/home/Inputbar/types'
 import type { FileMetadata } from '@renderer/types'
 import { filterSupportedFiles } from '@renderer/utils/file'
-import { Tooltip } from 'antd'
 import { Paperclip, Upload } from 'lucide-react'
 import type { Dispatch, FC, SetStateAction } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import ToolActionIconButton from './ToolActionIconButton'
+
 interface Props {
   quickPanel: ToolQuickPanelApi
   couldAddImageFile: boolean
@@ -96,15 +97,13 @@ const AttachmentButton: FC<Props> = ({ quickPanel, couldAddImageFile, extensions
   const ariaLabel = couldAddImageFile ? '上传图片或文档' : '上传文档（模型不支持图片）'
 
   return (
-    <Tooltip placement="top" title={ariaLabel} mouseLeaveDelay={0} arrow>
-      <ActionIconButton
-        onClick={openFileSelectDialog}
-        active={files.length > 0}
-        disabled={disabled}
-        aria-label={ariaLabel}>
-        <Paperclip size={18} />
-      </ActionIconButton>
-    </Tooltip>
+    <ToolActionIconButton
+      tooltip={ariaLabel}
+      onClick={openFileSelectDialog}
+      active={files.length > 0}
+      disabled={disabled}>
+      <Paperclip size={18} />
+    </ToolActionIconButton>
   )
 }
 

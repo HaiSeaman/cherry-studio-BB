@@ -1,6 +1,23 @@
-import Emittery from 'emittery'
+class Emitter {
+  private listeners = new Map<string, Set<(data?: any) => void>>()
 
-export const EventEmitter = new Emittery()
+  on(name: string, listener: (data?: any) => void): () => void {
+    const set = this.listeners.get(name) ?? new Set()
+    set.add(listener)
+    this.listeners.set(name, set)
+    return () => this.off(name, listener)
+  }
+
+  off(name: string, listener: (data?: any) => void): void {
+    this.listeners.get(name)?.delete(listener)
+  }
+
+  emit(name: string, data?: unknown): void {
+    this.listeners.get(name)?.forEach((listener) => listener(data))
+  }
+}
+
+export const EventEmitter = new Emitter()
 
 export const EVENT_NAMES = {
   PLUGINS_UPDATED: 'PLUGINS_UPDATED',
