@@ -2,8 +2,6 @@ import { type AzureOpenAIProvider, type Provider, SystemProviderIds } from '@ren
 import { describe, expect, it, vi } from 'vitest'
 
 import {
-  getAnthropicSupportedProviders,
-  getClaudeSupportedProviders,
   isAIGatewayProvider,
   isAnthropicProvider,
   isAnthropicSupportedProvider,
@@ -15,9 +13,6 @@ import {
   isOpenAICompatibleProvider,
   isOpenAIProvider,
   isPerplexityProvider,
-  isSupportAPIVersionProvider,
-  isSupportArrayContentProvider,
-  isSupportDeveloperRoleProvider,
   isSupportEnableThinkingProvider,
   isSupportServiceTierProvider,
   isSupportStreamOptionsProvider,
@@ -58,28 +53,6 @@ const createSystemProvider = (overrides: Partial<Provider> = {}): Provider =>
   })
 
 describe('provider utils', () => {
-  it('filters Claude supported providers', () => {
-    const providers = [
-      createProvider({ id: 'anthropic-official', type: 'anthropic' }),
-      createProvider({ id: 'custom-host', anthropicApiHost: 'https://anthropic.local' }),
-      createProvider({ id: 'aihubmix' }),
-      createProvider({ id: 'other' })
-    ]
-
-    expect(getClaudeSupportedProviders(providers)).toEqual(providers.slice(0, 3))
-  })
-
-  it('filters Anthropic supported providers', () => {
-    const providers = [
-      createProvider({ id: 'anthropic-official', type: 'anthropic' }),
-      createProvider({ id: 'custom-host', anthropicApiHost: 'https://anthropic.local' }),
-      createProvider({ id: 'aihubmix' }),
-      createProvider({ id: 'other' })
-    ]
-
-    expect(getAnthropicSupportedProviders(providers)).toEqual(providers.slice(0, 2))
-  })
-
   it('checks Anthropic supported provider', () => {
     expect(isAnthropicSupportedProvider(createProvider({ id: 'anthropic-official', type: 'anthropic' }))).toBe(true)
     expect(
@@ -87,22 +60,6 @@ describe('provider utils', () => {
     ).toBe(true)
     expect(isAnthropicSupportedProvider(createProvider({ id: 'aihubmix' }))).toBe(false)
     expect(isAnthropicSupportedProvider(createProvider({ id: 'other' }))).toBe(false)
-  })
-
-  it('evaluates message array content support', () => {
-    expect(isSupportArrayContentProvider(createProvider())).toBe(true)
-
-    expect(isSupportArrayContentProvider(createProvider({ apiOptions: { isNotSupportArrayContent: true } }))).toBe(
-      false
-    )
-
-    expect(isSupportArrayContentProvider(createSystemProvider({ id: SystemProviderIds.deepseek }))).toBe(false)
-  })
-
-  it('evaluates developer role support', () => {
-    expect(isSupportDeveloperRoleProvider(createProvider({ apiOptions: { isSupportDeveloperRole: true } }))).toBe(true)
-    expect(isSupportDeveloperRoleProvider(createSystemProvider())).toBe(true)
-    expect(isSupportDeveloperRoleProvider(createSystemProvider({ id: SystemProviderIds.poe }))).toBe(false)
   })
 
   it('checks stream options support', () => {
@@ -203,12 +160,5 @@ describe('provider utils', () => {
     expect(isAnthropicProvider(createProvider({ type: 'anthropic' }))).toBe(true)
     expect(isGeminiProvider(createProvider({ type: 'gemini' }))).toBe(true)
     expect(isAIGatewayProvider(createProvider({ type: 'gateway' }))).toBe(true)
-  })
-
-  it('computes API version support', () => {
-    expect(isSupportAPIVersionProvider(createSystemProvider())).toBe(true)
-    expect(isSupportAPIVersionProvider(createSystemProvider({ id: SystemProviderIds.github }))).toBe(false)
-    expect(isSupportAPIVersionProvider(createProvider())).toBe(true)
-    expect(isSupportAPIVersionProvider(createProvider({ apiOptions: { isNotSupportAPIVersion: false } }))).toBe(false)
   })
 })

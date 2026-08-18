@@ -13,7 +13,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import BeatLoader from 'react-spinners/BeatLoader'
 import styled from 'styled-components'
 
-// Tab 模式下新的页面壳，不再直接创建 WebView，而是依赖全局 MinAppTabsPool
 import MinimalToolbar from './components/MinimalToolbar'
 import WebviewSearch from './components/WebviewSearch'
 

@@ -30,9 +30,7 @@ files:
       - "!**/{tsconfig.json,tsconfig.tsbuildinfo,tsconfig.node.json,tsconfig.web.json}"
       - "!**/{.editorconfig,.jekyll-metadata}"
       - "!src"
-      - "!config"
       - "!patches"
-      - "!app-upgrade-config.json"
       # dist 是 electron-builder 自身的产物目录，必须排除，
       # 否则二次打包会把上次的 EXE 卷进 app.asar（体积滚雪球）
       - "!dist"
@@ -48,7 +46,6 @@ files:
       - "!._*"
       - "!*.log"
       - "!stats.html"
-      - "!*.md"
       - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
       - "!**/*.{map,ts,tsx,jsx,less,scss,sass,css.d.ts,d.cts,d.mts,md,markdown,yaml,yml}"
       - "!**/{test,tests,__tests__,powered-test,coverage}/**"
@@ -116,42 +113,8 @@ nsis:
 portable:
   artifactName: ${productName}-${version}-${arch}-portable.${ext}
   buildUniversalInstaller: false
-mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  notarize: false
-  artifactName: ${productName}-${version}-${arch}.${ext}
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  target:
-    - target: dmg
-    - target: zip
-dmg:
-  writeUpdateInfo: false
-linux:
-  artifactName: ${productName}-${version}-${arch}.${ext}
-  executableName: CherryStudio
-  target:
-    - target: AppImage
-    - target: deb
-    - target: rpm
-  maintainer: electronjs.org
-  category: Utility
-  desktop:
-    entry:
-      Name: Cherry Studio
-      StartupWMClass: CherryStudio
-  mimeTypes:
-    - x-scheme-handler/cherrystudio
-rpm:
-  # Workaround for electron build issue on rpm package:
-  # https://github.com/electron/forge/issues/3594
-  fpm: ["--rpm-rpmbuild-define=_build_id_links none"]
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 beforePack: scripts/before-pack.js
 afterPack: scripts/after-pack.js
-afterSign: scripts/notarize.js
 artifactBuildCompleted: scripts/artifact-build-completed.js

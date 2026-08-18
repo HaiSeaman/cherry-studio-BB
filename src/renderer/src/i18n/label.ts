@@ -125,22 +125,6 @@ export const getRestoreProgressLabel = (key: string): string => {
   return getLabel(restoreProgressKeyMap, key)
 }
 
-const titleKeyMap = {
-  store: '助手库',
-  apps: '小程序',
-  home: '首页',
-  launchpad: '启动台',
-  'mcp-servers': 'MCP 服务器',
-  memories: '记忆',
-  settings: '设置',
-  music: '音乐',
-  notes: '闹钟便签'
-} as const
-
-export const getTitleLabel = (key: string): string => {
-  return getLabel(titleKeyMap, key)
-}
-
 const sidebarIconKeyMap = {
   assistants: '助手',
   store: '助手库',

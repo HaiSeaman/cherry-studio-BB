@@ -19,18 +19,11 @@ const RTK_VERSION_FILE = '.rtk-version'
 const RTK_MIN_VERSION = '0.23.0'
 const REWRITE_TIMEOUT_MS = 3000
 
-// rtk is not available for these platforms
-const UNSUPPORTED_PLATFORMS = new Set(['win32-arm64'])
-
 let rtkPath: string | null = null
 let rtkAvailable: boolean | null = null
 
 function getPlatformKey(): string {
   return `${process.platform}-${process.arch}`
-}
-
-function isPlatformSupported(): boolean {
-  return !UNSUPPORTED_PLATFORMS.has(getPlatformKey())
 }
 
 function getBundledBinariesDir(): string {
@@ -47,11 +40,6 @@ function getUserBinDir(): string {
  * Called once at app startup.
  */
 export async function extractRtkBinaries(): Promise<void> {
-  if (!isPlatformSupported()) {
-    logger.debug('rtk not supported on this platform', { platform: getPlatformKey() })
-    return
-  }
-
   const bundledDir = getBundledBinariesDir()
   if (!fs.existsSync(bundledDir)) {
     logger.debug('No bundled rtk binaries found for this platform', { dir: bundledDir })
@@ -106,11 +94,6 @@ function resolveRtkPath(): string | null {
 
 async function checkRtkAvailable(): Promise<boolean> {
   if (rtkAvailable !== null) return rtkAvailable
-
-  if (!isPlatformSupported()) {
-    rtkAvailable = false
-    return false
-  }
 
   rtkPath = resolveRtkPath()
   if (!rtkPath) {

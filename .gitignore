@@ -97,7 +97,7 @@ tests/e2e/.artifacts/
 .vim/
 
 # ---------- 本地 AI / 智能体工具缓存与配置 ----------
-.reasonix/
+.reasonix
 .aider*
 .cursor/
 .cursorrules
@@ -122,6 +122,8 @@ tests/e2e/.artifacts/
 CLAUDE.local.md
 AGENTS.override.md
 subagent/
+.workbuddy
+
 
 # ---------- 本地数据与运行时目录 ----------
 local/

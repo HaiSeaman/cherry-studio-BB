@@ -1,70 +1,51 @@
+import * as crypto from 'crypto'
+
 import { describe, expect, it } from 'vitest'
 
-import { decrypt, encrypt } from '../aes'
+import { decrypt } from '../aes'
 
-const key = '12345678901234567890123456789012' // 32字节
-const iv = '1234567890abcdef1234567890abcdef' // 32字节hex，实际应16字节hex
+const key = '12345678901234567890123456789012' // 32 字节
+const iv = '1234567890abcdef1234567890abcdef' // 32 字节 hex（16 字节）
+const getIv16 = () => iv.slice(0, 32)
 
-function getIv16() {
-  // 取前16字节作为 hex
-  return iv.slice(0, 32)
+// 用 node crypto 直接加密，验证 decrypt 是它的逆操作
+function encryptForTest(text: string): string {
+  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), Buffer.from(getIv16(), 'hex'))
+  return cipher.update(text, 'utf8', 'hex') + cipher.final('hex')
 }
 
-describe('aes utils', () => {
-  it('should encrypt and decrypt normal string', () => {
-    const text = 'hello world'
-    const { iv: outIv, encryptedData } = encrypt(text, key, getIv16())
-    expect(typeof encryptedData).toBe('string')
-    expect(outIv).toBe(getIv16())
-    const decrypted = decrypt(encryptedData, getIv16(), key)
-    expect(decrypted).toBe(text)
+describe('aes.decrypt', () => {
+  it('decrypts a normal string', () => {
+    expect(decrypt(encryptForTest('hello world'), getIv16(), key)).toBe('hello world')
   })
 
-  it('should support unicode and special chars', () => {
+  it('supports unicode and special chars', () => {
     const text = '你好，世界！🌟🚀'
-    const { encryptedData } = encrypt(text, key, getIv16())
-    const decrypted = decrypt(encryptedData, getIv16(), key)
-    expect(decrypted).toBe(text)
+    expect(decrypt(encryptForTest(text), getIv16(), key)).toBe(text)
   })
 
-  it('should handle empty string', () => {
-    const text = ''
-    const { encryptedData } = encrypt(text, key, getIv16())
-    const decrypted = decrypt(encryptedData, getIv16(), key)
-    expect(decrypted).toBe(text)
+  it('handles empty string', () => {
+    expect(decrypt(encryptForTest(''), getIv16(), key)).toBe('')
   })
 
-  it('should encrypt and decrypt long string', () => {
+  it('handles long string', () => {
     const text = 'a'.repeat(100_000)
-    const { encryptedData } = encrypt(text, key, getIv16())
-    const decrypted = decrypt(encryptedData, getIv16(), key)
-    expect(decrypted).toBe(text)
+    expect(decrypt(encryptForTest(text), getIv16(), key)).toBe(text)
   })
 
-  it('should throw error for wrong key', () => {
-    const text = 'test'
-    const { encryptedData } = encrypt(text, key, getIv16())
-    expect(() => decrypt(encryptedData, getIv16(), 'wrongkeywrongkeywrongkeywrongkey')).toThrow()
+  it('throws for wrong key', () => {
+    expect(() => decrypt(encryptForTest('test'), getIv16(), 'wrongkeywrongkeywrongkeywrongkey')).toThrow()
   })
 
-  it('should throw error for wrong iv', () => {
-    const text = 'test'
-    const { encryptedData } = encrypt(text, key, getIv16())
-    expect(() => decrypt(encryptedData, 'abcdefabcdefabcdefabcdefabcdefab', key)).toThrow()
+  it('throws for wrong iv', () => {
+    expect(() => decrypt(encryptForTest('test'), 'abcdefabcdefabcdefabcdefabcdefab', key)).toThrow()
   })
 
-  it('should throw error for invalid key/iv length', () => {
-    expect(() => encrypt('test', 'shortkey', getIv16())).toThrow()
-    expect(() => encrypt('test', key, 'shortiv')).toThrow()
-  })
-
-  it('should throw error for invalid encrypted data', () => {
+  it('throws for invalid encrypted data', () => {
     expect(() => decrypt('nothexdata', getIv16(), key)).toThrow()
   })
 
-  it('should throw error for non-string input', () => {
-    // @ts-expect-error purposely pass wrong type to test error branch
-    expect(() => encrypt(null, key, getIv16())).toThrow()
+  it('throws for non-string input', () => {
     // @ts-expect-error purposely pass wrong type to test error branch
     expect(() => decrypt(null, getIv16(), key)).toThrow()
   })

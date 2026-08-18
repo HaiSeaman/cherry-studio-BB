@@ -27,14 +27,7 @@ function isAllowedUrl(url: string): boolean {
 }
 
 export class SearchService {
-  private static instance: SearchService | null = null
   private searchWindows: Record<string, BrowserWindow> = {}
-  public static getInstance(): SearchService {
-    if (!SearchService.instance) {
-      SearchService.instance = new SearchService()
-    }
-    return SearchService.instance
-  }
 
   private async createNewSearchWindow(uid: string, show: boolean = false): Promise<BrowserWindow> {
     // Bound the number of live windows; evict the oldest hidden one when over the cap.
@@ -129,4 +122,4 @@ export class SearchService {
   }
 }
 
-export const searchService = SearchService.getInstance()
+export const searchService = new SearchService()

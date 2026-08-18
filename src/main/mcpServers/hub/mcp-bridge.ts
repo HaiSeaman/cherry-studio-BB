@@ -35,10 +35,6 @@ export function syncToolMapFromHubTools(tools: { id: string; serverName: string;
   toolNameMapping = buildToolNameMapping(identities)
 }
 
-export function clearToolMap(): void {
-  toolNameMapping = null
-}
-
 /**
  * Resolve a hub tool JS name (or namespaced id) to its original serverId and toolName.
  * Returns null if the name cannot be resolved.
@@ -56,27 +52,6 @@ export function resolveHubToolName(nameOrId: string): { serverId: string; toolNa
     serverId: toolId.substring(0, separatorIndex),
     toolName: toolId.substring(separatorIndex + 2)
   }
-}
-
-/**
- * Async version of resolveHubToolName that lazily refreshes the tool mapping
- * if it has been cleared (e.g., after cache invalidation).
- */
-export async function resolveHubToolNameAsync(
-  nameOrId: string
-): Promise<{ serverId: string; toolName: string } | null> {
-  if (!toolNameMapping) {
-    await refreshToolMap()
-  }
-
-  const result = resolveHubToolName(nameOrId)
-  if (!result && toolNameMapping) {
-    // Mapping exists but tool not found — refresh once and retry
-    await refreshToolMap()
-    return resolveHubToolName(nameOrId)
-  }
-
-  return result
 }
 
 /**

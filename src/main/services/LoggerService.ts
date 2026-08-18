@@ -295,13 +295,6 @@ class LoggerService {
   }
 
   /**
-   * Log verbose message
-   */
-  public verbose(message: string, ...data: LogContextData): void {
-    this.processMainLog(LEVEL.VERBOSE, message, data)
-  }
-
-  /**
    * Log debug message
    */
   public debug(message: string, ...data: LogContextData): void {
@@ -334,37 +327,6 @@ class LoggerService {
    */
   private processRendererLog = (source: LogSourceWithContext, level: LogLevel, message: string, data: any[]): void => {
     this.processLog(source, level, message, data)
-  }
-
-  /**
-   * Set the minimum log level
-   * @param level - The log level to set
-   */
-  public setLevel(level: LogLevel): void {
-    this.logger.level = level
-  }
-
-  /**
-   * Get the current log level
-   * @returns The current log level
-   */
-  public getLevel(): LogLevel {
-    return this.logger.level as LogLevel
-  }
-
-  /**
-   * Reset log level to environment default
-   */
-  public resetLevel(): void {
-    this.setLevel(DEFAULT_LEVEL)
-  }
-
-  /**
-   * Get the underlying Winston logger instance
-   * @returns The Winston logger instance
-   */
-  public getBaseLogger(): winston.Logger {
-    return this.logger
   }
 
   /**

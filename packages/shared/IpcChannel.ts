@@ -57,15 +57,11 @@ export enum IpcChannel {
   Open_Path = 'open:path',
   Open_Website = 'open:website',
 
-  Minapp = 'minapp',
-
   Config_Set = 'config:set',
   Config_Get = 'config:get',
 
-  MiniWindow_Show = 'miniwindow:show',
   MiniWindow_Hide = 'miniwindow:hide',
   MiniWindow_Close = 'miniwindow:close',
-  MiniWindow_Toggle = 'miniwindow:toggle',
   MiniWindow_SetPin = 'miniwindow:set-pin',
   MiniWindow_ConsumeScreenshot = 'miniwindow:consume-screenshot',
   MiniWindow_ReadClipboardImage = 'miniwindow:read-clipboard-image',
@@ -83,7 +79,6 @@ export enum IpcChannel {
   Mcp_GetResource = 'mcp:get-resource',
   Mcp_GetInstallInfo = 'mcp:get-install-info',
   Mcp_ServersChanged = 'mcp:servers-changed',
-  Mcp_ServersUpdated = 'mcp:servers-updated',
   Mcp_CheckConnectivity = 'mcp:check-connectivity',
   Mcp_UploadDxt = 'mcp:upload-dxt',
   Mcp_AbortTool = 'mcp:abort-tool',
@@ -97,7 +92,6 @@ export enum IpcChannel {
   Obsidian_GetFiles = 'obsidian:get-files',
 
   //aes
-  Aes_Encrypt = 'aes:encrypt',
   Aes_Decrypt = 'aes:decrypt',
 
   Windows_ResetMinimumSize = 'window:reset-minimum-size',
@@ -139,12 +133,9 @@ export enum IpcChannel {
   File_Base64Image = 'file:base64Image',
   File_SaveBase64Image = 'file:saveBase64Image',
   File_SaveImageToDirectory = 'file:saveImageToDirectory',
-  File_SavePastedImage = 'file:savePastedImage',
   File_Download = 'file:download',
-  File_Copy = 'file:copy',
   File_BinaryImage = 'file:binaryImage',
   File_Base64File = 'file:base64File',
-  File_GetPdfInfo = 'file:getPdfInfo',
   Fs_Read = 'fs:read',
   Fs_ReadText = 'fs:readText',
   File_OpenWithRelativePath = 'file:openWithRelativePath',
@@ -154,7 +145,6 @@ export enum IpcChannel {
   File_CheckFileName = 'file:checkFileName',
   File_StartWatcher = 'file:startWatcher',
   File_StopWatcher = 'file:stopWatcher',
-  File_BatchUploadMarkdown = 'file:batchUploadMarkdown',
   File_ShowInFolder = 'file:showInFolder',
 
   // PDF
@@ -190,7 +180,6 @@ export enum IpcChannel {
   Backup_CheckS3Connection = 'backup:checkS3Connection',
 
   // zip
-  Zip_Compress = 'zip:compress',
   Zip_Decompress = 'zip:decompress',
 
   // system
@@ -204,8 +193,6 @@ export enum IpcChannel {
   BackupProgress = 'backup-progress',
   ThemeUpdated = 'theme:updated',
   RestoreProgress = 'restore-progress',
-
-  DirectoryProcessingPercent = 'directory-processing-percent',
 
   FullscreenStatusChanged = 'fullscreen-status-changed',
 
@@ -223,9 +210,6 @@ export enum IpcChannel {
   StoreSync_Unsubscribe = 'store-sync:unsubscribe',
   StoreSync_OnUpdate = 'store-sync:on-update',
   StoreSync_BroadcastSync = 'store-sync:broadcast-sync',
-
-  // Provider
-  Provider_AddKey = 'provider:add-key',
 
   //Selection Assistant
   Selection_TextSelected = 'selection:text-selected',
@@ -245,14 +229,6 @@ export enum IpcChannel {
   Selection_ProcessAction = 'selection:process-action',
   Selection_UpdateActionData = 'selection:update-action-data',
   Selection_GetLinuxEnvInfo = 'selection:get-linux-env-info',
-
-  // Anthropic OAuth
-  Anthropic_StartOAuthFlow = 'anthropic:start-oauth-flow',
-  Anthropic_CompleteOAuthWithCode = 'anthropic:complete-oauth-with-code',
-  Anthropic_CancelOAuthFlow = 'anthropic:cancel-oauth-flow',
-  Anthropic_GetAccessToken = 'anthropic:get-access-token',
-  Anthropic_HasCredentials = 'anthropic:has-credentials',
-  Anthropic_ClearCredentials = 'anthropic:clear-credentials',
 
   // ExternalApps
   ExternalApps_DetectInstalled = 'external-apps:detect-installed',

@@ -1,9 +1,5 @@
-import { pad2 } from './schedule'
-
-/** 本地时区 ISO 日期 YYYY-MM-DD */
-export function toISODate(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
+import { dateKeyOf as toISODate } from './schedule'
+export { toISODate }
 
 /** 热力图 5 档：0→0，1→1，≤3→2，≤6→3，>6→4 */
 export function hmLevel(score: number): 0 | 1 | 2 | 3 | 4 {

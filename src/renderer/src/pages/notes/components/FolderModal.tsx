@@ -2,6 +2,7 @@ import { Archive, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { type FC, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
+import { formatDateTime } from '../services/schedule'
 import { mx, MXDialog } from './mx'
 
 export interface FolderItem {
@@ -57,10 +58,7 @@ const FolderModal: FC<FolderModalProps> = ({
     [items, searchQuery]
   )
 
-  const fmtTime = (t: number) => {
-    const d = new Date(t)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  }
+  const fmtTime = (t: number) => formatDateTime(t)
 
   return (
     <MXDialog open={open} title={title} okText="关闭" cancelText="关闭" okDisabled onCancel={onClose} onOk={onClose}>

@@ -50,12 +50,12 @@ import storeSyncService from './services/StoreSyncService'
 import { themeService } from './services/ThemeService'
 import { setOpenLinkExternal } from './services/WebviewService'
 import { windowService } from './services/WindowService'
-import { calculateDirectorySize, getResourcePath } from './utils'
-import { decrypt, encrypt } from './utils/aes'
+import { calculateDirectorySize, getNewDataPathFromArgs, getResourcePath } from './utils'
+import { decrypt } from './utils/aes'
 import { getCacheDir, getConfigDir, getFilesDir, hasWritePermission, isPathInside, untildify } from './utils/file'
 import { updateAppDataConfig } from './utils/init'
 import { getDeviceType, getHostname } from './utils/system'
-import { compress, decompress } from './utils/zip'
+import { decompress } from './utils/zip'
 
 const logger = loggerService.withContext('IPC')
 
@@ -91,7 +91,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
     resourcesPath: getResourcePath(),
     logsPath: logger.getLogsDir(),
     arch: arch(),
-    isPortable: isWin && 'PORTABLE_EXECUTABLE_DIR' in process.env,
+    isPortable,
     installPath: path.dirname(app.getPath('exe'))
   }))
 
@@ -318,10 +318,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   ipcMain.handle(IpcChannel.App_GetDataPathFromArgs, () => {
-    return process.argv
-      .slice(1)
-      .find((arg) => arg.startsWith('--new-data-path='))
-      ?.split('--new-data-path=')[1]
+    return getNewDataPathFromArgs()
   })
 
   ipcMain.handle(IpcChannel.App_FlushAppData, async () => {
@@ -390,7 +387,6 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
     await notificationService.sendNotification(notification)
   })
   // zip
-  ipcMain.handle(IpcChannel.Zip_Compress, (_, text: string) => compress(text))
   ipcMain.handle(IpcChannel.Zip_Decompress, (_, text: Buffer) => decompress(text))
 
   // system
@@ -448,11 +444,8 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.File_Base64Image, fileManager.base64Image.bind(fileManager))
   ipcMain.handle(IpcChannel.File_SaveBase64Image, fileManager.saveBase64Image.bind(fileManager))
   ipcMain.handle(IpcChannel.File_SaveImageToDirectory, fileManager.saveImageToDirectory.bind(fileManager))
-  ipcMain.handle(IpcChannel.File_SavePastedImage, fileManager.savePastedImage.bind(fileManager))
   ipcMain.handle(IpcChannel.File_Base64File, fileManager.base64File.bind(fileManager))
-  ipcMain.handle(IpcChannel.File_GetPdfInfo, fileManager.pdfPageCount.bind(fileManager))
   ipcMain.handle(IpcChannel.File_Download, fileManager.downloadFile.bind(fileManager))
-  ipcMain.handle(IpcChannel.File_Copy, fileManager.copyFile.bind(fileManager))
   ipcMain.handle(IpcChannel.File_BinaryImage, fileManager.binaryImage.bind(fileManager))
   ipcMain.handle(IpcChannel.File_OpenWithRelativePath, fileManager.openFileWithRelativePath.bind(fileManager))
   ipcMain.handle(IpcChannel.File_IsTextFile, fileManager.isTextFile.bind(fileManager))
@@ -461,7 +454,6 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.File_CheckFileName, fileManager.fileNameGuard.bind(fileManager))
   ipcMain.handle(IpcChannel.File_StartWatcher, fileManager.startFileWatcher.bind(fileManager))
   ipcMain.handle(IpcChannel.File_StopWatcher, fileManager.stopFileWatcher.bind(fileManager))
-  ipcMain.handle(IpcChannel.File_BatchUploadMarkdown, fileManager.batchUploadMarkdownFiles.bind(fileManager))
   ipcMain.handle(IpcChannel.File_ShowInFolder, fileManager.showInFolder.bind(fileManager))
 
   // music tab（本地音乐：元数据解析/文件夹扫描/封面缩略图）
@@ -583,10 +575,8 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   // mini window
-  ipcMain.handle(IpcChannel.MiniWindow_Show, () => windowService.showMiniWindow())
   ipcMain.handle(IpcChannel.MiniWindow_Hide, () => windowService.hideMiniWindow())
   ipcMain.handle(IpcChannel.MiniWindow_Close, () => windowService.closeMiniWindow())
-  ipcMain.handle(IpcChannel.MiniWindow_Toggle, () => windowService.toggleMiniWindow())
   ipcMain.handle(IpcChannel.MiniWindow_SetPin, (_, isPinned) => windowService.setPinMiniWindow(isPinned))
   ipcMain.handle(IpcChannel.MiniWindow_ConsumeScreenshot, () => screenshotService.consumePendingScreenshot())
   ipcMain.handle(IpcChannel.MiniWindow_ReadClipboardImage, () => {
@@ -595,9 +585,6 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   // aes
-  ipcMain.handle(IpcChannel.Aes_Encrypt, (_, text: string, secretKey: string, iv: string) =>
-    encrypt(text, secretKey, iv)
-  )
   ipcMain.handle(IpcChannel.Aes_Decrypt, (_, encryptedData: string, iv: string, secretKey: string) =>
     decrypt(encryptedData, iv, secretKey)
   )

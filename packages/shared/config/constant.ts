@@ -4,13 +4,6 @@ export const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
 export const videoExts = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv']
 export const audioExts = ['.mp3', '.wav', '.ogg', '.flac', '.aac']
 export const documentExts = ['.pdf', '.doc', '.docx', '.pptx', '.xlsx', '.odt', '.odp', '.ods']
-export const thirdPartyApplicationExts = ['.draftsExport']
-export const bookExts = ['.epub']
-
-export const API_SERVER_DEFAULTS = {
-  HOST: '127.0.0.1',
-  PORT: 23333
-}
 
 /**
  * A flat array of all file extensions known by the linguist database.
@@ -159,14 +152,6 @@ export const customTextExts = new Map([
  * The Set ensures there are no duplicates.
  */
 export const textExts = [...new Set([...Array.from(customTextExts.values()).flat(), ...codeLangExts])]
-
-export const ZOOM_LEVELS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
-
-// 从 ZOOM_LEVELS 生成 Ant Design Select 所需的 options 结构
-export const ZOOM_OPTIONS = ZOOM_LEVELS.map((level) => ({
-  value: level,
-  label: `${Math.round(level * 100)}%`
-}))
 
 export const ZOOM_SHORTCUTS = [
   {
@@ -329,6 +314,44 @@ export const DEFAULT_SHORTCUTS = [
   }
 ]
 
+/**
+ * Deduplicate and complete a shortcut list so it always contains exactly one
+ * entry per default key:
+ *
+ * 1. keeps the FIRST occurrence of each key — legacy migrations pushed duplicate
+ *    entries with push() without checking whether the key already existed
+ *    (migrate 48/49/54/57/58/215), which left duplicated rows in persisted state;
+ * 2. heals `system`/`editable` metadata back to the current defaults — they are
+ *    NOT user-editable, and migrate 48 rewrote system=true for nearly everything;
+ * 3. appends missing defaults (e.g. newly added "screenshot").
+ *
+ * User-editable fields (`shortcut`, `enabled`) are always preserved, and the
+ * input list is never mutated.
+ */
+export const mergeDefaultShortcuts = <T extends { key: string; system: boolean; editable: boolean }>(
+  shortcuts: T[]
+): T[] => {
+  const byDefault = new Map(DEFAULT_SHORTCUTS.map((d) => [d.key, d]))
+  const merged: T[] = []
+  const seen = new Set<string>()
+  for (const s of shortcuts) {
+    if (seen.has(s.key)) continue
+    seen.add(s.key)
+    const def = byDefault.get(s.key)
+    if (def && (s.system !== def.system || s.editable !== def.editable)) {
+      merged.push({ ...s, system: def.system, editable: def.editable })
+    } else {
+      merged.push(s)
+    }
+  }
+  for (const def of DEFAULT_SHORTCUTS) {
+    if (!seen.has(def.key)) {
+      merged.push({ ...def } as unknown as T)
+    }
+  }
+  return merged
+}
+
 export const KB = 1024
 export const MB = 1024 * KB
 export const GB = 1024 * MB
@@ -345,13 +368,5 @@ export const defaultByPassRules = 'localhost,127.0.0.1,::1'
 
 // resources/scripts should be maintained manually
 export const HOME_CHERRY_DIR = '.cherrystudio'
-
-// CherryIN OAuth configuration
-export const CHERRYIN_CONFIG = {
-  CLIENT_ID: '2a348c87-bae1-4756-a62f-b2e97200fd6d',
-  ALLOWED_HOSTS: ['https://open.cherryin.net', 'https://open.cherryin.dev'],
-  REDIRECT_URI: 'cherrystudio://oauth/callback',
-  SCOPES: 'openid profile email offline_access balance:read usage:read tokens:read tokens:write'
-}
 
 export const APP_NAME = 'Cherry Studio'

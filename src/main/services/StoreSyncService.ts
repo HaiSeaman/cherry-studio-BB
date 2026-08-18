@@ -29,23 +29,8 @@ import { BrowserWindow, ipcMain } from 'electron'
  * 4. Adds metadata to synced actions to prevent infinite sync loops
  */
 export class StoreSyncService {
-  private static instance: StoreSyncService
   private windowIds: number[] = []
   private isIpcHandlerRegistered = false
-
-  private constructor() {
-    return
-  }
-
-  /**
-   * Get the singleton instance of StoreSyncService
-   */
-  public static getInstance(): StoreSyncService {
-    if (!StoreSyncService.instance) {
-      StoreSyncService.instance = new StoreSyncService()
-    }
-    return StoreSyncService.instance
-  }
 
   /**
    * Subscribe a window to store sync
@@ -146,4 +131,4 @@ export class StoreSyncService {
 }
 
 // Export singleton instance
-export default StoreSyncService.getInstance()
+export default new StoreSyncService()

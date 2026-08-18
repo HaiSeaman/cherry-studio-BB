@@ -1,61 +1,36 @@
+import zlib from 'node:zlib'
+
 import { describe, expect, it } from 'vitest'
 
-import { compress, decompress } from '../zip'
+import { decompress } from '../zip'
 
-const jsonStr = JSON.stringify({ foo: 'bar', num: 42, arr: [1, 2, 3] })
+const gzip = (str: string) => zlib.gzipSync(Buffer.from(str, 'utf-8'))
 
-// 辅助函数：生成大字符串
-function makeLargeString(size: number) {
-  return 'a'.repeat(size)
-}
+describe('zip.decompress', () => {
+  it('decompresses a gzipped JSON string', async () => {
+    const jsonStr = JSON.stringify({ foo: 'bar', num: 42, arr: [1, 2, 3] })
+    expect(await decompress(gzip(jsonStr))).toBe(jsonStr)
+  })
 
-describe('zip', () => {
-  describe('compress & decompress', () => {
-    it('should compress and decompress a normal JSON string', async () => {
-      const compressed = await compress(jsonStr)
-      expect(compressed).toBeInstanceOf(Buffer)
+  it('handles empty string', async () => {
+    expect(await decompress(gzip(''))).toBe('')
+  })
 
-      const decompressed = await decompress(compressed)
-      expect(decompressed).toBe(jsonStr)
-    })
+  it('handles large string', async () => {
+    const largeStr = 'a'.repeat(100_000)
+    expect(await decompress(gzip(largeStr))).toBe(largeStr)
+  })
 
-    it('should handle empty string', async () => {
-      const compressed = await compress('')
-      expect(compressed).toBeInstanceOf(Buffer)
-      const decompressed = await decompress(compressed)
-      expect(decompressed).toBe('')
-    })
+  it('throws when decompressing invalid buffer', async () => {
+    await expect(decompress(Buffer.from('not a valid gzip', 'utf-8'))).rejects.toThrow()
+  })
 
-    it('should handle large string', async () => {
-      const largeStr = makeLargeString(100_000)
-      const compressed = await compress(largeStr)
-      expect(compressed).toBeInstanceOf(Buffer)
-      expect(compressed.length).toBeLessThan(largeStr.length)
-      const decompressed = await decompress(compressed)
-      expect(decompressed).toBe(largeStr)
-    })
-
-    it('should throw error when decompressing invalid buffer', async () => {
-      const invalidBuffer = Buffer.from('not a valid gzip', 'utf-8')
-      await expect(decompress(invalidBuffer)).rejects.toThrow()
-    })
-
-    it('should throw error when compress input is not string', async () => {
-      // @ts-expect-error purposely pass wrong type to test error branch
-      await expect(compress(null)).rejects.toThrow()
-      // @ts-expect-error purposely pass wrong type to test error branch
-      await expect(compress(undefined)).rejects.toThrow()
-      // @ts-expect-error purposely pass wrong type to test error branch
-      await expect(compress(123)).rejects.toThrow()
-    })
-
-    it('should throw error when decompress input is not buffer', async () => {
-      // @ts-expect-error purposely pass wrong type to test error branch
-      await expect(decompress(null)).rejects.toThrow()
-      // @ts-expect-error purposely pass wrong type to test error branch
-      await expect(decompress(undefined)).rejects.toThrow()
-      // @ts-expect-error purposely pass wrong type to test error branch
-      await expect(decompress('string')).rejects.toThrow()
-    })
+  it('throws when input is not a buffer', async () => {
+    // @ts-expect-error purposely pass wrong type to test error branch
+    await expect(decompress(null)).rejects.toThrow()
+    // @ts-expect-error purposely pass wrong type to test error branch
+    await expect(decompress(undefined)).rejects.toThrow()
+    // @ts-expect-error purposely pass wrong type to test error branch
+    await expect(decompress('string')).rejects.toThrow()
   })
 })

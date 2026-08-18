@@ -7,22 +7,8 @@
 
 import { extensionRegistry } from '../../providers'
 import type { ToolCapability } from '../../providers/types/toolFactory'
+import { deepMergeObjects } from '../../utils'
 import { definePlugin } from '../'
-
-const isPlainObject = (value: unknown): value is Record<string, any> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-function deepMergeObjects(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = { ...target }
-  for (const [key, value] of Object.entries(source)) {
-    if (isPlainObject(value) && isPlainObject(result[key])) {
-      result[key] = deepMergeObjects(result[key], value)
-    } else {
-      result[key] = value
-    }
-  }
-  return result
-}
 
 function mergeProviderOptions(target?: Record<string, any>, source?: Record<string, any>): Record<string, any> {
   if (!target) return source ? { ...source } : {}

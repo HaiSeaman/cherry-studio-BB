@@ -29,7 +29,6 @@ const logger = loggerService.withContext('WindowService')
 const linuxIcon = isLinux ? nativeImage.createFromPath(iconPath) : undefined
 
 export class WindowService {
-  private static instance: WindowService | null = null
   private mainWindow: BrowserWindow | null = null
   private miniWindow: BrowserWindow | null = null
   private isPinnedMiniWindow: boolean = false
@@ -37,13 +36,6 @@ export class WindowService {
   //to restore the focus status when miniWindow hides
   private wasMainWindowFocused: boolean = false
   private lastRendererProcessCrashTime: number = 0
-
-  public static getInstance(): WindowService {
-    if (!WindowService.instance) {
-      WindowService.instance = new WindowService()
-    }
-    return WindowService.instance
-  }
 
   public createMainWindow(): BrowserWindow {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -237,28 +229,6 @@ export class WindowService {
         mainWindow.webContents.setZoomFactor(configManager.getZoomFactor())
       })
     }
-
-    // 添加Escape键退出全屏的支持
-    // mainWindow.webContents.on('before-input-event', (event, input) => {
-    //   // 当按下Escape键且窗口处于全屏状态时退出全屏
-    //   if (input.key === 'Escape' && !input.alt && !input.control && !input.meta && !input.shift) {
-    //     if (mainWindow.isFullScreen()) {
-    //       // 获取 shortcuts 配置
-    //       const shortcuts = configManager.getShortcuts()
-    //       const exitFullscreenShortcut = shortcuts.find((s) => s.key === 'exit_fullscreen')
-    //       if (exitFullscreenShortcut == undefined) {
-    //         mainWindow.setFullScreen(false)
-    //         return
-    //       }
-    //       if (exitFullscreenShortcut?.enabled) {
-    //         event.preventDefault()
-    //         mainWindow.setFullScreen(false)
-    //         return
-    //       }
-    //     }
-    //   }
-    //   return
-    // })
   }
 
   private setupWebContentsHandlers(mainWindow: BrowserWindow) {
@@ -330,24 +300,11 @@ export class WindowService {
 
       return { action: 'deny' }
     })
-
-    this.setupWebRequestHeaders(mainWindow)
-  }
-
-  private setupWebRequestHeaders(mainWindow: BrowserWindow) {
-    // NOTE: Previously this handler stripped Content-Security-Policy and
-    // X-Frame-Options from every response, which disabled the webview pages'
-    // own security headers (their XSS/clickjacking protection). We now leave
-    // response headers untouched; the main window itself is a local app page.
-    mainWindow.webContents.session.webRequest.onHeadersReceived({ urls: ['*://*/*'] }, (details, callback) => {
-      callback({ cancel: false, responseHeaders: details.responseHeaders })
-    })
   }
 
   private loadMainWindowContent(mainWindow: BrowserWindow) {
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       void mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-      // mainWindow.webContents.openDevTools()
     } else {
       void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
     }
@@ -726,4 +683,4 @@ export class WindowService {
   }
 }
 
-export const windowService = WindowService.getInstance()
+export const windowService = new WindowService()

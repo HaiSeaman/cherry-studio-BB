@@ -5,6 +5,7 @@ import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'reac
 import styled from 'styled-components'
 
 import type { HubNote } from '../types'
+import { formatDateTime } from '../services/schedule'
 import FolderModal from './FolderModal'
 import {
   CountChip,
@@ -110,10 +111,7 @@ const NotesPanel: FC = () => {
   }
 
   const previewText = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, 80) || '（空便签）'
-  const fmtTime = (t: number) => {
-    const d = new Date(t)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  }
+  const fmtTime = (t: number) => formatDateTime(t)
 
   // 编辑器内容变化（防抖已落盘）→ 记住最新内容供切换时兜底
   const latestContentRef = useRef<{ id: number; content: string } | null>(null)

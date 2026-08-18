@@ -93,7 +93,6 @@ const api = {
     toggle: () => ipcRenderer.invoke(IpcChannel.System_ToggleDevTools)
   },
   zip: {
-    compress: (text: string) => ipcRenderer.invoke(IpcChannel.Zip_Compress, text),
     decompress: (text: Buffer) => ipcRenderer.invoke(IpcChannel.Zip_Decompress, text)
   },
   backup: {
@@ -165,13 +164,9 @@ const api = {
     saveBase64Image: (data: string) => ipcRenderer.invoke(IpcChannel.File_SaveBase64Image, data),
     saveImageToDirectory: (data: string, dirPath: string) =>
       ipcRenderer.invoke(IpcChannel.File_SaveImageToDirectory, data, dirPath),
-    savePastedImage: (imageData: Uint8Array, extension?: string) =>
-      ipcRenderer.invoke(IpcChannel.File_SavePastedImage, imageData, extension),
     download: (url: string, isUseContentType?: boolean) =>
       ipcRenderer.invoke(IpcChannel.File_Download, url, isUseContentType),
-    copy: (fileId: string, destPath: string) => ipcRenderer.invoke(IpcChannel.File_Copy, fileId, destPath),
     base64File: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_Base64File, fileId),
-    pdfInfo: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_GetPdfInfo, fileId),
     getPathForFile: (file: File) => webUtils.getPathForFile(file),
     openFileWithRelativePath: (file: FileMetadata) => ipcRenderer.invoke(IpcChannel.File_OpenWithRelativePath, file),
     isTextFile: (filePath: string): Promise<boolean> => ipcRenderer.invoke(IpcChannel.File_IsTextFile, filePath),
@@ -183,8 +178,6 @@ const api = {
     startFileWatcher: (dirPath: string, config?: any) =>
       ipcRenderer.invoke(IpcChannel.File_StartWatcher, dirPath, config),
     stopFileWatcher: () => ipcRenderer.invoke(IpcChannel.File_StopWatcher),
-    batchUploadMarkdown: (filePaths: string[], targetPath: string) =>
-      ipcRenderer.invoke(IpcChannel.File_BatchUploadMarkdown, filePaths, targetPath),
     onFileChange: (callback: (data: FileChangeEvent) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, data: any) => {
         if (data && typeof data === 'object') {
@@ -237,27 +230,19 @@ const api = {
     retrieve: (provider: Provider, fileId: string): Promise<FileUploadResponse> =>
       ipcRenderer.invoke(IpcChannel.FileService_Retrieve, provider, fileId)
   },
-  selectionMenu: {
-    action: (action: string) => ipcRenderer.invoke('selection-menu:action', action)
-  },
-
   config: {
     set: (key: string, value: any, isNotify: boolean = false) =>
       ipcRenderer.invoke(IpcChannel.Config_Set, key, value, isNotify),
     get: (key: string) => ipcRenderer.invoke(IpcChannel.Config_Get, key)
   },
   miniWindow: {
-    show: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Show),
     hide: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Hide),
     close: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Close),
-    toggle: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Toggle),
     setPin: (isPinned: boolean) => ipcRenderer.invoke(IpcChannel.MiniWindow_SetPin, isPinned),
     consumeScreenshot: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ConsumeScreenshot),
     readClipboardImage: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ReadClipboardImage)
   },
   aes: {
-    encrypt: (text: string, secretKey: string, iv: string) =>
-      ipcRenderer.invoke(IpcChannel.Aes_Encrypt, text, secretKey, iv),
     decrypt: (encryptedData: string, iv: string, secretKey: string) =>
       ipcRenderer.invoke(IpcChannel.Aes_Decrypt, encryptedData, iv, secretKey)
   },
@@ -297,8 +282,9 @@ const api = {
   },
   shell: {
     openExternal: (url: string, options?: Electron.OpenExternalOptions) => {
-      // Defense-in-depth: validate URL scheme before forwarding to shell.openExternal
-      const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:', 'obsidian:']
+      // Defense-in-depth: validate URL scheme before forwarding to shell.openExternal.
+      // Keep in sync with src/main/services/security.ts ALLOWED_EXTERNAL_PROTOCOLS.
+      const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:', 'obsidian:', 'vscode:', 'vscode-insiders:', 'cursor:', 'zed:']
       try {
         const parsed = new URL(url)
         if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {

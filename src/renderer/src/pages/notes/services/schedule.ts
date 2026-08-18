@@ -13,6 +13,13 @@ export function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
 
+/** 本地时区日期时间 YYYY-MM-DD HH:mm(:ss)（notes 模块统一格式化） */
+export function formatDateTime(t: number, withSeconds = false): string {
+  const d = new Date(t)
+  const base = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  return withSeconds ? `${base}:${pad2(d.getSeconds())}` : base
+}
+
 export function dateKeyOf(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }

@@ -1,7 +1,6 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
   "include": [
-    "local/src/renderer/**/*",
     "src/renderer/src/**/*",
     "src/main/integration/cherryai/index.js",
     "src/preload/*.d.ts",

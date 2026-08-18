@@ -10,7 +10,7 @@ import {
   resolveAndValidatePath
 } from '@main/utils/file'
 import { t } from '@main/utils/locales'
-import { documentExts, imageExts, KB, MB } from '@shared/config/constant'
+import { documentExts, KB, MB } from '@shared/config/constant'
 import { parseDataUrl } from '@shared/utils'
 import type { FileMetadata, FileType } from '@types'
 import { FILE_TYPE } from '@types'
@@ -26,7 +26,6 @@ import { readFile } from 'fs/promises'
 import { isBinaryFile } from 'isbinaryfile'
 import officeParser from 'officeparser'
 import * as path from 'path'
-import { PDFDocument } from 'pdf-lib'
 import WordExtractor from 'word-extractor'
 
 const logger = loggerService.withContext('FileStorage')
@@ -279,31 +278,6 @@ class FileStorage {
     return Promise.all(fileMetadataPromises)
   }
 
-  private async compressImage(sourcePath: string, destPath: string): Promise<void> {
-    try {
-      const stats = fs.statSync(sourcePath)
-      const fileSizeInMB = stats.size / MB
-
-      // 如果图片大于1MB才进行压缩
-      if (fileSizeInMB > 1) {
-        try {
-          await fs.promises.copyFile(sourcePath, destPath)
-          logger.debug(`Image compressed successfully: ${sourcePath}`)
-        } catch (jimpError) {
-          logger.error('Image compression failed:', jimpError as Error)
-          await fs.promises.copyFile(sourcePath, destPath)
-        }
-      } else {
-        // 小图片直接复制
-        await fs.promises.copyFile(sourcePath, destPath)
-      }
-    } catch (error) {
-      logger.error('Image handling failed:', error as Error)
-      // 错误情况下直接复制原文件
-      await fs.promises.copyFile(sourcePath, destPath)
-    }
-  }
-
   public uploadFile = async (_: Electron.IpcMainInvokeEvent, file: FileMetadata): Promise<FileMetadata> => {
     const filePath = file.path
     const duplicateFile = await this.findDuplicateFile(filePath)
@@ -319,12 +293,7 @@ class FileStorage {
 
     logger.info(`[FileStorage] Uploading file: ${filePath}`)
 
-    // 根据文件类型选择处理方式
-    if (imageExts.includes(ext)) {
-      await this.compressImage(filePath, destPath)
-    } else {
-      await fs.promises.copyFile(filePath, destPath)
-    }
+    await fs.promises.copyFile(filePath, destPath)
 
     const stats = await fs.promises.stat(destPath)
     const fileType = await this.getFileType(destPath)
@@ -785,92 +754,12 @@ class FileStorage {
     }
   }
 
-  public savePastedImage = async (
-    _: Electron.IpcMainInvokeEvent,
-    imageData: Uint8Array | Buffer,
-    extension?: string
-  ): Promise<FileMetadata> => {
-    try {
-      const uuid = crypto.randomUUID()
-      const ext = extension || '.png'
-      const destPath = path.join(this.storageDir, uuid + ext)
-
-      logger.debug('Saving pasted image:', {
-        storageDir: this.storageDir,
-        destPath,
-        bufferSize: imageData.length
-      })
-
-      // 确保目录存在
-      if (!fs.existsSync(this.storageDir)) {
-        fs.mkdirSync(this.storageDir, { recursive: true })
-      }
-
-      // 确保 imageData 是 Buffer
-      const buffer = Buffer.isBuffer(imageData) ? imageData : Buffer.from(imageData)
-
-      // 如果图片大于1MB，进行压缩处理
-      if (buffer.length > MB) {
-        await this.compressImageBuffer(buffer, destPath, ext)
-      } else {
-        await fs.promises.writeFile(destPath, buffer)
-      }
-
-      const stats = await fs.promises.stat(destPath)
-
-      return {
-        id: uuid,
-        origin_name: `pasted_image_${uuid}${ext}`,
-        name: uuid + ext,
-        path: destPath,
-        created_at: new Date().toISOString(),
-        size: stats.size,
-        ext: ext,
-        type: getFileTypeByExt(ext),
-        count: 1
-      }
-    } catch (error) {
-      logger.error('Failed to save pasted image:', error as Error)
-      throw error
-    }
-  }
-
-  private async compressImageBuffer(imageBuffer: Buffer, destPath: string, ext: string): Promise<void> {
-    try {
-      // 创建临时文件
-      const tempPath = path.join(this.tempDir, `temp_${crypto.randomUUID()}${ext}`)
-      await fs.promises.writeFile(tempPath, imageBuffer)
-
-      // 使用现有的压缩方法
-      await this.compressImage(tempPath, destPath)
-
-      // 清理临时文件
-      try {
-        await fs.promises.unlink(tempPath)
-      } catch (error) {
-        logger.warn('Failed to cleanup temp file:', error as Error)
-      }
-    } catch (error) {
-      logger.error('Image buffer compression failed, saving original:', error as Error)
-      // 压缩失败时保存原始文件
-      await fs.promises.writeFile(destPath, imageBuffer)
-    }
-  }
-
   public base64File = async (_: Electron.IpcMainInvokeEvent, id: string): Promise<{ data: string; mime: string }> => {
     const filePath = this.resolveStoragePath(id)
     const buffer = await fs.promises.readFile(filePath)
     const base64 = buffer.toString('base64')
     const mime = `application/${path.extname(filePath).slice(1)}`
     return { data: base64, mime }
-  }
-
-  public pdfPageCount = async (_: Electron.IpcMainInvokeEvent, id: string): Promise<number> => {
-    const filePath = this.resolveStoragePath(id)
-    const buffer = await fs.promises.readFile(filePath)
-
-    const pdfDoc = await PDFDocument.load(buffer)
-    return pdfDoc.getPageCount()
   }
 
   public binaryImage = async (_: Electron.IpcMainInvokeEvent, id: string): Promise<{ data: Buffer; mime: string }> => {
@@ -1630,26 +1519,6 @@ class FileStorage {
     return mimeToExtension[mimeType] || '.bin'
   }
 
-  // @TraceProperty({ spanName: 'copyFile', tag: 'FileStorage' })
-  public copyFile = async (_: Electron.IpcMainInvokeEvent, id: string, destPath: string): Promise<void> => {
-    try {
-      const sourcePath = this.resolveStoragePath(id)
-
-      // 确保目标目录存在
-      const destDir = path.dirname(destPath)
-      if (!fs.existsSync(destDir)) {
-        await fs.promises.mkdir(destDir, { recursive: true })
-      }
-
-      // 复制文件
-      await fs.promises.copyFile(sourcePath, destPath)
-      logger.debug(`File copied successfully: ${sourcePath} to ${destPath}`)
-    } catch (error) {
-      logger.error('Copy file failed:', error as Error)
-      throw error
-    }
-  }
-
   public writeFileWithId = async (_: Electron.IpcMainInvokeEvent, id: string, content: string): Promise<void> => {
     try {
       const filePath = this.resolveStoragePath(id)
@@ -1860,14 +1729,6 @@ class FileStorage {
     }
   }
 
-  public getWatcherStatus(): { isActive: boolean; watchPath?: string; hasValidSender: boolean } {
-    return {
-      isActive: !!this.watcher,
-      watchPath: this.currentWatchPath,
-      hasValidSender: !!this.watcherSender && !this.watcherSender.isDestroyed()
-    }
-  }
-
   public getFilePathById(file: FileMetadata): string {
     // Validate so a crafted file.id (e.g. "../secret") cannot escape storageDir.
     return this.resolveStoragePath(file.id + file.ext)
@@ -1924,138 +1785,6 @@ class FileStorage {
       shell.showItemInFolder(path)
     } catch (error) {
       logger.error('Failed to show item in folder:', error as Error)
-    }
-  }
-
-  /**
-   * Batch upload markdown files from native File objects
-   * This handles all I/O operations in the Main process to avoid blocking Renderer
-   */
-  public batchUploadMarkdownFiles = async (
-    _: Electron.IpcMainInvokeEvent,
-    filePaths: string[],
-    targetPath: string
-  ): Promise<{
-    fileCount: number
-    folderCount: number
-    skippedFiles: number
-  }> => {
-    try {
-      logger.info('Starting batch upload', { fileCount: filePaths.length, targetPath })
-
-      const basePath = path.resolve(targetPath)
-      const MARKDOWN_EXTS = ['.md', '.markdown']
-
-      // Filter markdown files
-      const markdownFiles = filePaths.filter((filePath) => {
-        const ext = path.extname(filePath).toLowerCase()
-        return MARKDOWN_EXTS.includes(ext)
-      })
-
-      const skippedFiles = filePaths.length - markdownFiles.length
-
-      if (markdownFiles.length === 0) {
-        return { fileCount: 0, folderCount: 0, skippedFiles }
-      }
-
-      // Collect unique folders needed
-      const foldersSet = new Set<string>()
-      const fileOperations: Array<{ sourcePath: string; targetPath: string }> = []
-
-      for (const filePath of markdownFiles) {
-        try {
-          // Get relative path if file is from a directory upload
-          const fileName = path.basename(filePath)
-          const relativePath = path.dirname(filePath)
-
-          // Determine target directory structure
-          let targetDir = basePath
-          const folderParts: string[] = []
-
-          // Extract folder structure from file path for nested uploads
-          // This is a simplified version - in real scenario we'd need the original directory structure
-          if (relativePath && relativePath !== '.') {
-            const parts = relativePath.split(path.sep)
-            // Get the last few parts that represent the folder structure within upload
-            const relevantParts = parts.slice(Math.max(0, parts.length - 3))
-            folderParts.push(...relevantParts)
-          }
-
-          // Build target directory path
-          for (const part of folderParts) {
-            targetDir = path.join(targetDir, part)
-            foldersSet.add(targetDir)
-          }
-
-          // Determine final file name
-          const nameWithoutExt = fileName.endsWith('.md')
-            ? fileName.slice(0, -3)
-            : fileName.endsWith('.markdown')
-              ? fileName.slice(0, -9)
-              : fileName
-
-          const { safeName } = await this.fileNameGuard(_, targetDir, nameWithoutExt, true)
-          const finalPath = path.join(targetDir, safeName + '.md')
-
-          fileOperations.push({ sourcePath: filePath, targetPath: finalPath })
-        } catch (error) {
-          logger.error('Failed to prepare file operation:', error as Error, { filePath })
-        }
-      }
-
-      // Create folders in order (shallow to deep)
-      const sortedFolders = Array.from(foldersSet).sort((a, b) => a.length - b.length)
-      for (const folder of sortedFolders) {
-        try {
-          if (!fs.existsSync(folder)) {
-            await fs.promises.mkdir(folder, { recursive: true })
-          }
-        } catch (error) {
-          logger.debug('Folder already exists or creation failed', { folder, error: (error as Error).message })
-        }
-      }
-
-      // Process files in batches
-      const BATCH_SIZE = 10 // Higher batch size since we're in Main process
-      let successCount = 0
-
-      for (let i = 0; i < fileOperations.length; i += BATCH_SIZE) {
-        const batch = fileOperations.slice(i, i + BATCH_SIZE)
-
-        const results = await Promise.allSettled(
-          batch.map(async (op) => {
-            // Read from source and write to target in Main process
-            const content = await fs.promises.readFile(op.sourcePath, 'utf-8')
-            await fs.promises.writeFile(op.targetPath, content, 'utf-8')
-            return true
-          })
-        )
-
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            successCount++
-          } else {
-            logger.error('Failed to upload file:', result.reason, {
-              file: batch[index].sourcePath
-            })
-          }
-        })
-      }
-
-      logger.info('Batch upload completed', {
-        successCount,
-        folderCount: foldersSet.size,
-        skippedFiles
-      })
-
-      return {
-        fileCount: successCount,
-        folderCount: foldersSet.size,
-        skippedFiles
-      }
-    } catch (error) {
-      logger.error('Batch upload failed:', error as Error)
-      throw error
     }
   }
 }

@@ -15,9 +15,13 @@ export const test = base.extend<ElectronFixtures>({
     // Launch Electron app from project root
     // The args ['.'] tells Electron to load the app from current directory
     const electronApp = await electron.launch({
-      args: ['.'],
+      args: ['.', '--disable-gpu', '--no-sandbox'],
       env: {
         ...process.env,
+        // ELECTRON_RUN_AS_NODE=1 (injected by some host environments) makes
+        // Electron run in plain Node mode so require('electron') returns a
+        // path string and the app crashes at startup. Always strip it.
+        ELECTRON_RUN_AS_NODE: undefined,
         NODE_ENV: 'development'
       },
       timeout: 60000

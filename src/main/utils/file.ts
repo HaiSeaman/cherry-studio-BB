@@ -140,47 +140,6 @@ export function getFileType(ext: string): FileType {
   return fileTypeMap.get(ext) || FILE_TYPE.OTHER
 }
 
-export function getAllFiles(dirPath: string, arrayOfFiles: FileMetadata[] = []): FileMetadata[] {
-  const files = fs.readdirSync(dirPath)
-
-  files.forEach((file) => {
-    if (file.startsWith('.')) {
-      return
-    }
-
-    const fullPath = path.join(dirPath, file)
-    if (fs.statSync(fullPath).isDirectory()) {
-      arrayOfFiles = getAllFiles(fullPath, arrayOfFiles)
-    } else {
-      const ext = path.extname(file)
-      const fileType = getFileType(ext)
-
-      if ([FILE_TYPE.OTHER, FILE_TYPE.IMAGE, FILE_TYPE.VIDEO, FILE_TYPE.AUDIO].some((type) => type === fileType)) {
-        return
-      }
-
-      const name = path.basename(file)
-      const size = fs.statSync(fullPath).size
-
-      const fileItem: FileMetadata = {
-        id: crypto.randomUUID(),
-        name,
-        path: fullPath,
-        size,
-        ext,
-        count: 1,
-        origin_name: name,
-        type: fileType,
-        created_at: new Date().toISOString()
-      }
-
-      arrayOfFiles.push(fileItem)
-    }
-  })
-
-  return arrayOfFiles
-}
-
 export function getTempDir() {
   return path.join(app.getPath('temp'), 'CherryStudio')
 }
@@ -195,10 +154,6 @@ export function getConfigDir() {
 
 export function getCacheDir() {
   return path.join(app.getPath('userData'), 'Cache')
-}
-
-export function getAppConfigDir(name: string) {
-  return path.join(getConfigDir(), name)
 }
 
 export function getMcpDir() {

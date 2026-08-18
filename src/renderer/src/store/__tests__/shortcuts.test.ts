@@ -96,4 +96,84 @@ describe('shortcuts store', () => {
     expect(screenshot?.shortcut).toEqual(['Ctrl', 'Alt', 'S'])
     expect(state.shortcuts.length).toBe(DEFAULT_SHORTCUTS.length)
   })
+
+  it('mergeDefaultShortcuts deduplicates keys duplicated by legacy migrations (keeps first occurrence)', () => {
+    // legacy migrations (migrate 48/49/54/57/58/215) pushed shortcut entries with
+    // push() without checking whether the key already existed -> duplicated keys
+    // in persisted state. The merge must collapse them back to one entry each.
+    const duplicated = [
+      ...DEFAULT_SHORTCUTS,
+      { key: 'toggle_show_assistants', shortcut: ['Ctrl', '['], editable: true, enabled: true, system: false },
+      { key: 'toggle_show_topics', shortcut: ['Ctrl', ']'], editable: true, enabled: true, system: false },
+      { key: 'copy_last_message', shortcut: ['Ctrl', 'Shift', 'C'], editable: true, enabled: false, system: false },
+      { key: 'search_message', shortcut: ['Ctrl', 'F'], editable: true, enabled: true, system: false },
+      { key: 'clear_topic', shortcut: ['Ctrl', 'L'], editable: true, enabled: true, system: false },
+      { key: 'toggle_new_context', shortcut: ['Ctrl', 'R'], editable: true, enabled: true, system: false },
+      { key: 'mini_window', shortcut: ['Alt', 'W'], editable: true, enabled: true, system: true },
+      { key: 'exit_fullscreen', shortcut: ['Escape'], editable: false, enabled: true, system: true }
+    ]
+
+    const merged = mergeDefaultShortcuts(duplicated)
+
+    const counts = new Map<string, number>()
+    for (const s of merged) {
+      counts.set(s.key, (counts.get(s.key) ?? 0) + 1)
+    }
+    expect([...counts.values()].every((c) => c === 1)).toBe(true)
+    expect(merged.length).toBe(DEFAULT_SHORTCUTS.length)
+    // the FIRST occurrence (the app default) wins, not the legacy migration artifact
+    expect(merged.find((s) => s.key === 'toggle_show_assistants')?.shortcut).toEqual(['CommandOrControl', '['])
+    expect(merged.find((s) => s.key === 'search_message')?.shortcut).toEqual(['CommandOrControl', 'Shift', 'F'])
+  })
+
+  it('mergeDefaultShortcuts heals system/editable metadata corrupted by legacy migrations', () => {
+    // migrate 48 rewrote system=true for every shortcut except new_topic; system
+    // and editable are NOT user-editable, so they can safely be normalized to
+    // the current defaults while shortcut/enabled customizations are preserved
+    const corrupted = DEFAULT_SHORTCUTS.map((s) => (s.key === 'new_topic' ? s : { ...s, system: true }))
+
+    const merged = mergeDefaultShortcuts(corrupted)
+
+    expect(merged.find((s) => s.key === 'toggle_show_assistants')?.system).toBe(false)
+    expect(merged.find((s) => s.key === 'search_message')?.system).toBe(false)
+    expect(merged.find((s) => s.key === 'new_topic')?.system).toBe(false)
+    expect(merged.find((s) => s.key === 'screenshot')?.system).toBe(true)
+    expect(merged.find((s) => s.key === 'mini_window')?.system).toBe(true)
+  })
+
+  it('mergeDefaults action heals a persisted list that already contains duplicates', () => {
+    const duplicated = [...DEFAULT_SHORTCUTS, { ...DEFAULT_SHORTCUTS[0] }] // zoom_in duplicated
+
+    const state = shortcutsReducer({ shortcuts: duplicated }, mergeDefaults())
+
+    expect(state.shortcuts.length).toBe(DEFAULT_SHORTCUTS.length)
+    expect(state.shortcuts.filter((s) => s.key === 'zoom_in').length).toBe(1)
+  })
+
+  it('mergeDefaults heals even when duplicates and missing defaults cancel out in count', () => {
+    // 8 keys are missing (to be appended) while 8 OTHER keys are duplicated (to be
+    // removed) -> input length === merged length. The merge must still detect the
+    // difference by content and heal the list instead of skipping it.
+    const missing = DEFAULT_SHORTCUTS.slice(0, 8) // 8 defaults absent from the list
+    const base = DEFAULT_SHORTCUTS.filter((s) => !missing.some((m) => m.key === s.key)) // 13 unique
+    const duplicated = [...base, ...DEFAULT_SHORTCUTS.slice(8, 16).map((s) => ({ ...s, shortcut: ['Ctrl', 'X'] }))]
+    expect(duplicated.length).toBe(DEFAULT_SHORTCUTS.length) // 21 === 21, length check alone would skip
+
+    const state = shortcutsReducer({ shortcuts: duplicated }, mergeDefaults())
+
+    expect(state.shortcuts.length).toBe(DEFAULT_SHORTCUTS.length)
+    const counts = new Map<string, number>()
+    for (const s of state.shortcuts) counts.set(s.key, (counts.get(s.key) ?? 0) + 1)
+    expect([...counts.values()].every((c) => c === 1)).toBe(true)
+    expect(state.shortcuts.some((s) => s.shortcut[0] === 'Ctrl')).toBe(false)
+  })
+
+  it('mergeDefaultShortcuts does not mutate the input list', () => {
+    const input = [...DEFAULT_SHORTCUTS]
+    const snapshot = JSON.stringify(input)
+
+    mergeDefaultShortcuts(input)
+
+    expect(JSON.stringify(input)).toBe(snapshot)
+  })
 })

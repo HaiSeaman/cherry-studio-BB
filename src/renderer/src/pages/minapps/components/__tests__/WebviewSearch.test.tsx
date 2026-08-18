@@ -88,8 +88,7 @@ describe('WebviewSearch', () => {
     error: vi.fn(),
     success: vi.fn(),
     warning: vi.fn(),
-    info: vi.fn(),
-    addToast: vi.fn()
+    info: vi.fn()
   }
   let removeFindShortcutListenerMock: ReturnType<typeof vi.fn>
   let onFindShortcutMock: ReturnType<typeof vi.fn>

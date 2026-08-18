@@ -106,12 +106,6 @@ const SelectionAssistantSettings: FC = () => {
         <Row align="middle">
           <SettingTitle>{'划词助手'}</SettingTitle>
           <Spacer />
-          <Button
-            type="link"
-            onClick={() => window.api.openWebsite('https://github.com/CherryHQ/cherry-studio/issues/6505')}
-            style={{ fontSize: 12 }}>
-            {'FAQ & ' + '反馈'}
-          </Button>
           {isMac && <ExperimentalText>{'实验性功能'}</ExperimentalText>}
         </Row>
         <SettingDivider />

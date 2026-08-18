@@ -19,16 +19,8 @@ describe('bundled native binaries', () => {
     Object.defineProperty(app, 'isPackaged', { configurable: true, value: false })
   })
 
-  it('maps ripgrep to the target platform and architecture', () => {
-    expect(getRipgrepPlatformKey('win32', 'arm64')).toBe('arm64-win32')
-    expect(getRipgrepPlatformKey('win32', 'x64')).toBe('x64-win32')
-    expect(getRipgrepPlatformKey('darwin', 'arm64')).toBe('arm64-darwin')
-    expect(getRipgrepPlatformKey('linux', 'x64')).toBe('x64-linux')
-  })
-
-  it('rejects unsupported ripgrep targets', () => {
-    expect(() => getRipgrepPlatformKey('freebsd', 'x64')).toThrow('Bundled ripgrep is not available for freebsd-x64')
-    expect(() => getRipgrepPlatformKey('win32', 'ia32')).toThrow('Bundled ripgrep is not available for win32-ia32')
+  it('always maps ripgrep to the Windows x64 variant', () => {
+    expect(getRipgrepPlatformKey()).toBe('x64-win32')
   })
 
   it('resolves installed native executables for the current host', () => {

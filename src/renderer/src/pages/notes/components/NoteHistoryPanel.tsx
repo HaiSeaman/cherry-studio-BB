@@ -3,6 +3,7 @@ import { type FC } from 'react'
 import styled from 'styled-components'
 
 import type { HubNoteSnapshot } from '../types'
+import { formatDateTime } from '../services/schedule'
 import { mx, MXDialog } from './mx'
 
 interface NoteHistoryPanelProps {
@@ -18,10 +19,7 @@ const NoteHistoryPanel: FC<NoteHistoryPanelProps> = ({ open, snapshots, onClose,
   const unlocked = snapshots.filter((s) => s.locked !== 1).sort((a, b) => b.ts - a.ts)
   const locked = snapshots.filter((s) => s.locked === 1).sort((a, b) => b.ts - a.ts)
 
-  const fmtTime = (t: number) => {
-    const d = new Date(t)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
-  }
+  const fmtTime = (t: number) => formatDateTime(t, true)
 
   const renderRow = (s: HubNoteSnapshot) => (
     <Row key={s.id}>

@@ -27,9 +27,6 @@ const hubSettingsSlice = createSlice({
     setAlarmVolume(state, action: PayloadAction<number>) {
       state.alarmVolume = Math.min(Math.max(action.payload, 0), 300)
     },
-    setDefaultSound(state, action: PayloadAction<string>) {
-      state.defaultSound = action.payload
-    },
     addCustomSound(state, action: PayloadAction<CustomSound>) {
       if (!state.customSounds.some((s) => s.filePath === action.payload.filePath)) {
         state.customSounds.push(action.payload)
@@ -41,6 +38,6 @@ const hubSettingsSlice = createSlice({
   }
 })
 
-export const { setAlarmVolume, setDefaultSound, addCustomSound, removeCustomSound } = hubSettingsSlice.actions
+export const { setAlarmVolume, addCustomSound, removeCustomSound } = hubSettingsSlice.actions
 
 export default hubSettingsSlice.reducer

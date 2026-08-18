@@ -1,55 +1,13 @@
 import type { AzureOpenAIProvider, ProviderType } from '@renderer/types'
 import { isSystemProvider, type Provider, type SystemProviderId, SystemProviderIds } from '@renderer/types'
 import { isAzureOpenAIProvider } from '@shared/aiCore/provider/utils'
-import { CLAUDE_SUPPORTED_PROVIDERS } from '@shared/config/providers'
 
 export const isAzureResponsesEndpoint = (provider: AzureOpenAIProvider) => {
   return provider.apiVersion === 'preview' || provider.apiVersion === 'v1'
 }
 
-export const getClaudeSupportedProviders = (providers: Provider[]) => {
-  return providers.filter(
-    (p) => p.type === 'anthropic' || !!p.anthropicApiHost || CLAUDE_SUPPORTED_PROVIDERS.includes(p.id)
-  )
-}
-
-export const getAnthropicSupportedProviders = (providers: Provider[]) => {
-  return providers.filter(isAnthropicSupportedProvider)
-}
-
 export const isAnthropicSupportedProvider = (provider: Provider) => {
   return provider.type === 'anthropic' || !!provider.anthropicApiHost
-}
-
-const NOT_SUPPORT_ARRAY_CONTENT_PROVIDERS = [
-  'deepseek',
-  'baichuan',
-  'minimax',
-  'xirang',
-  'poe',
-  'cephalon'
-] as const satisfies SystemProviderId[]
-
-/**
- * 判断提供商是否支持 message 的 content 为数组类型。 Only for OpenAI Chat Completions API.
- */
-export const isSupportArrayContentProvider = (provider: Provider) => {
-  return (
-    provider.apiOptions?.isNotSupportArrayContent !== true &&
-    !NOT_SUPPORT_ARRAY_CONTENT_PROVIDERS.some((pid) => pid === provider.id)
-  )
-}
-
-const NOT_SUPPORT_DEVELOPER_ROLE_PROVIDERS = ['poe', 'qiniu'] as const satisfies SystemProviderId[]
-
-/**
- * 判断提供商是否支持 developer 作为 message role。 Only for OpenAI API.
- */
-export const isSupportDeveloperRoleProvider = (provider: Provider) => {
-  return (
-    provider.apiOptions?.isSupportDeveloperRole === true ||
-    (isSystemProvider(provider) && !NOT_SUPPORT_DEVELOPER_ROLE_PROVIDERS.some((pid) => pid === provider.id))
-  )
 }
 
 const NOT_SUPPORT_STREAM_OPTIONS_PROVIDERS = ['mistral'] as const satisfies SystemProviderId[]
@@ -165,15 +123,6 @@ export {
 
 export function isAIGatewayProvider(provider: Provider): boolean {
   return provider.type === 'gateway'
-}
-
-const NOT_SUPPORT_API_VERSION_PROVIDERS = ['github', 'perplexity'] as const satisfies SystemProviderId[]
-
-export const isSupportAPIVersionProvider = (provider: Provider) => {
-  if (isSystemProvider(provider)) {
-    return !NOT_SUPPORT_API_VERSION_PROVIDERS.some((pid) => pid === provider.id)
-  }
-  return provider.apiOptions?.isNotSupportAPIVersion !== false
 }
 
 export const NOT_SUPPORT_API_KEY_PROVIDERS: readonly SystemProviderId[] = ['ollama', 'lmstudio', 'aws-bedrock']

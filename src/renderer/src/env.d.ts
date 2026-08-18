@@ -5,13 +5,10 @@ import type { HookAPI } from 'antd/es/modal/useModal'
 import type { NavigateFunction } from 'react-router-dom'
 
 import type {
-  addToast,
   closeAll,
   closeToast,
   error,
-  getToastQueue,
   info,
-  isToastClosing,
   loading,
   success,
   warning
@@ -33,11 +30,8 @@ declare global {
     store: any
     navigate: NavigateFunction
     toast: {
-      getToastQueue: typeof getToastQueue
-      addToast: typeof addToast
       closeToast: typeof closeToast
       closeAll: typeof closeAll
-      isToastClosing: typeof isToastClosing
       error: typeof error
       success: typeof success
       warning: typeof warning

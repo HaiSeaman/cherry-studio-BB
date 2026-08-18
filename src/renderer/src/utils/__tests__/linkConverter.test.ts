@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  cleanLinkCommas,
-  completeLinks,
-  convertLinks,
-  extractUrlsFromMarkdown,
-  flushLinkConverterBuffer
-} from '../linkConverter'
+import { convertLinks, flushLinkConverterBuffer } from '../linkConverter'
 
 describe('linkConverter', () => {
   describe('convertLinks', () => {
@@ -233,68 +227,4 @@ describe('linkConverter', () => {
     })
   })
 
-  describe('completeLinks', () => {
-    it('should complete empty links with webSearch data', () => {
-      const webSearch = [{ link: 'https://example.com/1' }, { link: 'https://example.com/2' }]
-      const input = '参考 [<sup>1</sup>]() 和 [<sup>2</sup>]()'
-      const result = completeLinks(input, webSearch)
-      expect(result).toBe('参考 [<sup>1</sup>](https://example.com/1) 和 [<sup>2</sup>](https://example.com/2)')
-    })
-
-    it('should preserve link format when URL not found', () => {
-      const webSearch = [{ link: 'https://example.com/1' }]
-      const input = '参考 [<sup>1</sup>]() 和 [<sup>2</sup>]()'
-      const result = completeLinks(input, webSearch)
-      expect(result).toBe('参考 [<sup>1</sup>](https://example.com/1) 和 [<sup>2</sup>]()')
-    })
-
-    it('should handle empty webSearch array', () => {
-      const webSearch: any[] = []
-      const input = '参考 [<sup>1</sup>]() 和 [<sup>2</sup>]()'
-      const result = completeLinks(input, webSearch)
-      expect(result).toBe('参考 [<sup>1</sup>]() 和 [<sup>2</sup>]()')
-    })
-  })
-
-  describe('extractUrlsFromMarkdown', () => {
-    it('should extract URLs from all link formats', () => {
-      const input =
-        '这里有普通链接 [文本](https://example.com) 和编号链接 [<sup>1</sup>](https://other.com) 以及括号链接 ([域名](https://third.com))'
-      const result = extractUrlsFromMarkdown(input)
-      expect(result).toEqual(['https://example.com', 'https://other.com', 'https://third.com'])
-    })
-
-    it('should deduplicate URLs', () => {
-      const input = '重复链接 [链接1](https://example.com) 和 [链接2](https://example.com)'
-      const result = extractUrlsFromMarkdown(input)
-      expect(result).toEqual(['https://example.com'])
-    })
-
-    it('should filter invalid URLs', () => {
-      const input = '有效链接 [链接](https://example.com) 和无效链接 [链接](invalid-url)'
-      const result = extractUrlsFromMarkdown(input)
-      expect(result.length).toBe(1)
-      expect(result[0]).toBe('https://example.com')
-    })
-
-    it('should handle empty string', () => {
-      const input = ''
-      const result = extractUrlsFromMarkdown(input)
-      expect(result).toEqual([])
-    })
-  })
-
-  describe('cleanLinkCommas', () => {
-    it('should remove commas between links', () => {
-      const input = '[链接1](https://example.com),[链接2](https://other.com)'
-      const result = cleanLinkCommas(input)
-      expect(result).toBe('[链接1](https://example.com)[链接2](https://other.com)')
-    })
-
-    it('should handle commas with spaces between links', () => {
-      const input = '[链接1](https://example.com) , [链接2](https://other.com)'
-      const result = cleanLinkCommas(input)
-      expect(result).toBe('[链接1](https://example.com)[链接2](https://other.com)')
-    })
-  })
 })

@@ -17,31 +17,27 @@
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { createSlice } from '@reduxjs/toolkit'
 import type { Shortcut } from '@renderer/types'
-import { DEFAULT_SHORTCUTS } from '@shared/config/constant'
+import { DEFAULT_SHORTCUTS, mergeDefaultShortcuts } from '@shared/config/constant'
 
 export interface ShortcutsState {
   shortcuts: Shortcut[]
 }
 
 const initialState: ShortcutsState = {
-  shortcuts: DEFAULT_SHORTCUTS
+  // clone the defaults so the slice never shares (and could mutate) the
+  // module-level DEFAULT_SHORTCUTS array/objects
+  shortcuts: DEFAULT_SHORTCUTS.map((s) => ({ ...s }))
 }
 
 /**
- * Merge missing default shortcuts (e.g. the newly added "screenshot") into a
- * stored list, keeping any user customizations of existing items.
+ * Merge a stored shortcut list with the defaults:
+ * - deduplicates keys duplicated by legacy migrations (keeps the first occurrence)
+ * - heals system/editable metadata corrupted by legacy migrations
+ * - appends missing defaults (e.g. the newly added "screenshot")
  * Used by the persist stateReconciler so new defaults survive rehydration
  * even when an old persisted list would otherwise overwrite initialState.
  */
-export const mergeDefaultShortcuts = (shortcuts: Shortcut[]): Shortcut[] => {
-  const merged = [...shortcuts]
-  for (const def of DEFAULT_SHORTCUTS) {
-    if (!merged.some((s) => s.key === def.key)) {
-      merged.push(def)
-    }
-  }
-  return merged
-}
+export { mergeDefaultShortcuts }
 
 const getSerializableShortcuts = (shortcuts: Shortcut[]) => {
   return shortcuts.map((shortcut) => ({
@@ -66,7 +62,8 @@ const shortcutsSlice = createSlice({
       void window.api.shortcuts.update(getSerializableShortcuts(state.shortcuts))
     },
     resetShortcuts: (state) => {
-      state.shortcuts = initialState.shortcuts
+      // clone the defaults so the slice never shares the module-level array
+      state.shortcuts = initialState.shortcuts.map((s) => ({ ...s }))
       void window.api.shortcuts.update(getSerializableShortcuts(state.shortcuts))
     },
     /**
@@ -76,7 +73,13 @@ const shortcutsSlice = createSlice({
      */
     mergeDefaults: (state) => {
       const merged = mergeDefaultShortcuts(state.shortcuts)
-      if (merged.length !== state.shortcuts.length) {
+      // compare by content, not just length: duplicates and missing defaults can
+      // cancel out numerically (e.g. 8 dupes removed + 8 defaults appended), and
+      // metadata healing (system/editable) does not change the length at all
+      const changed =
+        merged.length !== state.shortcuts.length ||
+        merged.some((s, i) => JSON.stringify(s) !== JSON.stringify(state.shortcuts[i]))
+      if (changed) {
         state.shortcuts = merged
         void window.api.shortcuts.update(getSerializableShortcuts(state.shortcuts))
       }

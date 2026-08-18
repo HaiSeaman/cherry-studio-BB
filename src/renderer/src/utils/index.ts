@@ -55,37 +55,12 @@ export function getErrorMessage(error: any): string {
 }
 
 /**
- * 移除字符串中的特殊字符。
- * @param {string} str 输入字符串
- * @returns {string} 新字符串
- */
-export function removeSpecialCharacters(str: string): string {
-  // First remove newlines and quotes, then remove other special characters
-  return str.replace(/[\n"]/g, '').replace(/[\p{M}\p{P}]/gu, '')
-}
-
-/**
  * 检查 URL 是否是有效的代理 URL。
  * @param {string} url 代理 URL
  * @returns {boolean} 是否有效
  */
 export const isValidProxyUrl = (url: string): boolean => {
   return url.includes('://')
-}
-
-/**
- * 检查 URL 是否包含路径部分。
- * @param {string} url 输入 URL 字符串
- * @returns {boolean} 如果 URL 包含路径则返回 true，否则返回 false
- */
-export function hasPath(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url)
-    return parsedUrl.pathname !== '/' && parsedUrl.pathname !== ''
-  } catch (error) {
-    logger.error('Invalid URL:', error as Error)
-    return false
-  }
 }
 
 /**

@@ -6,7 +6,7 @@ import {
   isVisionModel,
   isWebSearchModel
 } from '@renderer/config/models'
-import type { AdaptedApiModel, ApiModel, Model, ModelTag } from '@renderer/types'
+import type { Model, ModelTag } from '@renderer/types'
 import { objectKeys } from '@renderer/types'
 
 /**
@@ -88,14 +88,4 @@ export const getDuplicateModelNames = <T extends Pick<Model, 'name'>>(models: T[
   }
 
   return duplicateNames
-}
-
-export const apiModelAdapter = (model: ApiModel): AdaptedApiModel => {
-  return {
-    id: model.provider_model_id ?? model.id,
-    provider: model.provider ?? '',
-    name: model.name,
-    group: '',
-    origin: model
-  }
 }

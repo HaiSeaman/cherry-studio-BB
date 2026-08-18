@@ -8,18 +8,6 @@ import path from 'path'
 const logger = loggerService.withContext('AppService')
 
 export class AppService {
-  private static instance: AppService
-
-  private constructor() {
-    // Private constructor to prevent direct instantiation
-  }
-
-  public static getInstance(): AppService {
-    if (!AppService.instance) {
-      AppService.instance = new AppService()
-    }
-    return AppService.instance
-  }
 
   public async setAppLaunchOnBoot(isLaunchOnBoot: boolean): Promise<void> {
     // Set login item settings for windows and mac
@@ -80,4 +68,4 @@ export class AppService {
 }
 
 // Default export as singleton instance
-export default AppService.getInstance()
+export default new AppService()

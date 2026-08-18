@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { runAsyncFunction } from '../index'
-import { hasPath, isValidProxyUrl, removeSpecialCharacters } from '../index'
+import { isValidProxyUrl, runAsyncFunction } from '../index'
 
 vi.mock('@renderer/store', () => ({
   default: {
@@ -34,22 +33,6 @@ describe('Unclassified Utils', () => {
     })
   })
 
-  describe('removeSpecialCharacters', () => {
-    it('should remove newlines, quotes, and special characters', () => {
-      expect(removeSpecialCharacters('hello\nworld!')).toBe('helloworld')
-      expect(removeSpecialCharacters('"hello, world!"')).toBe('hello world')
-      expect(removeSpecialCharacters('你好，世界！')).toBe('你好世界')
-    })
-
-    it('should handle empty string', () => {
-      expect(removeSpecialCharacters('')).toBe('')
-    })
-
-    it('should handle string with only special characters', () => {
-      expect(removeSpecialCharacters('"\n!,.')).toBe('')
-    })
-  })
-
   describe('isValidProxyUrl', () => {
     it('should return true for string containing "://"', () => {
       expect(isValidProxyUrl('http://localhost')).toBe(true)
@@ -67,23 +50,6 @@ describe('Unclassified Utils', () => {
 
     it('should return true for only "://"', () => {
       expect(isValidProxyUrl('://')).toBe(true)
-    })
-  })
-
-  describe('hasPath', () => {
-    it('should return true if url has path', () => {
-      expect(hasPath('http://a.com/path')).toBe(true)
-      expect(hasPath('http://a.com/path/to')).toBe(true)
-    })
-
-    it('should return false if url has no path or only root', () => {
-      expect(hasPath('http://a.com/')).toBe(false)
-      expect(hasPath('http://a.com')).toBe(false)
-    })
-
-    it('should return false for invalid url', () => {
-      expect(hasPath('not a url')).toBe(false)
-      expect(hasPath('')).toBe(false)
     })
   })
 })

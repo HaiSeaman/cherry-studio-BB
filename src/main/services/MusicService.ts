@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { loggerService } from '@logger'
+import { imageExts } from '@shared/config/constant'
 import { app, type IpcMainInvokeEvent, nativeImage } from 'electron'
 import { parseStream } from 'music-metadata'
 
@@ -14,7 +15,6 @@ export const MUSIC_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac', '.aac', 
 const MAX_SCAN_FILES = 2000
 const MAX_SCAN_DEPTH = 10
 const MAX_COVER_BYTES = 5 * 1024 * 1024
-const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp']
 
 export type MusicMetadata = {
   title: string
@@ -177,7 +177,7 @@ export class MusicService {
       for (const entry of entries) {
         if (!entry.isFile()) continue
         const ext = path.extname(entry.name).toLowerCase()
-        if (!IMAGE_EXTS.includes(ext)) continue
+        if (!imageExts.includes(ext)) continue
         const thumbPath = path.join(thumbDir, `${path.basename(entry.name, ext)}.jpg`)
         try {
           await fs.promises.access(thumbPath)

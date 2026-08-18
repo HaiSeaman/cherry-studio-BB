@@ -42,9 +42,6 @@ const musicSettingsSlice = createSlice({
     setFavoritesActive(state, action: PayloadAction<boolean>) {
       state.favoritesActive = action.payload
     },
-    setRadioConfig(state, action: PayloadAction<{ apiBaseUrl?: string; timeout?: number }>) {
-      state.radioConfig = { ...state.radioConfig, ...action.payload }
-    },
     addCustomStation(state, action: PayloadAction<RadioStation>) {
       if (state.customStations.length >= 500) return
       if (!state.customStations.some((s) => s.url === action.payload.url)) {
@@ -62,7 +59,6 @@ export const {
   setLastVolumeBeforeMute,
   setPlayMode,
   setFavoritesActive,
-  setRadioConfig,
   addCustomStation,
   removeCustomStation
 } = musicSettingsSlice.actions
