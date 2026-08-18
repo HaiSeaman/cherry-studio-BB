@@ -22,7 +22,7 @@ import {
   StickyNote,
   X
 } from 'lucide-react'
-import { useEffect, useState, type FC } from 'react'
+import { type FC, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 

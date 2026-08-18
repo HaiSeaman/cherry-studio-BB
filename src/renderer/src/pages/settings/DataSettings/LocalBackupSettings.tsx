@@ -1,7 +1,7 @@
 import { DeleteOutlined, FolderOpenOutlined, SaveOutlined } from '@ant-design/icons'
 import { loggerService } from '@logger'
-import { HStack } from '@renderer/components/Layout'
 import { LocalBackupManager, LocalBackupModal, useLocalBackupModal } from '@renderer/components/BackupManager'
+import { HStack } from '@renderer/components/Layout'
 import Selector from '@renderer/components/Selector'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
@@ -18,9 +18,8 @@ import type { AppInfo } from '@renderer/types'
 import { Button, Input, Switch } from 'antd'
 import { useEffect, useState } from 'react'
 
-import { SyncStatus } from './SyncStatus'
-
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
+import { SyncStatus } from './SyncStatus'
 
 const logger = loggerService.withContext('LocalBackupSettings')
 

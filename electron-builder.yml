@@ -76,6 +76,10 @@ files:
   - "!**/pdfjs-dist/node_modules/@napi-rs/canvas-darwin-*/**"
   - "!**/pdfjs-dist/node_modules/@napi-rs/canvas-linux-*/**"
   - "!**/pdfjs-dist/node_modules/@napi-rs/canvas-win32-arm64-*/**"
+  # node-screenshots 平台包是 optionalDependencies；pnpm 布局下依赖收集（npm ls）
+  # 不可靠，不依赖 files 强制包含。运行时靠 asarUnpack 中的平台包原生绑定
+  # （.node 不能从 asar 内加载，electron 会把 .node 的 require 自动重定向到
+  # unpacked 路径）；node-screenshots 的 JS 包装留在 asar 内即可正常加载。
 npmRebuild: false # selection-hook uses N-API prebuilds, no need to rebuild from source
 
 asarUnpack:
@@ -86,6 +90,10 @@ asarUnpack:
   # @napi-rs/canvas native bindings (.node) cannot be loaded from inside asar;
   # pdf-parse 2.x uses it to polyfill DOMMatrix for pdfjs in the main process
   - "node_modules/@napi-rs/canvas*/**"
+  # node-screenshots native bindings (.node) cannot be loaded from inside asar;
+  # electron-screenshots screenshot capture depends on it (screenshot toolbar feature)
+  - "node_modules/node-screenshots*/**"
+  - "node_modules/**/node-screenshots-win32-x64-msvc/**"
 
 win:
   executableName: Cherry-Studio-BB

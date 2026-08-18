@@ -1,6 +1,5 @@
 import App from '@renderer/components/MinApp/MinApp'
 import Scrollbar from '@renderer/components/Scrollbar'
-import MinappSettingsPopup from './MiniappSettings/MinappSettingsPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { Button, Input } from 'antd'
 import { Search, SettingsIcon } from 'lucide-react'
@@ -8,6 +7,7 @@ import type { FC } from 'react'
 import React, { useState } from 'react'
 import styled from 'styled-components'
 
+import MinappSettingsPopup from './MiniappSettings/MinappSettingsPopup'
 import NewAppButton from './NewAppButton'
 
 const AppsPage: FC = () => {

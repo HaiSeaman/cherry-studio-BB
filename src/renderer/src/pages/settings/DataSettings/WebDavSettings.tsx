@@ -1,7 +1,7 @@
 import { FolderOpenOutlined, SaveOutlined } from '@ant-design/icons'
+import { useWebdavBackupModal, WebdavBackupManager, WebdavBackupModal } from '@renderer/components/BackupManager'
 import { HStack } from '@renderer/components/Layout'
 import Selector from '@renderer/components/Selector'
-import { useWebdavBackupModal, WebdavBackupManager, WebdavBackupModal } from '@renderer/components/BackupManager'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { startAutoSync, stopAutoSync } from '@renderer/services/BackupService'
@@ -22,9 +22,8 @@ import { Button, Input, Switch } from 'antd'
 import type { FC } from 'react'
 import { useState } from 'react'
 
-import { SyncStatus } from './SyncStatus'
-
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
+import { SyncStatus } from './SyncStatus'
 
 const WebDavSettings: FC = () => {
   const {

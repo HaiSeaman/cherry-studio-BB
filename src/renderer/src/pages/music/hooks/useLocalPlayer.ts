@@ -1,8 +1,8 @@
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { registerAutoAdvance } from '../services/autoAdvance'
 import { audioEngine } from '../services/audioEngine'
+import { registerAutoAdvance } from '../services/autoAdvance'
 import { nextIndexInPool, prevIndexInPool, pushShuffleHistory, toFileUrl } from '../services/playLogic'
 import { setFavoritesActive, setPlayMode } from '../store/musicSettingsSlice'
 import type { MusicTrack, PlayMode } from '../types'

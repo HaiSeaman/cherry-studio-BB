@@ -17,138 +17,30 @@
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { createSlice } from '@reduxjs/toolkit'
 import type { Shortcut } from '@renderer/types'
-import { ZOOM_SHORTCUTS } from '@shared/config/constant'
+import { DEFAULT_SHORTCUTS } from '@shared/config/constant'
 
 export interface ShortcutsState {
   shortcuts: Shortcut[]
 }
 
 const initialState: ShortcutsState = {
-  shortcuts: [
-    ...ZOOM_SHORTCUTS,
-    {
-      key: 'show_settings',
-      shortcut: ['CommandOrControl', ','],
-      editable: false,
-      enabled: true,
-      system: true
-    },
-    {
-      key: 'show_app',
-      shortcut: [],
-      editable: true,
-      enabled: true,
-      system: true
-    },
-    {
-      key: 'mini_window',
-      shortcut: ['CommandOrControl', 'E'],
-      editable: true,
-      enabled: false,
-      system: true
-    },
-    {
-      //enable/disable selection assistant
-      key: 'selection_assistant_toggle',
-      shortcut: [],
-      editable: true,
-      enabled: false,
-      system: true
-    },
-    {
-      //to select text with selection assistant
-      key: 'selection_assistant_select_text',
-      shortcut: [],
-      editable: true,
-      enabled: false,
-      system: true
-    },
-    {
-      key: 'new_topic',
-      shortcut: ['CommandOrControl', 'N'],
-      editable: true,
-      enabled: true,
-      system: false
-    },
-    {
-      key: 'rename_topic',
-      shortcut: ['CommandOrControl', 'T'],
-      editable: true,
-      enabled: false,
-      system: false
-    },
-    {
-      key: 'toggle_show_assistants',
-      shortcut: ['CommandOrControl', '['],
-      editable: true,
-      enabled: true,
-      system: false
-    },
+  shortcuts: DEFAULT_SHORTCUTS
+}
 
-    {
-      key: 'toggle_show_topics',
-      shortcut: ['CommandOrControl', ']'],
-      editable: true,
-      enabled: true,
-      system: false
-    },
-    {
-      key: 'copy_last_message',
-      shortcut: ['CommandOrControl', 'Shift', 'C'],
-      editable: true,
-      enabled: false,
-      system: false
-    },
-    {
-      key: 'edit_last_user_message',
-      shortcut: ['CommandOrControl', 'Shift', 'E'],
-      editable: true,
-      enabled: false,
-      system: false
-    },
-    {
-      key: 'search_message_in_chat',
-      shortcut: ['CommandOrControl', 'F'],
-      editable: true,
-      enabled: true,
-      system: false
-    },
-    {
-      key: 'search_message',
-      shortcut: ['CommandOrControl', 'Shift', 'F'],
-      editable: true,
-      enabled: true,
-      system: false
-    },
-    {
-      key: 'clear_topic',
-      shortcut: ['CommandOrControl', 'L'],
-      editable: true,
-      enabled: true,
-      system: false
-    },
-    {
-      key: 'toggle_new_context',
-      shortcut: ['CommandOrControl', 'K'],
-      editable: true,
-      enabled: true,
-      system: false
-    },
-    {
-      key: 'select_model',
-      shortcut: ['CommandOrControl', 'Shift', 'M'],
-      editable: true,
-      enabled: true,
-      system: false
-    },
-    {
-      key: 'exit_fullscreen',
-      shortcut: ['Escape'],
-      editable: false,
-      enabled: true,
-      system: true
+/**
+ * Merge missing default shortcuts (e.g. the newly added "screenshot") into a
+ * stored list, keeping any user customizations of existing items.
+ * Used by the persist stateReconciler so new defaults survive rehydration
+ * even when an old persisted list would otherwise overwrite initialState.
+ */
+export const mergeDefaultShortcuts = (shortcuts: Shortcut[]): Shortcut[] => {
+  const merged = [...shortcuts]
+  for (const def of DEFAULT_SHORTCUTS) {
+    if (!merged.some((s) => s.key === def.key)) {
+      merged.push(def)
     }
-  ]
+  }
+  return merged
 }
 
 const getSerializableShortcuts = (shortcuts: Shortcut[]) => {
@@ -176,10 +68,22 @@ const shortcutsSlice = createSlice({
     resetShortcuts: (state) => {
       state.shortcuts = initialState.shortcuts
       void window.api.shortcuts.update(getSerializableShortcuts(state.shortcuts))
+    },
+    /**
+     * Dispatched right after redux-persist rehydration (see store/index.ts).
+     * Rehydration overwrites initialState with the old persisted list, which would
+     * hide newly added defaults like "screenshot". Merge them back in.
+     */
+    mergeDefaults: (state) => {
+      const merged = mergeDefaultShortcuts(state.shortcuts)
+      if (merged.length !== state.shortcuts.length) {
+        state.shortcuts = merged
+        void window.api.shortcuts.update(getSerializableShortcuts(state.shortcuts))
+      }
     }
   }
 })
 
-export const { updateShortcut, toggleShortcut, resetShortcuts } = shortcutsSlice.actions
+export const { updateShortcut, toggleShortcut, resetShortcuts, mergeDefaults } = shortcutsSlice.actions
 export default shortcutsSlice.reducer
 export { initialState }

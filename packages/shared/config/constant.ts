@@ -192,6 +192,143 @@ export const ZOOM_SHORTCUTS = [
   }
 ]
 
+/**
+ * Complete default shortcut list shared by the main process (registration)
+ * and the renderer (settings page). Add new shortcuts here, not in one place only.
+ */
+export const DEFAULT_SHORTCUTS = [
+  ...ZOOM_SHORTCUTS,
+  {
+    key: 'show_settings',
+    shortcut: ['CommandOrControl', ','],
+    editable: false,
+    enabled: true,
+    system: true
+  },
+  {
+    key: 'show_app',
+    shortcut: [],
+    editable: true,
+    enabled: true,
+    system: true
+  },
+  {
+    key: 'mini_window',
+    shortcut: ['CommandOrControl', 'E'],
+    editable: true,
+    enabled: false,
+    system: true
+  },
+  {
+    //enable/disable selection assistant
+    key: 'selection_assistant_toggle',
+    shortcut: [],
+    editable: true,
+    enabled: false,
+    system: true
+  },
+  {
+    //to select text with selection assistant
+    key: 'selection_assistant_select_text',
+    shortcut: [],
+    editable: true,
+    enabled: false,
+    system: true
+  },
+  {
+    //take a screenshot and send it to quick assistant
+    key: 'screenshot',
+    shortcut: ['Alt', 'Shift', 'A'],
+    editable: true,
+    enabled: true,
+    system: true
+  },
+  {
+    key: 'new_topic',
+    shortcut: ['CommandOrControl', 'N'],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'rename_topic',
+    shortcut: ['CommandOrControl', 'T'],
+    editable: true,
+    enabled: false,
+    system: false
+  },
+  {
+    key: 'toggle_show_assistants',
+    shortcut: ['CommandOrControl', '['],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'toggle_show_topics',
+    shortcut: ['CommandOrControl', ']'],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'copy_last_message',
+    shortcut: ['CommandOrControl', 'Shift', 'C'],
+    editable: true,
+    enabled: false,
+    system: false
+  },
+  {
+    key: 'edit_last_user_message',
+    shortcut: ['CommandOrControl', 'Shift', 'E'],
+    editable: true,
+    enabled: false,
+    system: false
+  },
+  {
+    key: 'search_message_in_chat',
+    shortcut: ['CommandOrControl', 'F'],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'search_message',
+    shortcut: ['CommandOrControl', 'Shift', 'F'],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'clear_topic',
+    shortcut: ['CommandOrControl', 'L'],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'toggle_new_context',
+    shortcut: ['CommandOrControl', 'K'],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'select_model',
+    shortcut: ['CommandOrControl', 'Shift', 'M'],
+    editable: true,
+    enabled: true,
+    system: false
+  },
+  {
+    key: 'exit_fullscreen',
+    shortcut: ['Escape'],
+    editable: false,
+    enabled: true,
+    system: true
+  }
+]
+
 export const KB = 1024
 export const MB = 1024 * KB
 export const GB = 1024 * MB

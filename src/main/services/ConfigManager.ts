@@ -14,7 +14,7 @@
  * - v2 Refactor PR   : https://github.com/CherryHQ/cherry-studio/pull/10162
  * --------------------------------------------------------------------------
  */
-import { ZOOM_SHORTCUTS } from '@shared/config/constant'
+import { DEFAULT_SHORTCUTS } from '@shared/config/constant'
 import type { LanguageVarious, Shortcut } from '@types'
 import { ThemeMode } from '@types'
 import Store from 'electron-store'
@@ -126,7 +126,16 @@ export class ConfigManager {
   }
 
   getShortcuts() {
-    return this.get(ConfigKeys.Shortcuts, ZOOM_SHORTCUTS) as Shortcut[] | []
+    const stored = this.get(ConfigKeys.Shortcuts, DEFAULT_SHORTCUTS) as Shortcut[]
+    // merge missing defaults (e.g. newly added "screenshot") so they register
+    // even when an older shortcut list is already stored
+    const merged = [...stored]
+    for (const def of DEFAULT_SHORTCUTS) {
+      if (!merged.some((s) => s.key === def.key)) {
+        merged.push(def)
+      }
+    }
+    return merged
   }
 
   setShortcuts(shortcuts: Shortcut[]) {

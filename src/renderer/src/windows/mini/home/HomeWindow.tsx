@@ -1,26 +1,38 @@
 import { loggerService } from '@logger'
 import { isMac } from '@renderer/config/constant'
+import { isVisionModel } from '@renderer/config/models'
+import { builtinLanguages } from '@renderer/config/translate'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { ConversationService } from '@renderer/services/ConversationService'
-import { getAssistantMessage, getUserMessage } from '@renderer/services/MessagesService'
+import FileManager from '@renderer/services/FileManager'
+import { getAssistantMessage, getUserMessage, safeDeleteFiles } from '@renderer/services/MessagesService'
 import store, { useAppSelector } from '@renderer/store'
-import { removeAllBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '@renderer/store/messageBlock'
+import {
+  messageBlocksSelectors,
+  removeAllBlocks,
+  updateOneBlock,
+  upsertManyBlocks,
+  upsertOneBlock
+} from '@renderer/store/messageBlock'
 import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
 import { cancelThrottledBlockUpdate, throttledBlockUpdate } from '@renderer/store/thunk/messageThunk'
-import type { Topic } from '@renderer/types'
+import type { FileMetadata, Topic } from '@renderer/types'
 import { ThemeMode } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
-import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
+import type { FileMessageBlock, ImageMessageBlock } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { abortCompletion } from '@renderer/utils/abortController'
 import { isAbortError } from '@renderer/utils/error'
 import { createMainTextBlock, createThinkingBlock } from '@renderer/utils/messageUtils/create'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { replacePromptVariables } from '@renderer/utils/prompt'
+import type { ScreenshotAction } from '@renderer/utils/screenshot'
+import { DEFAULT_TARGET_LANGUAGE, getScreenshotActionPrompt } from '@renderer/utils/screenshot'
 import { IpcChannel } from '@shared/IpcChannel'
 import { Divider } from 'antd'
 import { cloneDeep, isEmpty } from 'lodash'
@@ -39,13 +51,37 @@ import InputBar from './components/InputBar'
 
 const logger = loggerService.withContext('HomeWindow')
 
+/**
+ * 收集某话题下所有消息引用的文件（图片/附件块 + 生成图），
+ * 供 Esc 清空话题时一并回收，避免上传的截图在文件库与磁盘上永久残留。
+ * 与主窗口删除话题时的文件回收逻辑（useTopic）保持一致。
+ */
+function collectTopicFiles(topicId: string): FileMetadata[] {
+  const state = store.getState()
+  const messages = selectMessagesForTopic(state, topicId)
+  const blockIds = messages.flatMap((message) => message.blocks ?? [])
+
+  return blockIds
+    .map((blockId) => messageBlocksSelectors.selectById(state, blockId))
+    .filter(
+      (block): block is ImageMessageBlock | FileMessageBlock =>
+        block !== undefined && (block.type === MessageBlockType.IMAGE || block.type === MessageBlockType.FILE)
+    )
+    .flatMap((block) => {
+      const generatedFiles = block.type === MessageBlockType.IMAGE ? (block.metadata?.generatedFiles ?? []) : []
+      return [block.file, ...generatedFiles]
+    })
+    .filter((file): file is FileMetadata => file !== undefined)
+}
+
 const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
-  const { readClipboardAtStartup, windowStyle } = useSettings()
+  const { readClipboardAtStartup, windowStyle, language } = useSettings()
   const { theme } = useTheme()
   const [route, setRoute] = useState<'home' | 'chat' | 'translate' | 'summary' | 'explanation'>('home')
   const [isFirstMessage, setIsFirstMessage] = useState(true)
 
   const [userInputText, setUserInputText] = useState('')
+  const [files, setFiles] = useState<FileMetadata[]>([])
 
   const [clipboardText, setClipboardText] = useState('')
   const lastClipboardTextRef = useRef<string | null>(null)
@@ -69,6 +105,12 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
   const featureMenusRef = useRef<FeatureMenusRef>(null)
 
   const referenceText = useMemo(() => clipboardText || userInputText, [clipboardText, userInputText])
+
+  // 翻译目标语言中文名：优先用界面语言映射，取不到时回退默认
+  const targetLanguage = useMemo(() => {
+    const lang = builtinLanguages.find((l) => l.langCode === language.toLowerCase())
+    return lang?.label() ?? DEFAULT_TARGET_LANGUAGE
+  }, [language])
 
   const userContent = useMemo(() => {
     if (isFirstMessage) {
@@ -116,10 +158,90 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
     focusInput()
   }, [focusInput])
 
+  // Bridge to handleSendMessage defined later in the component (avoids TDZ in useCallback deps).
+  const handleSendMessageRef = useRef<((prompt?: string, filesOverride?: FileMetadata[]) => Promise<void>) | undefined>(
+    undefined
+  )
+
+  // Pull a pending screenshot from main (set by ScreenshotService on capture confirm)
+  // and insert it into the input bar as an image attachment. When the screenshot comes
+  // from the toolbar "ocr/translate" buttons, auto-send to the AI without confirmation.
+  const consumeScreenshot = useCallback(async () => {
+    try {
+      const result = await window.api.miniWindow.consumeScreenshot()
+      if (!result) return
+
+      const { buffer, action } = result as { buffer: Uint8Array; action: ScreenshotAction | null }
+
+      const tempFilePath = await window.api.file.createTempFile('screenshot.png')
+      await window.api.file.write(tempFilePath, new Uint8Array(buffer))
+      const file = await window.api.file.get(tempFilePath)
+      if (!file) return
+
+      if (action) {
+        if (isLoading) {
+          // a reply is already streaming; keep the image in the input bar instead of queueing
+          setFiles((prev) => [...prev, file])
+          return
+        }
+        if (!isVisionModel(currentAssistant.model)) {
+          // keep the image in the input bar so the user can act on it manually
+          setFiles((prev) => [...prev, file])
+          window.toast.error('当前模型不支持图片识别，请在设置中切换支持视觉的模型')
+          return
+        }
+        // switch to chat route so the streaming reply is visible
+        setRoute('chat')
+        await handleSendMessageRef.current?.(getScreenshotActionPrompt(action, targetLanguage), [file])
+      } else {
+        setFiles((prev) => [...prev, file])
+      }
+    } catch (error) {
+      logger.warn('Failed to consume screenshot:', error as Error)
+    }
+  }, [isLoading, targetLanguage, currentAssistant])
+
+  // Paste an image from the clipboard into the input bar (e.g. copied from another app).
+  // Returns true when an image was actually inserted (caller may preventDefault the paste).
+  const handlePasteImage = useCallback(async (): Promise<boolean> => {
+    try {
+      const buffer = await window.api.miniWindow.readClipboardImage()
+      if (!buffer || buffer.length === 0) return false
+
+      const tempFilePath = await window.api.file.createTempFile('clipboard.png')
+      await window.api.file.write(tempFilePath, new Uint8Array(buffer))
+      const file = await window.api.file.get(tempFilePath)
+      if (file) {
+        setFiles((prev) => [...prev, file])
+        return true
+      }
+      return false
+    } catch (error) {
+      logger.warn('Failed to paste image from clipboard:', error as Error)
+      return false
+    }
+  }, [])
+
+  // Screenshot quick actions in the input bar: auto-send the attached image to the AI.
+  const handleScreenshotAction = useCallback(
+    (action: ScreenshotAction) => {
+      if (isLoading || files.length === 0) return
+      if (!isVisionModel(currentAssistant.model)) {
+        window.toast.error('当前模型不支持图片识别，请在设置中切换支持视觉的模型')
+        return
+      }
+      // switch to chat route so the streaming reply is visible
+      setRoute('chat')
+      void handleSendMessageRef.current?.(getScreenshotActionPrompt(action, targetLanguage), files)
+    },
+    [isLoading, files, currentAssistant, targetLanguage]
+  )
+
   const onWindowShow = useCallback(async () => {
     await readClipboard()
+    await consumeScreenshot()
     focusInput()
-  }, [readClipboard, focusInput])
+  }, [readClipboard, consumeScreenshot, focusInput])
 
   useEffect(() => {
     void window.api.miniWindow.setPin(isPinned)
@@ -209,18 +331,26 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
   }
 
   const handleSendMessage = useCallback(
-    async (prompt?: string) => {
-      if (isEmpty(userContent) || !currentTopic.current) {
+    async (prompt?: string, filesOverride?: FileMetadata[]) => {
+      if ((isEmpty(userContent) && !prompt) || !currentTopic.current) {
         return
       }
 
       try {
         const topicId = currentTopic.current.id
+        const filesToSend = filesOverride ?? files
+
+        // 与主窗口一致：发送前把附件上传进文件库（filesPath/<id><ext>）。
+        // 截图/剪贴板图片原本只是临时文件（path 指向 tempDir），若直接作为消息附件，
+        // 聊天里 ImageBlock 会按 `file://<filesPath>/<id><ext>` 渲染而找不到文件，
+        // 导致图片无法显示。上传后 id/path 与磁盘实际文件一一对应。
+        const uploadedFiles = filesToSend.length > 0 ? await FileManager.uploadFiles(filesToSend) : []
 
         const { message: userMessage, blocks } = getUserMessage({
           content: [prompt, userContent].filter(Boolean).join('\n\n'),
           assistant: currentAssistant,
-          topic: currentTopic.current
+          topic: currentTopic.current,
+          files: uploadedFiles
         })
 
         store.dispatch(newMessagesActions.addMessage({ topicId, message: userMessage }))
@@ -262,6 +392,7 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
 
         setIsFirstMessage(false)
         setUserInputText('')
+        setFiles([])
 
         const newAssistant = cloneDeep(currentAssistant)
         if (!newAssistant.settings) {
@@ -446,8 +577,10 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
         currentAskId.current = ''
       }
     },
-    [userContent, currentAssistant]
+    [userContent, currentAssistant, files]
   )
+
+  handleSendMessageRef.current = handleSendMessage
 
   const handlePause = useCallback(() => {
     if (currentAskId.current) {
@@ -467,9 +600,15 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
       } else {
         // Clear the topic messages to reduce memory usage
         if (currentTopic.current) {
+          // 先收集消息引用的文件，再清空消息与块，最后回收文件，
+          // 否则 removeAllBlocks 后块引用丢失，上传的截图会永久残留
+          const filesToDelete = collectTopicFiles(currentTopic.current.id)
           store.dispatch(newMessagesActions.clearTopicMessages(currentTopic.current.id))
           // 块内容（markdown/工具输出/引用）同样驻留堆，一并清空
           store.dispatch(removeAllBlocks())
+          if (filesToDelete.length > 0) {
+            void safeDeleteFiles(filesToDelete)
+          }
         }
 
         // Reset the topic
@@ -480,6 +619,7 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
         setError(null)
         setRoute('home')
         setUserInputText('')
+        setFiles([])
       }
     }
   }, [isLoading, route, handleCloseWindow, currentAssistant.id, handlePause])
@@ -543,6 +683,10 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
                 handleKeyDown={handleKeyDown}
                 handleChange={handleChange}
                 ref={inputBarRef}
+                files={files}
+                onRemoveFile={(fileId) => setFiles((prev) => prev.filter((f) => f.id !== fileId))}
+                onPasteImage={handlePasteImage}
+                onScreenshotAction={handleScreenshotAction}
               />
               <Divider style={{ margin: '10px 0' }} />
             </>
@@ -587,6 +731,10 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
             handleKeyDown={handleKeyDown}
             handleChange={handleChange}
             ref={inputBarRef}
+            files={files}
+            onRemoveFile={(fileId) => setFiles((prev) => prev.filter((f) => f.id !== fileId))}
+            onPasteImage={handlePasteImage}
+            onScreenshotAction={handleScreenshotAction}
           />
           <Divider style={{ margin: '10px 0' }} />
           <ClipboardPreview referenceText={referenceText} clearClipboard={clearClipboard} />

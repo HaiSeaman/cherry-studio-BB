@@ -1,6 +1,6 @@
 import { getThemeInfo } from '@renderer/config/themes'
-import { useSettings } from '@renderer/hooks/useSettings'
 import { useTheme } from '@renderer/context/ThemeProvider'
+import { useSettings } from '@renderer/hooks/useSettings'
 import type { LanguageVarious } from '@renderer/types'
 import { ConfigProvider, theme } from 'antd'
 import deDE from 'antd/locale/de_DE'

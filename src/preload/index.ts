@@ -251,7 +251,9 @@ const api = {
     hide: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Hide),
     close: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Close),
     toggle: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Toggle),
-    setPin: (isPinned: boolean) => ipcRenderer.invoke(IpcChannel.MiniWindow_SetPin, isPinned)
+    setPin: (isPinned: boolean) => ipcRenderer.invoke(IpcChannel.MiniWindow_SetPin, isPinned),
+    consumeScreenshot: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ConsumeScreenshot),
+    readClipboardImage: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ReadClipboardImage)
   },
   aes: {
     encrypt: (text: string, secretKey: string, iv: string) =>

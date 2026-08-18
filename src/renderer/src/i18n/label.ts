@@ -176,6 +176,7 @@ const shortcutKeyMap = {
   select_model: '选择模型',
   selection_assistant_select_text: '划词助手：取词',
   selection_assistant_toggle: '开关划词助手',
+  screenshot: '屏幕截图',
   show_app: '显示 / 隐藏应用',
   show_settings: '打开设置',
   title: '快捷键',

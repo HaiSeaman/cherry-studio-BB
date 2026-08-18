@@ -1,6 +1,6 @@
 import { FolderOpenOutlined, InfoCircleOutlined, SaveOutlined } from '@ant-design/icons'
-import { HStack } from '@renderer/components/Layout'
 import { S3BackupManager, S3BackupModal, useS3BackupModal } from '@renderer/components/BackupManager'
+import { HStack } from '@renderer/components/Layout'
 import Selector from '@renderer/components/Selector'
 import { AppLogo } from '@renderer/config/env'
 import { useTheme } from '@renderer/context/ThemeProvider'
@@ -14,9 +14,8 @@ import { Button, Input, Switch, Tooltip } from 'antd'
 import type { FC } from 'react'
 import { useState } from 'react'
 
-import { SyncStatus } from './SyncStatus'
-
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
+import { SyncStatus } from './SyncStatus'
 
 const S3Settings: FC = () => {
   const { s3 = {} as S3Config } = useSettings()

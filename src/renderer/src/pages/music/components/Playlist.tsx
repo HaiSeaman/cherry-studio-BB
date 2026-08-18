@@ -1,7 +1,7 @@
-import { memo, type FC, useEffect, useRef } from 'react'
+import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
+import { type FC, memo, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 
-import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
 import { formatTime, toFileUrl } from '../services/playLogic'
 import type { MusicTrack } from '../types'
 import { Eq, mx } from './mx'

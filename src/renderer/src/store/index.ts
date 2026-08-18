@@ -36,7 +36,7 @@ import newMessagesReducer from './newMessage'
 import runtime from './runtime'
 import selectionStore from './selectionStore'
 import settings from './settings'
-import shortcuts from './shortcuts'
+import shortcuts, { mergeDefaults } from './shortcuts'
 import tabs from './tabs'
 import toolPermissions from './toolPermissions'
 import translate from './translate'
@@ -110,6 +110,11 @@ export type RootState = ReturnType<typeof rootReducer>
 export type AppDispatch = typeof store.dispatch
 
 export const persistor = persistStore(store, undefined, () => {
+  // redux-persist rehydrates with the OLD persisted shortcuts list, overwriting
+  // initialState and hiding newly added defaults like "screenshot". Dispatch a
+  // merge right after rehydration so new shortcuts appear in the settings UI.
+  store.dispatch(mergeDefaults())
+
   // Notify main process that Redux store is ready
   void window.electron?.ipcRenderer?.invoke(IpcChannel.ReduxStoreReady)
   logger.info('Redux store ready, notified main process')

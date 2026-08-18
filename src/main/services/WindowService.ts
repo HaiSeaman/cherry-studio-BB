@@ -357,6 +357,10 @@ export class WindowService {
     return this.mainWindow
   }
 
+  public getMiniWindow(): BrowserWindow | null {
+    return this.miniWindow && !this.miniWindow.isDestroyed() ? this.miniWindow : null
+  }
+
   private setupWindowLifecycleEvents(mainWindow: BrowserWindow) {
     mainWindow.on('close', (event) => {
       // save data before when close window

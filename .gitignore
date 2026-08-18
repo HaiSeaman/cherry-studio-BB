@@ -37,6 +37,7 @@ stats.html
 .cache/
 .vite/
 .turbo/
+.swc/
 .eslintcache
 .tsbuildinfo/
 .context/
@@ -129,6 +130,9 @@ mcp_server/
 resources/binaries/
 .sessions/
 ui-shots/
+# WorkBuddy / 本地助手运行数据（内存日志、临时产物等，不入库）
+.workbuddy/
+.xx/
 *.db
 *.sqlite
 *.sqlite3

@@ -13,8 +13,17 @@ import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { IpcChannel } from '@shared/IpcChannel'
 import { extractPdfText } from '@shared/utils/pdf'
 import type { FileMetadata, Notification, Provider, Shortcut, ThemeMode } from '@types'
-import type { ProxyConfig } from 'electron'
-import { BrowserWindow, dialog, ipcMain, session, shell, systemPreferences, webContents } from 'electron'
+import {
+  BrowserWindow,
+  clipboard,
+  dialog,
+  ipcMain,
+  type ProxyConfig,
+  session,
+  shell,
+  systemPreferences,
+  webContents
+} from 'electron'
 import fontList from 'font-list'
 
 import appService from './services/AppService'
@@ -32,6 +41,7 @@ import ObsidianVaultService from './services/ObsidianVaultService'
 import powerMonitorService from './services/PowerMonitorService'
 import { proxyManager } from './services/ProxyManager'
 import { FileServiceManager } from './services/remotefile/FileServiceManager'
+import screenshotService from './services/ScreenshotService'
 import { searchService } from './services/SearchService'
 import { isSafeExternalUrl } from './services/security'
 import { SelectionService } from './services/SelectionService'
@@ -578,6 +588,11 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.MiniWindow_Close, () => windowService.closeMiniWindow())
   ipcMain.handle(IpcChannel.MiniWindow_Toggle, () => windowService.toggleMiniWindow())
   ipcMain.handle(IpcChannel.MiniWindow_SetPin, (_, isPinned) => windowService.setPinMiniWindow(isPinned))
+  ipcMain.handle(IpcChannel.MiniWindow_ConsumeScreenshot, () => screenshotService.consumePendingScreenshot())
+  ipcMain.handle(IpcChannel.MiniWindow_ReadClipboardImage, () => {
+    const image = clipboard.readImage()
+    return image.isEmpty() ? null : image.toPNG()
+  })
 
   // aes
   ipcMain.handle(IpcChannel.Aes_Encrypt, (_, text: string, secretKey: string, iv: string) =>

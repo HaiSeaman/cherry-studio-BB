@@ -26,6 +26,7 @@ import {
   setupAppImageDeepLink
 } from './services/ProtocolClient'
 import selectionService, { initSelectionService } from './services/SelectionService'
+import screenshotService, { initScreenshotService } from './services/ScreenshotService'
 import { registerShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { versionService } from './services/VersionService'
@@ -197,6 +198,9 @@ if (!app.requestSingleInstanceLock()) {
 
     //start selection assistant service
     initSelectionService()
+
+    //start screenshot service
+    initScreenshotService()
   })
 
   registerProtocolClient(app)
@@ -233,6 +237,7 @@ if (!app.requestSingleInstanceLock()) {
     if (selectionService) {
       selectionService.quit()
     }
+    screenshotService.quit()
   })
 
   app.on('will-quit', async () => {

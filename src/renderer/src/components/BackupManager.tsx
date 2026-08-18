@@ -1,5 +1,5 @@
-import { loggerService } from '@logger'
 import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined } from '@ant-design/icons'
+import { loggerService } from '@logger'
 import {
   backupToLocal,
   backupToS3,

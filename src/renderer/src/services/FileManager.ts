@@ -83,7 +83,11 @@ class FileManager {
 
     if (file) {
       const filesPath = store.getState().runtime.filesPath
-      file.path = filesPath + '/' + file.id + file.ext
+      // filesPath 未初始化（如 mini 窗口初始化完成前）时保持 db 中已存的绝对路径，
+      // 避免覆盖成 file:///<id><ext> 这类无效路径
+      if (filesPath) {
+        file.path = filesPath + '/' + file.id + file.ext
+      }
     }
 
     return file
@@ -91,7 +95,9 @@ class FileManager {
 
   static getFilePath(file: FileMetadata) {
     const filesPath = store.getState().runtime.filesPath
-    return filesPath + '/' + file.id + file.ext
+    // filesPath 未初始化（如 mini 窗口）时回退到元数据里的磁盘绝对路径，
+    // 保证 file:// 前缀后一定指向真实存在的文件
+    return filesPath ? filesPath + '/' + file.id + file.ext : file.path
   }
 
   static async deleteFile(id: string, force: boolean = false): Promise<void> {
@@ -148,7 +154,8 @@ class FileManager {
 
   static getFileUrl(file: FileMetadata) {
     const filesPath = store.getState().runtime.filesPath
-    return 'file://' + filesPath + '/' + file.name
+    // filesPath 未初始化（如 mini 窗口）时回退到元数据里的磁盘绝对路径
+    return 'file://' + (filesPath ? filesPath + '/' + file.name : file.path)
   }
 
   static async updateFile(file: FileMetadata) {

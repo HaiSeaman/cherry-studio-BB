@@ -5,6 +5,22 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.2] - 2026-08-18
+
+### 新增：截图「识别文字 / 翻译图片」
+
+- 截图框选工具栏新增「识别文字」「翻译图片」两个按键：点击后自动将截图发送到快捷助手并交给多模态模型处理，无需再次确认。
+- 快捷助手输入框新增同名快捷按钮：截图后或从外部复制图片粘贴进输入框时，点击即自动识别 / 翻译。
+- 识别 / 翻译复用软件已配置的多模态 AI 模型（发图给模型），不引入额外 OCR 引擎。
+- 技术实现：pnpm `patchedDependencies` 固化 `react-screenshots` / `electron-screenshots` 两个补丁，扩展截图工具栏与 `ocr` / `translate` 事件通道。
+
+**修复 / 加固**
+- 打包配置：`node-screenshots` 原生模块加入 asarUnpack（修复打包后截图功能不可用的问题）。
+- 截图空 buffer 防御、快捷助手加载中防重复自动发送、无视觉模型时明确提示。
+
+**其他**
+- 修复全量 lint 中 14 个 import 排序 / `prefer-const` 错误。
+
 ## [1.3.1] - 2026-08-17
 
 ### 精简代码（重构 / 死代码清理，无功能变更）

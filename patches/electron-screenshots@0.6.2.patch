@@ -1,0 +1,56 @@
+diff --git a/lib/preload.js b/lib/preload.js
+index f55bdda084e095b35b442d4d70153a0a75ab2636..a432d7c28912b1d45dbe37a79fc1832681963cd6 100644
+--- a/lib/preload.js
++++ b/lib/preload.js
+@@ -24,6 +24,14 @@
+         console.log('contextBridge ok', arrayBuffer, data);
+         electron_1.ipcRenderer.send('SCREENSHOTS:ok', Buffer.from(arrayBuffer), data);
+     },
++    ocr: (arrayBuffer, data) => {
++        console.log('contextBridge ocr', arrayBuffer, data);
++        electron_1.ipcRenderer.send('SCREENSHOTS:ocr', Buffer.from(arrayBuffer), data);
++    },
++    translate: (arrayBuffer, data) => {
++        console.log('contextBridge translate', arrayBuffer, data);
++        electron_1.ipcRenderer.send('SCREENSHOTS:translate', Buffer.from(arrayBuffer), data);
++    },
+     on: (channel, fn) => {
+         var _a;
+         console.log('contextBridge on', fn);
+diff --git a/lib/index.js b/lib/index.js
+index 0fd1d5c7489263de53024621e8d653bf2aaa149a..71f21f8c64aba4f29f34131d53c6aa68e13a02a1 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -273,6 +273,32 @@
+             this.endCapture();
+         });
+         /**
++         * OCR事件（截图工具栏「识别文字」）
++         */
++        electron_1.ipcMain.on('SCREENSHOTS:ocr', (_event, buffer, data) => {
++            this.logger('SCREENSHOTS:ocr buffer.length %d, data: %o', buffer.length, data);
++            const event = new event_js_1.default();
++            this.emit('ocr', event, buffer, data);
++            if (event.defaultPrevented) {
++                return;
++            }
++            electron_1.clipboard.writeImage(electron_1.nativeImage.createFromBuffer(buffer));
++            this.endCapture();
++        });
++        /**
++         * TRANSLATE事件（截图工具栏「翻译图片」）
++         */
++        electron_1.ipcMain.on('SCREENSHOTS:translate', (_event, buffer, data) => {
++            this.logger('SCREENSHOTS:translate buffer.length %d, data: %o', buffer.length, data);
++            const event = new event_js_1.default();
++            this.emit('translate', event, buffer, data);
++            if (event.defaultPrevented) {
++                return;
++            }
++            electron_1.clipboard.writeImage(electron_1.nativeImage.createFromBuffer(buffer));
++            this.endCapture();
++        });
++        /**
+          * CANCEL事件
+          */
+         electron_1.ipcMain.on('SCREENSHOTS:cancel', () => {
