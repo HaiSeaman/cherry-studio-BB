@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  getFunctionalKeys,
-  isBase64ImageDataUrl,
-  isDataUrl,
-  parseDataUrl,
-  sanitizeEnvForLogging
-} from '../utils'
+import { getFunctionalKeys, isBase64ImageDataUrl, isDataUrl, parseDataUrl, sanitizeEnvForLogging } from '../utils'
 
 describe('parseDataUrl', () => {
   it('parses a standard base64 image data URL', () => {

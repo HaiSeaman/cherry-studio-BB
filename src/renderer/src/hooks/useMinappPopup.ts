@@ -83,6 +83,11 @@ export const useMinappPopup = () => {
     // 2. 大于设置的缓存的话，就直到数量减少到设置的缓存数量
   }
 
+  // 每次渲染同步 TabsService 的 cache 引用：cache 重建（调整 maxKeepAliveMinapps /
+  // closeAllMinapps）时若 MinAppPage 未挂载，其 effect 不会刷新引用，TabsService 将持有
+  // 过期实例——顶部导航模式关闭小程序 tab 时会删错 cache，webview 渲染进程残留不释放
+  TabsService.setMinAppsCache(minAppsCache)
+
   /** Open a minapp (popup shows and minapp loaded) */
   const openMinapp = useCallback(
     (app: MinAppType, keepAlive: boolean = false) => {

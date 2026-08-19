@@ -52,6 +52,7 @@ export enum IpcChannel {
   Webview_PrintToPDF = 'webview:print-to-pdf',
   Webview_SaveAsHTML = 'webview:save-as-html',
   Webview_Close = 'webview:close',
+  Webview_IsAudible = 'webview:is-audible',
 
   // Open
   Open_Path = 'open:path',

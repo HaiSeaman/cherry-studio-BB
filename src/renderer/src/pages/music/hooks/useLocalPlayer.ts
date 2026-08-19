@@ -255,7 +255,10 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
       if (favoritesActiveRef.current && list[resumeIdx].favorite !== 1) {
         pendingReturnToFavorites.current = true
         // 基于删除后的实际列表重建收藏索引，避免旧索引错位
-        const pool = list.map((t, i) => ({ t, i })).filter((x) => x.t.favorite === 1).map((x) => x.i)
+        const pool = list
+          .map((t, i) => ({ t, i }))
+          .filter((x) => x.t.favorite === 1)
+          .map((x) => x.i)
         if (pool.length > 0) targetId = list[pool[0]].id
         else return stopPlayback()
       }

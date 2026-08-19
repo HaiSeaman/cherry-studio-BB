@@ -7,12 +7,10 @@ import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useNavbarPosition } from '@renderer/hooks/useSettings'
-import { setOpenedKeepAliveMinapps } from '@renderer/store/runtime'
 import type { MinAppType } from '@renderer/types'
 import type { MenuProps } from 'antd'
 import { Dropdown } from 'antd'
 import type { FC } from 'react'
-import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -26,10 +24,9 @@ interface Props {
 const logger = loggerService.withContext('App')
 
 const MinApp: FC<Props> = ({ app, onClick, size = 60, isLast }) => {
-  const { openMinappKeepAlive } = useMinappPopup()
+  const { openMinappKeepAlive, closeMinapp } = useMinappPopup()
   const { minapps, pinned, disabled, updateMinapps, updateDisabledMinapps, updatePinnedMinapps } = useMinapps()
   const { openedKeepAliveMinapps, currentMinappId, minappShow } = useRuntime()
-  const dispatch = useDispatch()
   const navigate = useNavigate()
   const isPinned = pinned.some((p) => p.id === app.id)
   const isVisible = minapps.some((m) => m.id === app.id)
@@ -71,9 +68,9 @@ const MinApp: FC<Props> = ({ app, onClick, size = 60, isLast }) => {
         const newDisabled = [...(disabled || []), app]
         updateDisabledMinapps(newDisabled)
         updatePinnedMinapps(pinned.filter((item) => item.id !== app.id))
-        // 更新 openedKeepAliveMinapps
-        const newOpenedKeepAliveMinapps = openedKeepAliveMinapps.filter((item) => item.id !== app.id)
-        dispatch(setOpenedKeepAliveMinapps(newOpenedKeepAliveMinapps))
+        // 须走 closeMinapp 同步删除 minAppsCache（其 disposeAfter 会同步 redux 与清理 webview 状态）；
+        // 直接 dispatch 会导致 cache 与 redux 不一致，该小程序重开时永久白屏
+        closeMinapp(app.id)
       }
     },
     ...(app.type === 'Custom'

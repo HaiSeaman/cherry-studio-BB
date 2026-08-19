@@ -199,7 +199,7 @@ const MessageMenubar: FC<Props> = (props) => {
   )
 
   const onNewBranch = useCallback(async () => {
-    void EventEmitter.emit(EVENT_NAMES.NEW_BRANCH, index)
+    EventEmitter.emit(EVENT_NAMES.NEW_BRANCH, index)
     window.toast.success('新分支已创建')
   }, [index])
 

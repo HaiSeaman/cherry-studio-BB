@@ -4,8 +4,8 @@ import { Archive, FileText, Plus, Search, Trash2 } from 'lucide-react'
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 
-import type { HubNote } from '../types'
 import { formatDateTime } from '../services/schedule'
+import type { HubNote } from '../types'
 import FolderModal from './FolderModal'
 import {
   CountChip,

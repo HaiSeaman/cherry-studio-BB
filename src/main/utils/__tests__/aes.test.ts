@@ -1,5 +1,4 @@
 import * as crypto from 'crypto'
-
 import { describe, expect, it } from 'vitest'
 
 import { decrypt } from '../aes'

@@ -284,7 +284,16 @@ const api = {
     openExternal: (url: string, options?: Electron.OpenExternalOptions) => {
       // Defense-in-depth: validate URL scheme before forwarding to shell.openExternal.
       // Keep in sync with src/main/services/security.ts ALLOWED_EXTERNAL_PROTOCOLS.
-      const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:', 'obsidian:', 'vscode:', 'vscode-insiders:', 'cursor:', 'zed:']
+      const ALLOWED_PROTOCOLS = [
+        'http:',
+        'https:',
+        'mailto:',
+        'obsidian:',
+        'vscode:',
+        'vscode-insiders:',
+        'cursor:',
+        'zed:'
+      ]
       try {
         const parsed = new URL(url)
         if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
@@ -327,6 +336,7 @@ const api = {
     printToPDF: (webviewId: number) => ipcRenderer.invoke(IpcChannel.Webview_PrintToPDF, webviewId),
     saveAsHTML: (webviewId: number) => ipcRenderer.invoke(IpcChannel.Webview_SaveAsHTML, webviewId),
     close: (webviewId: number) => ipcRenderer.invoke(IpcChannel.Webview_Close, webviewId),
+    isAudible: (webviewId: number) => ipcRenderer.invoke(IpcChannel.Webview_IsAudible, webviewId),
     onFindShortcut: (callback: (payload: WebviewKeyEvent) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, payload: WebviewKeyEvent) => {
         callback(payload)

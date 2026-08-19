@@ -16,7 +16,5 @@ export function getRipgrepPlatformKey(): string {
 export function resolveBundledRipgrepPath(): string {
   const packageRoot = path.dirname(require_.resolve('@cherrystudio/ripgrep/package.json'))
 
-  return toAsarUnpackedPath(
-    path.join(packageRoot, 'vendor', 'ripgrep', RIPGREP_PLATFORM_KEY, RIPGREP_EXECUTABLE)
-  )
+  return toAsarUnpackedPath(path.join(packageRoot, 'vendor', 'ripgrep', RIPGREP_PLATFORM_KEY, RIPGREP_EXECUTABLE))
 }

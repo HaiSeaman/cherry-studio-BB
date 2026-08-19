@@ -1,11 +1,12 @@
-import FileManager from '@renderer/services/FileManager'
-import type { FileMetadata } from '@renderer/types'
-import { FILE_TYPE } from '@renderer/types'
-import { createImageBlock } from '@renderer/utils/messageUtils/create'
-import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+
+import FileManager from '@renderer/services/FileManager'
+import type { FileMetadata } from '@renderer/types'
+import { FILE_TYPE } from '@renderer/types'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { createImageBlock } from '@renderer/utils/messageUtils/create'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------

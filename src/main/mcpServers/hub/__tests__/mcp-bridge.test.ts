@@ -9,11 +9,7 @@ vi.mock('@main/services/MCPService', () => ({
   }
 }))
 
-import {
-  callMcpTool,
-  resolveHubToolName,
-  syncToolMapFromTools
-} from '../mcp-bridge'
+import { callMcpTool, resolveHubToolName, syncToolMapFromTools } from '../mcp-bridge'
 
 const githubSearchRepos: MCPTool = {
   id: 'github__search_repos',

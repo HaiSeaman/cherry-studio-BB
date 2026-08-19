@@ -212,4 +212,3 @@ export const findTranslationBlocksById = (id: string): TranslationMessageBlock[]
   const message = state.messages.entities[id]
   return findTranslationBlocks(message)
 }
-

@@ -69,7 +69,7 @@ const Chat: FC<Props> = (props) => {
     const topic = props.activeTopic
     if (!topic) return
 
-    void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+    EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
 
     const name = await PromptPopup.show({
       title: '编辑话题名',

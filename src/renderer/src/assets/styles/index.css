@@ -60,8 +60,7 @@ body {
   background:
     radial-gradient(1100px 750px at 12% -8%, var(--acrylic-1), transparent 62%),
     radial-gradient(950px 700px at 108% 18%, var(--acrylic-2), transparent 58%),
-    radial-gradient(850px 900px at 45% 118%, var(--acrylic-3), transparent 62%),
-    var(--color-background);
+    radial-gradient(850px 900px at 45% 118%, var(--acrylic-3), transparent 62%), var(--color-background);
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

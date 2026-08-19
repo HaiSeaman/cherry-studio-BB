@@ -121,7 +121,7 @@ const CustomNode: FC<{ data: any }> = ({ data }) => {
       setTimeoutTimer(
         'handleNodeClick',
         () => {
-          void EventEmitter.emit(EVENT_NAMES.LOCATE_MESSAGE + ':' + data.messageId)
+          EventEmitter.emit(EVENT_NAMES.LOCATE_MESSAGE + ':' + data.messageId)
         },
         250
       )

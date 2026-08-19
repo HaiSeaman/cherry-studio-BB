@@ -122,7 +122,7 @@ const AssistantItem: FC<AssistantItemProps> = ({
   const handleSwitch = useCallback(async () => {
     if (clickAssistantToShowTopic) {
       if (topicPosition === 'left') {
-        void EventEmitter.emit(EVENT_NAMES.SWITCH_TOPIC_SIDEBAR)
+        EventEmitter.emit(EVENT_NAMES.SWITCH_TOPIC_SIDEBAR)
       }
     }
     onSwitch(assistant)

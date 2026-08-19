@@ -283,7 +283,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
       await delay(1)
     }
 
-    void EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES, topic)
+    EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES, topic)
     focusTextarea()
   }, [focusTextarea, loading, onPause, topic])
 
@@ -292,7 +292,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
       void onPause()
       return
     }
-    void EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
+    EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
   }, [loading, onPause])
 
   const addNewTopic = useCallback(async () => {
@@ -341,7 +341,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
     'new_topic',
     () => {
       void addNewTopic()
-      void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+      EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
       focusTextarea()
     },
     { preventDefault: true, enableOnFormTags: true }

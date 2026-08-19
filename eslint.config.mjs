@@ -63,7 +63,10 @@ export default defineConfig([
       '.gitignore',
       '.conductor/**',
       'src/main/integration/cherryai/index.js',
-      'packages/**/dist'
+      'packages/**/dist',
+      // Playwright 运行产物（打包压缩后的 JS），非源码
+      'playwright-report/**',
+      'test-results/**'
     ]
   },
   // turn off oxlint supported rules.

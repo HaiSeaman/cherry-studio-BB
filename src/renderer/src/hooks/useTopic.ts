@@ -59,7 +59,7 @@ export function useActiveTopic(assistantId: string, topic?: Topic) {
   useEffect(() => {
     if (activeTopic) {
       void store.dispatch(loadTopicMessagesThunk(activeTopic.id))
-      void EventEmitter.emit(EVENT_NAMES.CHANGE_TOPIC, activeTopic)
+      EventEmitter.emit(EVENT_NAMES.CHANGE_TOPIC, activeTopic)
     }
   }, [activeTopic])
 

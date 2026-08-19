@@ -74,7 +74,9 @@ test.describe('Full Flow', () => {
         await link.click()
         await mainWindow.waitForTimeout(1800)
       } else {
-        await mainWindow.evaluate((p) => { location.hash = p }, path)
+        await mainWindow.evaluate((p) => {
+          location.hash = p
+        }, path)
         await mainWindow.waitForTimeout(1200)
       }
       const contentLen = await mainWindow.evaluate(
@@ -108,7 +110,9 @@ test.describe('Full Flow', () => {
     }
 
     // ---- Shortcut page deep check ----
-    await mainWindow.evaluate(() => { location.hash = '#/settings/shortcut' })
+    await mainWindow.evaluate(() => {
+      location.hash = '#/settings/shortcut'
+    })
     await mainWindow.waitForTimeout(1500)
 
     // Collect shortcut rows from the page: each row contains a shortcut name cell
@@ -163,7 +167,9 @@ test.describe('Full Flow', () => {
     await waitForAppReady(mainWindow)
 
     // ---- Theme switch in Display settings ----
-    await mainWindow.evaluate(() => { location.hash = '#/settings/display' })
+    await mainWindow.evaluate(() => {
+      location.hash = '#/settings/display'
+    })
     await mainWindow.waitForTimeout(1500)
     // antd segmented or radio for theme: look for 浅色/深色/跟随系统 texts
     const themeOption = mainWindow.locator('text=深色').first()
@@ -186,11 +192,13 @@ test.describe('Full Flow', () => {
     }
 
     // ---- Search interaction ----
-    await mainWindow.evaluate(() => { location.hash = '#/' })
+    await mainWindow.evaluate(() => {
+      location.hash = '#/'
+    })
     await mainWindow.waitForTimeout(1200)
-    const searchInput = mainWindow.locator(
-      'input[placeholder*="搜索"], input[type="search"], [class*="Search"] input, [class*="search"] input'
-    ).first()
+    const searchInput = mainWindow
+      .locator('input[placeholder*="搜索"], input[type="search"], [class*="Search"] input, [class*="search"] input')
+      .first()
     const searchCount = await searchInput.count()
     if (searchCount > 0) {
       await searchInput.fill('test')

@@ -6,7 +6,10 @@ import { app } from 'electron'
 
 /** 从启动参数解析 --new-data-path=... 的值（bootstrap/ipc 共用） */
 export function getNewDataPathFromArgs(): string | undefined {
-  return process.argv.slice(1).find((arg) => arg.startsWith('--new-data-path='))?.split('--new-data-path=')[1]
+  return process.argv
+    .slice(1)
+    .find((arg) => arg.startsWith('--new-data-path='))
+    ?.split('--new-data-path=')[1]
 }
 
 export function getResourcePath() {

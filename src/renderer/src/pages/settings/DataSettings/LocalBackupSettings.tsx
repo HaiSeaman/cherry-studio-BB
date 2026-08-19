@@ -162,7 +162,9 @@ const LocalBackupSettings: React.FC = () => {
 
   const renderSyncStatus = () => {
     if (!localBackupDir) return null
-    return <SyncStatus sync={localBackupSync} emptyLabel="等待下次备份" syncedLabel="上次备份: " errorLabel="备份错误" />
+    return (
+      <SyncStatus sync={localBackupSync} emptyLabel="等待下次备份" syncedLabel="上次备份: " errorLabel="备份错误" />
+    )
   }
 
   const { isModalVisible, handleBackup, handleCancel, backuping, customFileName, setCustomFileName, showBackupModal } =

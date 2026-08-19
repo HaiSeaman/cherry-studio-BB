@@ -8,7 +8,6 @@ import path from 'path'
 const logger = loggerService.withContext('AppService')
 
 export class AppService {
-
   public async setAppLaunchOnBoot(isLaunchOnBoot: boolean): Promise<void> {
     // Set login item settings for windows and mac
     // linux is not supported because it requires more file operations

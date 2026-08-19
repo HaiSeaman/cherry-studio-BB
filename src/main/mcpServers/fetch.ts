@@ -3,7 +3,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { net } from 'electron'
-import { JSDOM } from 'jsdom'
 import TurndownService from 'turndown'
 import * as z from 'zod'
 
@@ -72,6 +71,8 @@ export class Fetcher {
       const response = await this._fetch(requestPayload)
       const html = await response.text()
 
+      // jsdom 很重（完整 DOM 实现），仅在提取网页纯文本时按需加载
+      const { JSDOM } = await import('jsdom')
       const dom = new JSDOM(html)
       const document = dom.window.document
 

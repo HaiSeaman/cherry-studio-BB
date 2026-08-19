@@ -103,30 +103,28 @@ export const Playlist: FC<PlaylistProps> = memo(function Playlist({
               <Info>
                 <Title className="title">{t.title}</Title>
                 <Meta>{[t.artist, t.album].filter(Boolean).join(' · ') || '未知艺术家'}</Meta>
-            </Info>
-            <Duration>
-              {playing ? <Eq paused={!isPlaying} /> : t.duration > 0 ? formatTime(t.duration) : ''}
-            </Duration>
-            <FavBtn
-              className={t.favorite === 1 ? 'favorited' : ''}
-              title={t.favorite === 1 ? '取消收藏' : '收藏'}
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleFavorite(t)
-              }}>
-              {t.favorite === 1 ? '★' : '☆'}
-            </FavBtn>
-            <DeleteBtn
-              title="从列表移除"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(t)
-              }}>
-              ✕
-            </DeleteBtn>
-          </Item>
-        )
-      }}
+              </Info>
+              <Duration>{playing ? <Eq paused={!isPlaying} /> : t.duration > 0 ? formatTime(t.duration) : ''}</Duration>
+              <FavBtn
+                className={t.favorite === 1 ? 'favorited' : ''}
+                title={t.favorite === 1 ? '取消收藏' : '收藏'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleFavorite(t)
+                }}>
+                {t.favorite === 1 ? '★' : '☆'}
+              </FavBtn>
+              <DeleteBtn
+                title="从列表移除"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(t)
+                }}>
+                ✕
+              </DeleteBtn>
+            </Item>
+          )
+        }}
       </DynamicVirtualList>
     </ListWrap>
   )
@@ -134,8 +132,6 @@ export const Playlist: FC<PlaylistProps> = memo(function Playlist({
 
 /** 行高 = Item 52px（封面 40 + padding 12）+ 下边距 2px；虚拟列表估算必须与实测一致，否则首帧滚动位置偏移 */
 const ROW_HEIGHT = 54
-
-
 
 const ListWrap = styled.div`
   flex: 1;

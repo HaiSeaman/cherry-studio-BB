@@ -97,20 +97,15 @@ export class WindowService {
         webSecurity: false,
         webviewTag: true,
         allowRunningInsecureContent: true,
-        zoomFactor: configManager.getZoomFactor(),
-        backgroundThrottling: false
+        zoomFactor: configManager.getZoomFactor()
       }
     })
 
     this.setupMainWindow(this.mainWindow, mainWindowState)
 
-    //preload miniWindow to resolve series of issues about miniWindow in Mac
-    const enableQuickAssistant = configManager.getEnableQuickAssistant()
-    if (enableQuickAssistant && !this.miniWindow) {
-      this.miniWindow = this.createMiniWindow(true)
-    }
-
-    //init the MinApp webviews' useragent
+    // 迷你窗口改为懒创建（showMiniWindow 首次调用时再建）：
+    // 预加载原本只为解决 macOS 的窗口问题，在 Windows 上白烧一个常驻渲染进程（~180MB）
+    // init the MinApp webviews' useragent
     initSessionUserAgent()
 
     return this.mainWindow
@@ -611,11 +606,9 @@ export class WindowService {
       return
     }
 
-    if (!this.miniWindow || this.miniWindow.isDestroyed()) {
-      this.miniWindow = this.createMiniWindow()
-    }
-
-    this.miniWindow.show()
+    // 懒创建：createMiniWindow 内部已在 ready-to-show 时 center+show，
+    // 避免页面未加载完就 show() 导致白屏闪烁
+    this.miniWindow = this.createMiniWindow()
   }
 
   public hideMiniWindow() {

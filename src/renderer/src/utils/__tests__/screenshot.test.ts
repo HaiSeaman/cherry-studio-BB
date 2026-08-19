@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  DEFAULT_TARGET_LANGUAGE,
-  getScreenshotActionPrompt,
-  SCREENSHOT_OCR_PROMPT} from '../screenshot'
+import { DEFAULT_TARGET_LANGUAGE, getScreenshotActionPrompt, SCREENSHOT_OCR_PROMPT } from '../screenshot'
 
 describe('getScreenshotActionPrompt', () => {
   it('returns the OCR prompt for ocr action', () => {
@@ -19,9 +16,7 @@ describe('getScreenshotActionPrompt', () => {
   })
 
   it('falls back to the default target language when omitted', () => {
-    expect(getScreenshotActionPrompt('translate')).toBe(
-      `请识别图片中的文字，并将其翻译为${DEFAULT_TARGET_LANGUAGE}。`
-    )
+    expect(getScreenshotActionPrompt('translate')).toBe(`请识别图片中的文字，并将其翻译为${DEFAULT_TARGET_LANGUAGE}。`)
   })
 
   it('falls back to the default target language when blank', () => {

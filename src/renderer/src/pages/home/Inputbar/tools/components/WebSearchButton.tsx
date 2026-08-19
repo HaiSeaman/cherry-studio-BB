@@ -25,7 +25,11 @@ const WebSearchButton: FC<Props> = ({ quickPanelController, assistantId }) => {
   const ariaLabel = enableWebSearch ? '关闭' : '网络搜索'
 
   return (
-    <ToolActionIconButton tooltip={ariaLabel} onClick={onClick} active={!!enableWebSearch} aria-pressed={!!enableWebSearch}>
+    <ToolActionIconButton
+      tooltip={ariaLabel}
+      onClick={onClick}
+      active={!!enableWebSearch}
+      aria-pressed={!!enableWebSearch}>
       <WebSearchProviderIcon pid={selectedProviderId} />
     </ToolActionIconButton>
   )

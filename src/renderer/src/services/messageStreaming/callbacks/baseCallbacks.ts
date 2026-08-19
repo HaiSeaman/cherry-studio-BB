@@ -147,7 +147,7 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
               updates: { status: AssistantMessageStatus.SUCCESS }
             })
           )
-          void EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, {
+          EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, {
             id: assistantMsgId,
             topicId,
             status: 'success',
@@ -155,9 +155,7 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
           })
           return
         }
-        error = new Error(
-          '模型未返回任何内容（可能被内容过滤或服务端异常），请重试或更换模型'
-        ) as AISDKError
+        error = new Error('模型未返回任何内容（可能被内容过滤或服务端异常），请重试或更换模型') as AISDKError
         // 继续走下方统一错误处理（落错误块 + 消息 ERROR）
       }
       const isErrorTypeAbort = isAbortError(error)
@@ -295,7 +293,7 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
         .filter(Boolean) as MessageBlock[]
       await saveUpdatesToDB(assistantMsgId, topicId, messageErrorUpdate, blocksToSave)
 
-      void EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, {
+      EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, {
         id: assistantMsgId,
         topicId,
         status: isErrorTypeAbort ? 'pause' : 'error',
@@ -391,7 +389,7 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
       )
       await saveUpdatesToDB(assistantMsgId, topicId, messageUpdates, todoBlocksToSave)
 
-      void EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, { id: assistantMsgId, topicId, status })
+      EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, { id: assistantMsgId, topicId, status })
       logger.debug('onComplete finished')
     }
   }

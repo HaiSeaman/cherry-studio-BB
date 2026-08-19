@@ -130,4 +130,3 @@ export const HSpaceBetweenStack = styled(HStack)<StackProps>`
 export const VStack = styled(Stack)<StackProps>`
   flex-direction: column;
 `
-

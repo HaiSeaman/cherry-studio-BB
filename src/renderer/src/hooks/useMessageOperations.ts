@@ -122,7 +122,7 @@ export function useMessageOperations(topic: Topic) {
    * 发出事件以表示创建新上下文（清空消息 UI）。 / Emits an event to signal creating a new context (clearing messages UI).
    */
   const createNewContext = useCallback(async () => {
-    void EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
+    EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
   }, [])
 
   const displayCount = useAppSelector(selectNewDisplayCount)

@@ -84,9 +84,6 @@ asarUnpack:
   - resources/**
   - "**/*.{metal,exp,lib}"
   - "node_modules/@cherrystudio/ripgrep/vendor/ripgrep/**"
-  # @napi-rs/canvas native bindings (.node) cannot be loaded from inside asar;
-  # pdf-parse 2.x uses it to polyfill DOMMatrix for pdfjs in the main process
-  - "node_modules/@napi-rs/canvas*/**"
   # node-screenshots native bindings (.node) cannot be loaded from inside asar;
   # electron-screenshots screenshot capture depends on it (screenshot toolbar feature)
   - "node_modules/node-screenshots*/**"

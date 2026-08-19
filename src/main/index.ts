@@ -8,7 +8,7 @@ import '@main/config'
 import { loggerService } from '@logger'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { replaceDevtoolsFont } from '@main/utils/windowUtil'
-import { app, crashReporter } from 'electron'
+import { app } from 'electron'
 import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer'
 import { isDev, isLinux, isWin } from './constant'
 
@@ -35,14 +35,6 @@ import { initWebviewHotkeys } from './services/WebviewService'
 import { extractRtkBinaries } from './utils/rtk'
 
 const logger = loggerService.withContext('MainEntry')
-
-// enable local crash reports
-crashReporter.start({
-  companyName: 'CherryHQ',
-  productName: 'Cherry-Studio-BB',
-  submitURL: '',
-  uploadToServer: false
-})
 
 /**
  * Disable hardware acceleration if setting is enabled

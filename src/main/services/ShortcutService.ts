@@ -159,7 +159,9 @@ export function registerShortcuts(window: BrowserWindow) {
         const accelerator = convertShortcutFormat(shortcut.shortcut)
 
         if (!globalShortcut.register(accelerator, () => handler(window))) {
-          logger.warn(`Failed to register shortcut "${shortcut.key}" (${accelerator}): already registered or unavailable`)
+          logger.warn(
+            `Failed to register shortcut "${shortcut.key}" (${accelerator}): already registered or unavailable`
+          )
         }
       } catch (error) {
         logger.warn(`Failed to register shortcut ${shortcut.key}`)

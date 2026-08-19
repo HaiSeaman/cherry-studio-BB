@@ -177,7 +177,7 @@ const MessageItem: FC<Props> = ({
           if (isMultiSelectMode) {
             return
           }
-          void EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
+          EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
         }}>
         <Divider dashed style={{ padding: '0 20px' }} plain>
           {'清除上下文'}

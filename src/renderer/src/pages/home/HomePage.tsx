@@ -48,12 +48,12 @@ const HomePage: FC = () => {
     if (!showAssistants) {
       setShowAssistants(true)
       requestAnimationFrame(() => {
-        void EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
+        EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
       })
       return
     }
 
-    void EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
+    EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
   })
 
   useShortcut('toggle_show_topics', () => {
@@ -65,12 +65,12 @@ const HomePage: FC = () => {
     if (!showAssistants) {
       setShowAssistants(true)
       requestAnimationFrame(() => {
-        void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+        EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
       })
       return
     }
 
-    void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+    EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
   })
 
   const setActiveAssistant = useCallback(

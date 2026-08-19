@@ -19,13 +19,13 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import type { ProviderV3 } from '@ai-sdk/provider'
 import type { XaiProvider, XaiProviderSettings } from '@ai-sdk/xai'
 import { createXai } from '@ai-sdk/xai'
-import type { CherryInProvider, CherryInProviderSettings } from '../cherryin'
-import { createCherryIn } from '../cherryin'
 import type { OpenRouterProviderSettings } from '@openrouter/ai-sdk-provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { customProvider } from 'ai'
 
 import type { OpenRouterSearchConfig } from '../../plugins/built-in/webSearchPlugin'
+import type { CherryInProvider, CherryInProviderSettings } from '../cherryin'
+import { createCherryIn } from '../cherryin'
 import type {
   ExtensionConfigToIdResolutionMap,
   ExtractExtensionIds,

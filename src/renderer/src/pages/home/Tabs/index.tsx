@@ -23,14 +23,7 @@ interface Props {
 
 let _tab: Tab | null = null
 
-const HomeTabs: FC<Props> = ({
-  activeAssistant,
-  activeTopic,
-  setActiveAssistant,
-  setActiveTopic,
-  position,
-  style
-}) => {
+const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant, setActiveTopic, position, style }) => {
   const { addAssistant } = useAssistants()
   const { topicPosition } = useSettings()
   const { defaultAssistant } = useDefaultAssistant()

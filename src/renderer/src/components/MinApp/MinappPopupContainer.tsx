@@ -36,6 +36,10 @@ import WebviewContainer from './WebviewContainer'
 
 const logger = loggerService.withContext('MinappPopupContainer')
 
+/** 小程序闲置回收：闲置 30 分钟回收，每 5 分钟检查一次 */
+const IDLE_RECYCLE_MS = 30 * 60 * 1000
+const IDLE_RECYCLE_CHECK_MS = 5 * 60 * 1000
+
 interface AppExtraInfo {
   canPinned: boolean
   isPinned: boolean
@@ -169,12 +173,68 @@ const MinappPopupContainer: React.FC = () => {
   /** 供 memo 化的 WebviewContainerGroup 回调读取最新值（memo 只重建于 combinedApps 变化，闭包会过期） */
   const currentMinappIdRef = useRef(currentMinappId)
   currentMinappIdRef.current = currentMinappId
+  /** 供闲置回收定时器读取最新值（定时器不能依赖这些值重建，否则频繁切换小程序会不断重置计时） */
+  const openedKeepAliveMinappsRef = useRef(openedKeepAliveMinapps)
+  openedKeepAliveMinappsRef.current = openedKeepAliveMinapps
+  /** 闲置回收须调用最新渲染的 closeMinapp（其闭包依赖 redux 状态），否则可能误收起抽屉 */
+  const closeMinappRef = useRef(closeMinapp)
+  closeMinappRef.current = closeMinapp
   const minappsOpenLinkExternalRef = useRef(minappsOpenLinkExternal)
   minappsOpenLinkExternalRef.current = minappsOpenLinkExternal
 
   const { setTimeoutTimer } = useTimer()
 
   useBridge()
+
+  /** 闲置回收：非当前小程序 30 分钟未使用且未在发声时，销毁其 webview 渲染进程（~300MB/个）。
+   *  重开时 WebviewContainer 会通过 localStorage 的 last url 恢复到关闭前页面 */
+  const lastActiveMapRef = useRef<Map<string, number>>(new Map())
+
+  useEffect(() => {
+    if (currentMinappId) {
+      lastActiveMapRef.current.set(currentMinappId, Date.now())
+    }
+  }, [currentMinappId])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void (async () => {
+        const apps = openedKeepAliveMinappsRef.current
+        if (apps.length === 0) return
+
+        const now = Date.now()
+        const current = currentMinappIdRef.current
+
+        for (const app of apps) {
+          const lastActive = lastActiveMapRef.current.get(app.id) ?? now
+          if (app.id === current || now - lastActive < IDLE_RECYCLE_MS) {
+            continue
+          }
+
+          // 正在播放音频/视频的小程序（如后台听歌）不回收
+          let audible = false
+          try {
+            const webviewId = webviewRefs.current.get(app.id)?.getWebContentsId?.()
+            audible = webviewId ? ((await window.api?.webview?.isAudible?.(webviewId)) ?? false) : false
+          } catch {
+            // webview 未就绪/已销毁，视为可回收
+          }
+          if (audible) {
+            continue
+          }
+
+          // 必须走 closeMinapp（内部删除 minAppsCache 并触发 disposeAfter 同步 redux、
+          // clearWebviewState、关闭关联 tab）；直接 dispatch 会导致 cache 与 redux 不一致，
+          // 该小程序重新打开时因 cache 命中而跳过重新挂载，出现永久白屏
+          closeMinappRef.current(app.id)
+          lastActiveMapRef.current.delete(app.id)
+          logger.info(`Recycled idle minapp: ${app.id}`)
+        }
+      })()
+    }, IDLE_RECYCLE_CHECK_MS)
+
+    return () => clearInterval(timer)
+  }, [])
 
   /** set the popup display status */
   useEffect(() => {
@@ -306,12 +366,16 @@ const MinappPopupContainer: React.FC = () => {
       }
     }
     if (appid == currentMinappIdRef.current) {
-      setTimeoutTimer('handleWebviewLoaded', () => {
-        // 触发时复查：A 加载中切到 B 时，A 的定时器不应让 B 提前显示加载完成
-        if (appid === currentMinappIdRef.current) {
-          setIsReady(true)
-        }
-      }, 200)
+      setTimeoutTimer(
+        'handleWebviewLoaded',
+        () => {
+          // 触发时复查：A 加载中切到 B 时，A 的定时器不应让 B 提前显示加载完成
+          if (appid === currentMinappIdRef.current) {
+            setIsReady(true)
+          }
+        },
+        200
+      )
     }
   }
 

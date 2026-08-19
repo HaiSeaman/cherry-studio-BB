@@ -77,7 +77,6 @@ export class SelectionService {
   private toolbarWindow: BrowserWindow | null = null
   private actionWindows = new Set<BrowserWindow>()
   private preloadedActionWindows: BrowserWindow[] = []
-  private readonly PRELOAD_ACTION_WINDOW_COUNT = 1
 
   private isHideByMouseKeyListenerActive: boolean = false
   private isCtrlkeyListenerActive: boolean = false
@@ -336,10 +335,8 @@ export class SelectionService {
     }
 
     try {
-      //make sure the toolbar window is ready
-      this.createToolbarWindow()
-      // Initialize preloaded windows
-      void this.initPreloadedActionWindows()
+      // 工具栏与动作窗口懒创建（showToolbarAtPosition / popActionWindow 均有按需创建兜底）：
+      // 启动即预建会在后台常驻 2 个渲染进程（~320MB），首次划词各慢 ~0.5s，之后复用无感
       // Handle errors
       this.selectionHook.on('error', (error: { message: string }) => {
         this.logError('Error in SelectionHook:', error as Error)
@@ -1224,21 +1221,6 @@ export class SelectionService {
   }
 
   /**
-   * Initialize preloaded action windows
-   * Creates a pool of windows at startup for faster response
-   */
-  private async initPreloadedActionWindows(): Promise<void> {
-    try {
-      // Create initial pool of preloaded windows
-      for (let i = 0; i < this.PRELOAD_ACTION_WINDOW_COUNT; i++) {
-        await this.pushNewActionWindow()
-      }
-    } catch (error) {
-      this.logError('Failed to initialize preloaded windows:', error as Error)
-    }
-  }
-
-  /**
    * Close all preloaded action windows
    */
   private closePreloadedActionWindows(): void {
@@ -1324,7 +1306,20 @@ export class SelectionService {
   public processAction(actionItem: ActionItem, isFullScreen: boolean = false): void {
     const actionWindow = this.popActionWindow()
 
-    actionWindow.webContents.send(IpcChannel.Selection_UpdateActionData, actionItem)
+    const sendActionData = () => {
+      if (actionWindow.isDestroyed()) return
+      actionWindow.webContents.send(IpcChannel.Selection_UpdateActionData, actionItem)
+    }
+
+    // 预建队列空时 pop 出的是新建窗口，页面仍在加载、渲染端监听器尚未注册；
+    // 必须等 did-finish-load（React 挂载注册监听器略晚于它）后再发送，否则消息丢失
+    if (actionWindow.webContents.isLoading()) {
+      actionWindow.webContents.once('did-finish-load', () => {
+        setTimeout(sendActionData, 100)
+      })
+    } else {
+      sendActionData()
+    }
 
     this.showActionWindow(actionWindow, isFullScreen)
   }

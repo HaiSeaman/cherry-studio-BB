@@ -226,5 +226,4 @@ describe('linkConverter', () => {
       })
     })
   })
-
 })

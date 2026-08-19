@@ -2,8 +2,8 @@ import { Lock, Unlock } from 'lucide-react'
 import { type FC } from 'react'
 import styled from 'styled-components'
 
-import type { HubNoteSnapshot } from '../types'
 import { formatDateTime } from '../services/schedule'
+import type { HubNoteSnapshot } from '../types'
 import { mx, MXDialog } from './mx'
 
 interface NoteHistoryPanelProps {

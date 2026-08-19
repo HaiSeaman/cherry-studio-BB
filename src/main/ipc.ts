@@ -668,6 +668,12 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
     if (!webview || webview.isDestroyed() || webview.getType() !== 'webview') return
     webview.close()
   })
+  // 查询 guest webview 是否正在发声（闲置回收时跳过正在播放音频/视频的小程序）
+  ipcMain.handle(IpcChannel.Webview_IsAudible, (_, webviewId: number) => {
+    const webview = webContents.fromId(webviewId)
+    if (!webview || webview.isDestroyed() || webview.getType() !== 'webview') return false
+    return webview.isCurrentlyAudible()
+  })
 
   // Webview print and save handlers
   ipcMain.handle(IpcChannel.Webview_PrintToPDF, async (_, webviewId: number) => {

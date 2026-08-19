@@ -136,7 +136,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const onClearMessages = useCallback((topic: Topic) => {
     // window.keyv.set(EVENT_NAMES.CHAT_COMPLETION_PAUSED, true)
     store.dispatch(setGenerating(false))
-    void EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES, topic)
+    EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES, topic)
   }, [])
 
   const handleConfirmDelete = useCallback(

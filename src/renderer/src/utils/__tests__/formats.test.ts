@@ -135,5 +135,4 @@ describe('formats', () => {
       expect(removeSvgEmptyLines(content)).toBe(content)
     })
   })
-
 })

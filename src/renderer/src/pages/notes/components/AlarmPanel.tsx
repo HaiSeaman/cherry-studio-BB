@@ -115,7 +115,10 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
           <span />
         </Toggle>
         <AlarmInfo>
-          <AlarmTime>{isCalendar ? `📅 ${a.date} ` : ''}{`${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`}</AlarmTime>
+          <AlarmTime>
+            {isCalendar ? `📅 ${a.date} ` : ''}
+            {`${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`}
+          </AlarmTime>
           <AlarmMeta>
             {[
               a.label || '闹钟',

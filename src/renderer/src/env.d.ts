@@ -4,15 +4,7 @@ import type KeyvStorage from '@kangfenmao/keyv-storage'
 import type { HookAPI } from 'antd/es/modal/useModal'
 import type { NavigateFunction } from 'react-router-dom'
 
-import type {
-  closeAll,
-  closeToast,
-  error,
-  info,
-  loading,
-  success,
-  warning
-} from './components/TopView/toast'
+import type { closeAll, closeToast, error, info, loading, success, warning } from './components/TopView/toast'
 
 interface ImportMetaEnv {
   VITE_RENDERER_INTEGRATED_MODEL: string

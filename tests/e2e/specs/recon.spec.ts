@@ -49,7 +49,9 @@ test.describe('Recon', () => {
     console.log(JSON.stringify(await dump(mainWindow, 'home'), null, 1))
 
     // Navigate to settings via hash
-    await mainWindow.evaluate(() => { location.hash = '#/settings' })
+    await mainWindow.evaluate(() => {
+      location.hash = '#/settings'
+    })
     await mainWindow.waitForTimeout(2500)
     console.log('=== SETTINGS ===')
     console.log(JSON.stringify(await dump(mainWindow, 'settings'), null, 1))

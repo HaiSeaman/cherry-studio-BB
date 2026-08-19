@@ -24,7 +24,6 @@ import * as fs from 'fs'
 import { writeFileSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { isBinaryFile } from 'isbinaryfile'
-import officeParser from 'officeparser'
 import * as path from 'path'
 import WordExtractor from 'word-extractor'
 
@@ -494,6 +493,8 @@ class FileStorage {
           return extracted.getBody()
         }
 
+        // officeparser 体积大且仅在解析 Office 文档时需要，按需加载以降低主进程常驻内存
+        const { default: officeParser } = await import('officeparser')
         const data = await officeParser.parseOfficeAsync(filePath, {
           tempFilesLocation: this.tempDir
         })
