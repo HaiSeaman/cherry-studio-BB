@@ -116,12 +116,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 }
 
 export async function fetchMcpTools(assistant: Assistant) {
-  let mcpTools: MCPTool[] = []
-  const enabledMCPs = getMcpServersForAssistant(assistant)
+  return fetchToolsForServers(getMcpServersForAssistant(assistant))
+}
 
-  if (enabledMCPs && enabledMCPs.length > 0) {
+/** 拉取指定 MCP 服务器列表的工具（单个服务器失败不影响其余，返回聚合结果） */
+export async function fetchToolsForServers(servers: MCPServer[]): Promise<MCPTool[]> {
+  let mcpTools: MCPTool[] = []
+
+  if (servers && servers.length > 0) {
     try {
-      const toolPromises = enabledMCPs.map(async (mcpServer: MCPServer) => {
+      const toolPromises = servers.map(async (mcpServer: MCPServer) => {
         try {
           const tools = await withTimeout(
             window.api.mcp.listTools(mcpServer),

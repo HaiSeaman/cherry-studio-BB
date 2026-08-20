@@ -1,4 +1,4 @@
-import { InfoCircleOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, CopyOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { HStack } from '@renderer/components/Layout'
 import Selector from '@renderer/components/Selector'
 import { InfoTooltip } from '@renderer/components/TooltipIcons'
@@ -20,9 +20,9 @@ import type { NotificationSource } from '@renderer/types/notification'
 import { isValidProxyUrl } from '@renderer/utils'
 import { formatErrorMessage } from '@renderer/utils/error'
 import { defaultByPassRules } from '@shared/config/constant'
-import { Flex, Input, Switch, Tooltip } from 'antd'
+import { Avatar, Button, Flex, Input, message,Switch, Tooltip } from 'antd'
 import type { FC } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '.'
@@ -44,6 +44,9 @@ const spellCheckLanguageOptions: readonly SpellCheckOption[] = [
   { value: 'el', label: 'Ελληνικά', flag: '🇬🇷' }
 ]
 
+const APP_NAME = 'cherry-studio-BB'
+const RELEASE_URL = 'https://github.com/HaiSeaman/cherry-studio-BB'
+
 const GeneralSettings: FC = () => {
   const {
     proxyUrl: storeProxyUrl,
@@ -64,6 +67,11 @@ const GeneralSettings: FC = () => {
   const { theme } = useTheme()
   const { enableDeveloperMode, setEnableDeveloperMode } = useEnableDeveloperMode()
   const { setTimeoutTimer } = useTimer()
+  const [appVersion, setAppVersion] = useState('')
+
+  useEffect(() => {
+    void window.api.getAppInfo().then((info) => setAppVersion(info.version))
+  }, [])
 
   const updateTray = (isShowTray: boolean) => {
     setTray(isShowTray)
@@ -303,6 +311,26 @@ const GeneralSettings: FC = () => {
             <InfoTooltip title={'启用开发者模式后，将可以使用调用链功能查看模型调用过程的数据流。'} />
           </Flex>
           <Switch checked={enableDeveloperMode} onChange={setEnableDeveloperMode} />
+        </SettingRow>
+      </SettingGroup>
+      <SettingGroup theme={theme}>
+        <SettingTitle>{'关注'}</SettingTitle>
+        <SettingDivider />
+        <SettingRow>
+          <Flex align="center" gap={8}>
+            <Avatar size={22} shape="square" icon={<AppstoreOutlined />} />
+            <SettingRowTitle>{`${APP_NAME}  ${appVersion ? `v${appVersion}` : ''}`}</SettingRowTitle>
+          </Flex>
+          <Button
+            type="primary"
+            ghost
+            icon={<CopyOutlined />}
+            onClick={() => {
+              void navigator.clipboard.writeText(RELEASE_URL)
+              message.success('项目地址已复制到剪贴板')
+            }}>
+            发布地址
+          </Button>
         </SettingRow>
       </SettingGroup>
     </SettingContainer>

@@ -2,13 +2,14 @@ import { loggerService } from '@logger'
 import { AiProvider } from '@renderer/aiCore'
 import { buildStreamTextParams } from '@renderer/aiCore/prepareParams'
 import { db } from '@renderer/databases'
-import { fetchMcpTools, getRotatedApiKey } from '@renderer/services/ApiService'
-import { getAssistantById, getDefaultAssistant, getProviderByModel } from '@renderer/services/AssistantService'
+import { getStoreProviders } from '@renderer/hooks/useStore'
+import { fetchMcpTools, fetchToolsForServers, getRotatedApiKey } from '@renderer/services/ApiService'
+import { getAssistantById, getDefaultAssistant } from '@renderer/services/AssistantService'
 import { dbService } from '@renderer/services/db'
 import { NotificationService } from '@renderer/services/NotificationService'
 import store from '@renderer/store'
 import { addAssistant, addTopic } from '@renderer/store/assistants'
-import type { Assistant, Topic } from '@renderer/types'
+import type { Assistant, MCPTool, Model, Topic } from '@renderer/types'
 import { getAssistantType } from '@renderer/types'
 import { uuid } from '@renderer/utils'
 import { isAbortError } from '@renderer/utils/error'
@@ -112,24 +113,52 @@ export async function executeAutomationTask(task: AutomationTask, runId: string)
 
   let timeoutTimer: ReturnType<typeof setTimeout> | null = null
   try {
-    // 1. 解析助手与模型
-    const assistant: Assistant | undefined = getAssistantById(task.assistantId)
-    if (!assistant || !assistant.model) {
-      await fail(`任务绑定的助手不存在或未设置模型（assistantId=${task.assistantId}），请编辑任务重新选择`)
+    // 1. 解析执行配置：新任务直接用自带 model/prompt/mcpServerIds；
+    //    老任务（无 model）回退到绑定助手的模型、提示词与 MCP 配置
+    const legacy = !task.model && task.assistantId ? getAssistantById(task.assistantId) : undefined
+    const model = (task.model ?? legacy?.model) as Model | undefined
+    if (!model) {
+      await fail('任务未设置模型（或老任务绑定的助手已删除），请编辑任务重新选择模型')
       return
     }
-    const model = assistant.model
+    const assistant: Assistant = task.model
+      ? // 新任务：合成最小执行助手（默认设置 + 任务自定义提示词）
+        { ...getDefaultAssistant(), id: task.assistantId ?? 'automation', model, prompt: task.prompt ?? '' }
+      : // 老任务：沿用原助手（保留温度等设置）
+        legacy!
 
-    // 2. 组装工具集：MCP 工具（跟随助手配置，任务级授权=全部自动批准）+ 系统工具白名单
-    const mcpTools = task.useMcpTools ? await fetchMcpTools(assistant) : []
-    const baseProvider = getProviderByModel(model)
+    // 2. 模型有效性校验：按快照的 provider id 定位服务商并确认模型仍在（防模型/服务商被删后静默乱跑）
+    const baseProvider = getStoreProviders().find((p) => p.id === model.provider)
+    if (!baseProvider || !baseProvider.models.some((m) => m.id === model.id)) {
+      await fail(`模型「${model.name}」不可用（服务商或模型可能已被删除），请编辑任务重新选择模型`)
+      return
+    }
     const provider = { ...baseProvider, apiKey: getRotatedApiKey(baseProvider) }
 
-    // 3. 超时控制
+    // 3. 组装 MCP 工具：新任务按任务勾选的服务器（未启用/已删除的记提示并跳过）；老任务跟随助手配置
+    let mcpTools: MCPTool[] = []
+    if (task.useMcpTools) {
+      if (task.model) {
+        const allServers = store.getState().mcp.servers ?? []
+        const selected = task.mcpServerIds ?? []
+        const activeServers = allServers.filter((s) => s.isActive && selected.includes(s.id))
+        for (const id of selected) {
+          if (!activeServers.some((s) => s.id === id)) {
+            const name = allServers.find((s) => s.id === id)?.name ?? id
+            pushStep('notice', `MCP 服务器「${name}」未启用或已删除，本次运行已跳过`)
+          }
+        }
+        mcpTools = await fetchToolsForServers(activeServers)
+      } else {
+        mcpTools = await fetchMcpTools(assistant)
+      }
+    }
+
+    // 4. 超时控制
     const controller = new AbortController()
     timeoutTimer = setTimeout(() => controller.abort(), RUN_TIMEOUT_MS)
 
-    // 4. 复用现有参数构建（系统提示词、温度、stopWhen、providerOptions、空闲超时等）
+    // 5. 复用现有参数构建（系统提示词、温度、stopWhen、providerOptions、空闲超时等）
     const { params, modelId, capabilities, webSearchPluginConfig, idleTimeout } = await buildStreamTextParams(
       [{ role: 'user', content: task.instruction }],
       assistant,
@@ -141,10 +170,10 @@ export async function executeAutomationTask(task: AutomationTask, runId: string)
       }
     )
 
-    // 5. 注入自动化上下文（附加在助手提示词之后）
+    // 6. 注入自动化上下文（附加在提示词之后）
     params.system = params.system ? `${params.system}\n\n${buildContextPrompt(task)}` : buildContextPrompt(task)
 
-    // 6. 注入系统工具白名单 + 步数上限 + 逐步日志
+    // 7. 注入系统工具白名单 + 步数上限 + 逐步日志
     const systemTools = buildSystemTools(task.systemTools)
     if (Object.keys(systemTools).length > 0) {
       params.tools = { ...params.tools, ...systemTools }
@@ -161,7 +190,7 @@ export async function executeAutomationTask(task: AutomationTask, runId: string)
       }
     }
 
-    // 7. 执行
+    // 8. 执行
     const AI = new AiProvider(model, provider)
     const result = await AI.completions(modelId, params, {
       assistant,
@@ -214,7 +243,7 @@ async function writeRunReport(
   stepCount: number
 ): Promise<void> {
   try {
-    const assistant = getAssistantById(task.assistantId)
+    const assistant = getAssistantById(task.assistantId ?? '')
     if (!assistant) return
 
     let topic = (assistant.topics ?? []).find((t) => t.name === REPORT_TOPIC_NAME)

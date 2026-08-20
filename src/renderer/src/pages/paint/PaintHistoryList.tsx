@@ -103,6 +103,7 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
                 </Meta>
               </Info>
               <DeleteBtn
+                className="del-btn"
                 title="删除此会话"
                 onClick={(e) => {
                   e.stopPropagation()

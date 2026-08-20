@@ -1,10 +1,14 @@
 import { CopyOutlined, MoreOutlined, PlayCircleOutlined } from '@ant-design/icons'
 import { loggerService } from '@logger'
 import { REPORT_TOPIC_NAME } from '@renderer/automation/runner'
+import ModelSelector from '@renderer/components/ModelSelector'
 import { db } from '@renderer/databases'
+import { getMcpServersForAssistant } from '@renderer/services/ApiService'
+import { getAssistantById } from '@renderer/services/AssistantService'
+import { getModelUniqId } from '@renderer/services/ModelService'
+import store from '@renderer/store'
 import { useAppSelector } from '@renderer/store'
-import type { Assistant } from '@renderer/types'
-import { getAssistantType } from '@renderer/types'
+import type { Assistant, Model } from '@renderer/types'
 import type {
   AutomationRun,
   AutomationRunStatus,
@@ -12,7 +16,7 @@ import type {
   AutomationSystemToolId,
   AutomationTask
 } from '@shared/automation'
-import { WEEKDAY_LABELS, weekdayToJsDay } from '@shared/automation'
+import { jsDayToWeekday, WEEKDAY_LABELS } from '@shared/automation'
 import {
   Button,
   Checkbox,
@@ -52,7 +56,10 @@ function scheduleLabel(task: AutomationTask): string {
     if (m % 60 === 0) return `每 ${m / 60} 小时`
     return `每 ${m} 分钟`
   }
-  if (s.type === 'weekly') return `每${WEEKDAY_LABELS[s.weekday - 1] ?? '?'} ${s.time}`
+  if (s.type === 'weekly') {
+    const days = s.weekdays.map((w) => (WEEKDAY_LABELS[w - 1] ?? '?').replace('周', ''))
+    return `每周${days.join('/')} ${s.time}`
+  }
   return `每天 ${s.time}`
 }
 
@@ -68,10 +75,9 @@ function nextRunAt(task: AutomationTask): number | null {
   }
   const [h, m] = s.time.split(':').map(Number)
   if (s.type === 'weekly') {
-    const target = weekdayToJsDay(s.weekday)
     let next = dayjs().hour(h).minute(m).second(0).millisecond(0)
     for (let i = 0; i < 8; i++) {
-      if (next.day() === target && next.isAfter(dayjs())) return next.valueOf()
+      if (s.weekdays.includes(jsDayToWeekday(next.day())) && next.isAfter(dayjs())) return next.valueOf()
       next = next.add(1, 'day')
     }
     return null
@@ -90,6 +96,7 @@ const statusMeta: Record<AutomationRunStatus, { label: string; color: string }> 
 
 const stepDotColor: Record<string, string> = {
   text: 'var(--color-primary)',
+  notice: '#e6a23c',
   tool_call: '#2e9bd6',
   tool_result: '#6fbf9b',
   error: 'var(--color-error)'
@@ -97,6 +104,7 @@ const stepDotColor: Record<string, string> = {
 
 const stepLabel: Record<string, string> = {
   text: 'AI 输出',
+  notice: '提示',
   tool_call: '调用工具',
   tool_result: '工具结果',
   error: '错误'
@@ -149,32 +157,21 @@ const AutomationWorkspace: FC<Props> = ({ assistant }) => {
     return off
   }, [refresh])
 
-  const assistantName = useCallback(
-    (id: string) => {
-      const a = assistants.find((x) => x.id === id)
-      return a ? `${a.name}${a.model ? ` · ${a.model.name}` : ''}` : '（助手已删除）'
+  /** 任务执行模型名（新任务取自带 model；老任务回退绑定助手的模型） */
+  const modelLabel = useCallback(
+    (task: AutomationTask) => {
+      const m = task.model ?? assistants.find((a) => a.id === task.assistantId)?.model
+      return m?.name ?? '（需重新选择模型）'
     },
     [assistants]
   )
 
-  /** 本助手绑定的任务；其他（绑定在非自动化助手上的遗留任务）单独成组，避免不可达 */
-  const myTasks = useMemo(() => tasks.filter((t) => t.assistantId === assistant.id), [tasks, assistant.id])
-  const otherTasks = useMemo(
-    () =>
-      tasks.filter((t) => {
-        if (t.assistantId === assistant.id) return false
-        const owner = assistants.find((a) => a.id === t.assistantId)
-        return !owner || getAssistantType(owner) !== 'automation'
-      }),
-    [tasks, assistants, assistant.id]
-  )
-
-  /** 今日统计（按本助手任务口径） */
+  /** 今日统计（全部任务口径：任务不再绑定执行助手，所有自动化工作台共用一份列表） */
   const stats = useMemo(() => {
     const todayStart = dayjs().startOf('day').valueOf()
-    const myIds = new Set(myTasks.map((t) => t.id))
-    const todayRuns = runs.filter((r) => r.startedAt >= todayStart && myIds.has(r.taskId))
-    const next = myTasks
+    const taskIds = new Set(tasks.map((t) => t.id))
+    const todayRuns = runs.filter((r) => r.startedAt >= todayStart && taskIds.has(r.taskId))
+    const next = tasks
       .map((t) => nextRunAt(t))
       .filter((x): x is number => x !== null)
       .sort((a, b) => a - b)[0]
@@ -184,7 +181,7 @@ const AutomationWorkspace: FC<Props> = ({ assistant }) => {
       failed: todayRuns.filter((r) => r.status === 'failed' || r.status === 'timeout').length,
       next
     }
-  }, [runs, myTasks])
+  }, [runs, tasks])
 
   const toggleEnabled = async (task: AutomationTask, enabled: boolean) => {
     await window.api.automation.saveTask({ ...task, enabled })
@@ -230,7 +227,7 @@ const AutomationWorkspace: FC<Props> = ({ assistant }) => {
               <TaskMeta>
                 <span>{scheduleLabel(task)}</span>
                 <Divider />
-                <span>{assistantName(task.assistantId)}</span>
+                <span>{modelLabel(task)}</span>
                 {task.useMcpTools && (
                   <>
                     <Divider />
@@ -325,9 +322,9 @@ const AutomationWorkspace: FC<Props> = ({ assistant }) => {
             items={[
               {
                 key: 'tasks',
-                label: `任务 (${myTasks.length})`,
+                label: `任务 (${tasks.length})`,
                 children:
-                  myTasks.length === 0 && otherTasks.length === 0 ? (
+                  tasks.length === 0 ? (
                     <EmptyPanel>
                       <Empty description="还没有自动化任务" image={Empty.PRESENTED_IMAGE_SIMPLE}>
                         <Button type="primary" onClick={() => setSelectedTaskId(null)}>
@@ -336,19 +333,7 @@ const AutomationWorkspace: FC<Props> = ({ assistant }) => {
                       </Empty>
                     </EmptyPanel>
                   ) : (
-                    <>
-                      {myTasks.length > 0 ? (
-                        renderTaskList(myTasks)
-                      ) : (
-                        <SectionHint>本助手还没有任务，点上方「新建任务」或右侧表单直接创建</SectionHint>
-                      )}
-                      {otherTasks.length > 0 && (
-                        <>
-                          <OtherGroupTitle>绑定在其他助手上的任务</OtherGroupTitle>
-                          {renderTaskList(otherTasks)}
-                        </>
-                      )}
-                    </>
+                    renderTaskList(tasks)
                   )
               },
               {
@@ -540,14 +525,16 @@ const LinkedFilesPicker: FC<{ value?: string[]; onChange?: (v: string[]) => void
 
 interface FormValues {
   name: string
-  assistantId: string
+  modelUniqId?: string
+  prompt?: string
   instruction: string
   scheduleType: AutomationSchedule['type']
   onceAt?: Dayjs
   everyMinutes?: number
   dailyTime?: Dayjs
-  weekday?: number
+  weekdays?: number[]
   useMcpTools: boolean
+  mcpServerIds?: string[]
   systemTools: AutomationSystemToolId[]
   notifyOnComplete: boolean
   enabled: boolean
@@ -561,10 +548,26 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
   onDone
 }) => {
   const isEdit = !!taskId
-  const assistants = useAppSelector((state) => state.assistants.assistants)
+  const providers = useAppSelector((state) => state.llm.providers)
+  const mcpServers = useAppSelector((state) => state.mcp.servers)
   const [form] = Form.useForm<FormValues>()
   const [loading, setLoading] = useState(isEdit)
   const scheduleType = Form.useWatch('scheduleType', form) ?? 'daily'
+  const useMcpTools = Form.useWatch('useMcpTools', form) ?? false
+
+  /** 模型选择器数据源：仅已启用的服务商（与聊天页口径一致） */
+  const enabledProviders = useMemo(() => providers.filter((p) => p.enabled), [providers])
+
+  /** MCP 服务器选项：未启用的置灰并标注，保证已选但停用的服务器仍可见 */
+  const mcpOptions = useMemo(
+    () =>
+      (mcpServers ?? []).map((s) => ({
+        label: s.isActive ? s.name : `${s.name}（未启用）`,
+        value: s.id,
+        disabled: !s.isActive
+      })),
+    [mcpServers]
+  )
 
   useEffect(() => {
     if (!taskId) return
@@ -581,9 +584,22 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
           task.schedule.type === 'daily' || task.schedule.type === 'weekly'
             ? task.schedule.time.split(':').map(Number)
             : [0, 0]
+        // 老任务（无 model）回退绑定助手的模型/提示词/MCP 配置用于表单回显，保存后即转为新格式
+        // 助手经 getAssistantById 直读 store（不订阅），避免 assistants 变动触发 effect 重置表单
+        const legacy = task.model ? undefined : task.assistantId ? getAssistantById(task.assistantId) : undefined
+        const model = task.model ?? legacy?.model
+        let mcpIds = task.mcpServerIds
+        if (!mcpIds && legacy) {
+          // 排除 auto 模式注入的虚拟 Hub 服务器（不在 MCP 设置列表里，任务级无法选择）
+          const realIds = new Set((store.getState().mcp.servers ?? []).map((s) => s.id))
+          mcpIds = getMcpServersForAssistant(legacy)
+            .map((s) => s.id)
+            .filter((id) => realIds.has(id))
+        }
         form.setFieldsValue({
           name: task.name,
-          assistantId: task.assistantId,
+          modelUniqId: model ? getModelUniqId(model as Model) : undefined,
+          prompt: task.prompt ?? legacy?.prompt ?? '',
           instruction: task.instruction,
           scheduleType: task.schedule.type,
           onceAt: task.schedule.type === 'once' ? dayjs(task.schedule.at) : undefined,
@@ -593,8 +609,9 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
             task.schedule.type === 'daily' || task.schedule.type === 'weekly'
               ? dayjs().hour(h).minute(m).second(0)
               : undefined,
-          weekday: task.schedule.type === 'weekly' ? task.schedule.weekday : undefined,
+          weekdays: task.schedule.type === 'weekly' ? task.schedule.weekdays : undefined,
           useMcpTools: task.useMcpTools,
+          mcpServerIds: mcpIds ?? [],
           systemTools: task.systemTools,
           notifyOnComplete: task.notifyOnComplete,
           enabled: task.enabled,
@@ -606,21 +623,17 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
       .finally(() => setLoading(false))
   }, [taskId, form, onDone])
 
-  const assistantOptions = useMemo(
-    () =>
-      assistants
-        .filter((a) => a.id !== 'default')
-        .map((a) => ({
-          value: a.id,
-          label: `${a.name}${a.model ? `（${a.model.name}）` : '（未设置模型）'}`
-        })),
-    [assistants]
-  )
-
   const onSave = async (values: FormValues) => {
     const existing = isEdit ? (await window.api.automation.getTasks()).find((t) => t.id === taskId) : undefined
     if (!existing && isEdit) {
       message.error('任务不存在')
+      return
+    }
+
+    // 解析所选模型（选项来自已启用服务商；找不到说明模型刚被删除，需重选）
+    const model = enabledProviders.flatMap((p) => p.models).find((m) => getModelUniqId(m) === values.modelUniqId)
+    if (!model) {
+      message.error('请选择模型（原模型可能已被删除）')
       return
     }
 
@@ -642,7 +655,15 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
         message.error('请选择每周运行的时间')
         return
       }
-      schedule = { type: 'weekly', weekday: values.weekday ?? 1, time: values.dailyTime.format('HH:mm') }
+      if (!values.weekdays || values.weekdays.length === 0) {
+        message.error('请选择每周运行的星期')
+        return
+      }
+      schedule = {
+        type: 'weekly',
+        weekdays: [...values.weekdays].sort((a, b) => a - b),
+        time: values.dailyTime.format('HH:mm')
+      }
     } else {
       if (!values.dailyTime) {
         message.error('请选择每天运行的时间')
@@ -654,12 +675,16 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
     const task: AutomationTask = {
       id: existing?.id ?? `task_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
       name: values.name.trim(),
-      assistantId: values.assistantId,
+      // 任务归属的工作台助手（运行简报写入其「运行日志」话题；执行模型见 task.model）
+      assistantId: existing?.assistantId ?? defaultAssistantId,
+      model,
+      prompt: values.prompt?.trim() || undefined,
       instruction: values.instruction.trim(),
       schedule,
       enabled: values.enabled,
       systemTools: values.systemTools,
       useMcpTools: values.useMcpTools,
+      mcpServerIds: values.mcpServerIds ?? [],
       notifyOnComplete: values.notifyOnComplete,
       ...(values.workDir ? { workDir: values.workDir } : {}),
       ...(values.linkedFiles && values.linkedFiles.length > 0 ? { linkedFiles: values.linkedFiles } : {}),
@@ -688,7 +713,6 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
       onFinish={(v) => void onSave(v)}
       initialValues={{
         scheduleType: 'daily',
-        assistantId: defaultAssistantId,
         useMcpTools: false,
         systemTools: [] as AutomationSystemToolId[],
         notifyOnComplete: true,
@@ -706,11 +730,17 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
           <Input placeholder="例如：每日新闻摘要" />
         </Form.Item>
         <Form.Item
-          name="assistantId"
-          label="执行助手"
-          rules={[{ required: true, message: '请选择助手' }]}
-          extra="将使用该助手的提示词、模型和已配置的 MCP 工具">
-          <Select options={assistantOptions} placeholder="选择助手" showSearch optionFilterProp="label" />
+          name="modelUniqId"
+          label="AI 模型"
+          rules={[{ required: true, message: '请选择模型' }]}
+          extra="任务执行使用的模型（来自 设置 → 模型服务 中已启用的服务商）">
+          <ModelSelector providers={enabledProviders} grouped />
+        </Form.Item>
+        <Form.Item
+          name="prompt"
+          label="自定义提示词"
+          extra="选填：为 AI 设定角色或思考方式，运行时作为系统提示词；留空使用默认">
+          <Input.TextArea rows={3} placeholder="例如：你是一名严谨的数据分析师，先逐步思考再给出结论" />
         </Form.Item>
         <Form.Item
           name="instruction"
@@ -739,10 +769,13 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
         {(scheduleType === 'daily' || scheduleType === 'weekly') && (
           <Form.Item label={scheduleType === 'weekly' ? '星期与时间' : '每天运行时间'}>
             {scheduleType === 'weekly' && (
-              <Form.Item name="weekday" noStyle initialValue={1}>
+              <Form.Item name="weekdays" noStyle initialValue={[1]}>
                 <Select
-                  style={{ width: 96, marginRight: 8 }}
+                  mode="multiple"
+                  style={{ width: 220, marginRight: 8 }}
                   options={WEEKDAY_LABELS.map((label, i) => ({ label, value: i + 1 }))}
+                  placeholder="选择星期（可多选）"
+                  maxTagCount={4}
                 />
               </Form.Item>
             )}
@@ -769,9 +802,24 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
           name="useMcpTools"
           label="允许使用 MCP 工具"
           valuePropName="checked"
-          extra="使用该助手已配置且启用的 MCP 服务器工具（无需逐个确认）">
+          extra="开启后从下方勾选任务可使用的 MCP 服务器（运行时自动批准，无需逐个确认）">
           <Switch />
         </Form.Item>
+        {useMcpTools && (
+          <Form.Item
+            name="mcpServerIds"
+            label="MCP 服务器"
+            rules={[{ required: true, message: '请至少选择一个 MCP 服务器' }]}
+            extra="来自 设置 → MCP 中已启用的服务器；未启用的服务器会在运行时跳过">
+            <Select
+              mode="multiple"
+              options={mcpOptions}
+              placeholder="选择 MCP 服务器"
+              showSearch
+              optionFilterProp="label"
+            />
+          </Form.Item>
+        )}
         <Form.Item label="系统工具授权" required>
           <Form.Item name="systemTools" noStyle>
             <SystemToolGroups />
@@ -950,12 +998,15 @@ const RecordsView: FC<{ assistant: Assistant }> = ({ assistant }) => {
 /** 左右常驻布局：左 6（概览+列表）/ 右 4（任务表单），窄屏上下堆叠 */
 const Container = styled.div`
   display: flex;
+  flex: 1;
   gap: 14px;
   height: 100%;
   width: 100%;
   min-width: 0;
   min-height: 0;
   padding: 14px;
+  overflow: hidden;
+  box-sizing: border-box;
   background: var(--color-background);
   @media (max-width: 1100px) {
     flex-direction: column;
@@ -1033,7 +1084,7 @@ const Title = styled.h1`
 
 const StatsRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 10px;
   padding: 0 2px 12px;
 `
@@ -1079,19 +1130,6 @@ const EmptyPanel = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 300px;
-`
-
-const SectionHint = styled.div`
-  padding: 12px;
-  font-size: 13px;
-  color: var(--color-text-3);
-`
-
-const OtherGroupTitle = styled.div`
-  margin: 12px 0 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-2);
 `
 
 const GroupTitle = styled.div<{ $danger?: boolean }>`

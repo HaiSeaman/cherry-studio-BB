@@ -287,91 +287,91 @@ const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
 
   return (
     <Container>
-      {/* 第一行：模型 + 生成参数 */}
-      <Toolbar>
-        <ModelSelector
-          // 只显示已启用的 provider（未启用即使配置了 API Key 也不显示）
-          providers={enabledProviders}
-          style={{ minWidth: 200 }}
-          placeholder={'选择绘画模型'}
-          // 用户自定义 provider 的模型全部显示；系统内置 provider 只显示绘画模型（避免默认文本模型干扰）
-          predicate={modelPredicate}
-          value={selectedModel ? getModelUniqId(selectedModel) : undefined}
-          onChange={handleModelChange}
-        />
-        {/* 统一尺寸选择：宽高比 + 分辨率档位（所有模型共用一套） */}
-        <Tooltip title={'画面宽高比（Gemini 与百炼均支持；自定义比例输入 数字:数字）'} mouseEnterDelay={0.5}>
-          <Select
-            size="small"
-            style={{ width: 96 }}
-            value={aspectRatio}
-            onChange={(v) => {
-              if (v === '__custom__') {
-                openCustomRatio()
-              } else {
-                setAspectRatio(v)
-              }
-            }}
-            options={ratioOptions}
-          />
-        </Tooltip>
-        <Tooltip
-          title={
-            isGemini
-              ? 'Gemini 官方分辨率（1K/2K/4K；512 仅部分模型支持；自动=不指定）'
-              : '分辨率档位自动换算为模型合法像素，超出上限自动就近取整；自动=由模型按提示词推荐'
-          }
-          mouseEnterDelay={0.5}>
-          <Select
-            size="small"
-            style={{ width: 104 }}
-            value={isGemini ? resolutionTier : (customPixel ?? resolutionTier)}
-            onChange={(v) => {
-              if (v === '__custom__') {
-                openCustomPixel()
-              } else {
-                setCustomPixel(undefined)
-                setResolutionTier(v)
-              }
-            }}
-            options={tierOptions}
-          />
-        </Tooltip>
-        {isGemini ? (
-          <>
-            <Tooltip title={'人物生成模式（Gemini 官方）'} mouseEnterDelay={0.5}>
-              <Select
-                size="small"
-                style={{ width: 120 }}
-                value={personGeneration}
-                placeholder={'人物模式'}
-                allowClear
-                onChange={setPersonGeneration}
-                options={GEMINI_PERSON_GENERATION.map((p) => ({ label: p.label, value: p.value }))}
-              />
-            </Tooltip>
-            <DisabledHint>{'Gemini 每次生成 1 张'}</DisabledHint>
-          </>
-        ) : (
-          <>
-            <Tooltip
-              title={uploadedImages.length > 0 ? '图生图（图像编辑）固定生成 1 张' : undefined}
-              mouseEnterDelay={0.5}>
-              <Select
-                size="small"
-                style={{ width: 72 }}
-                value={uploadedImages.length > 0 ? 1 : batchSize}
-                onChange={setBatchSize}
-                disabled={uploadedImages.length > 0}
-                options={PAINT_BATCH_OPTIONS.map((n) => ({ label: `${n} 张`, value: n }))}
-              />
-            </Tooltip>
-            {effectivePixel && <DisabledHint>{`→ ${effectivePixel}`}</DisabledHint>}
-          </>
-        )}
-      </Toolbar>
-      {/* 第二行：提示词输入 */}
       <InputArea>
+        {/* 第一行：模型 + 生成参数 */}
+        <Toolbar>
+          <ModelSelector
+            // 只显示已启用的 provider（未启用即使配置了 API Key 也不显示）
+            providers={enabledProviders}
+            style={{ minWidth: 200 }}
+            placeholder={'选择绘画模型'}
+            // 用户自定义 provider 的模型全部显示；系统内置 provider 只显示绘画模型（避免默认文本模型干扰）
+            predicate={modelPredicate}
+            value={selectedModel ? getModelUniqId(selectedModel) : undefined}
+            onChange={handleModelChange}
+          />
+          {/* 统一尺寸选择：宽高比 + 分辨率档位（所有模型共用一套） */}
+          <Tooltip title={'画面宽高比（Gemini 与百炼均支持；自定义比例输入 数字:数字）'} mouseEnterDelay={0.5}>
+            <Select
+              size="small"
+              style={{ width: 96 }}
+              value={aspectRatio}
+              onChange={(v) => {
+                if (v === '__custom__') {
+                  openCustomRatio()
+                } else {
+                  setAspectRatio(v)
+                }
+              }}
+              options={ratioOptions}
+            />
+          </Tooltip>
+          <Tooltip
+            title={
+              isGemini
+                ? 'Gemini 官方分辨率（1K/2K/4K；512 仅部分模型支持；自动=不指定）'
+                : '分辨率档位自动换算为模型合法像素，超出上限自动就近取整；自动=由模型按提示词推荐'
+            }
+            mouseEnterDelay={0.5}>
+            <Select
+              size="small"
+              style={{ width: 104 }}
+              value={isGemini ? resolutionTier : (customPixel ?? resolutionTier)}
+              onChange={(v) => {
+                if (v === '__custom__') {
+                  openCustomPixel()
+                } else {
+                  setCustomPixel(undefined)
+                  setResolutionTier(v)
+                }
+              }}
+              options={tierOptions}
+            />
+          </Tooltip>
+          {isGemini ? (
+            <>
+              <Tooltip title={'人物生成模式（Gemini 官方）'} mouseEnterDelay={0.5}>
+                <Select
+                  size="small"
+                  style={{ width: 120 }}
+                  value={personGeneration}
+                  placeholder={'人物模式'}
+                  allowClear
+                  onChange={setPersonGeneration}
+                  options={GEMINI_PERSON_GENERATION.map((p) => ({ label: p.label, value: p.value }))}
+                />
+              </Tooltip>
+              <DisabledHint>{'Gemini 每次生成 1 张'}</DisabledHint>
+            </>
+          ) : (
+            <>
+              <Tooltip
+                title={uploadedImages.length > 0 ? '图生图（图像编辑）固定生成 1 张' : undefined}
+                mouseEnterDelay={0.5}>
+                <Select
+                  size="small"
+                  style={{ width: 72 }}
+                  value={uploadedImages.length > 0 ? 1 : batchSize}
+                  onChange={setBatchSize}
+                  disabled={uploadedImages.length > 0}
+                  options={PAINT_BATCH_OPTIONS.map((n) => ({ label: `${n} 张`, value: n }))}
+                />
+              </Tooltip>
+              {effectivePixel && <DisabledHint>{`→ ${effectivePixel}`}</DisabledHint>}
+            </>
+          )}
+        </Toolbar>
+        {/* 第二行：提示词输入 */}
         <Input.TextArea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}

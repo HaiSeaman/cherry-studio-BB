@@ -47,6 +47,22 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/** 旧数据归一化：weekly 单选 weekday → weekdays 数组（幂等，加载时调用） */
+export function normalizeTaskSchedules(tasks: AutomationTask[]): void {
+  for (const task of tasks) {
+    const s = task.schedule as
+      | { type?: string; weekday?: number; weekdays?: number[]; time?: string }
+      | undefined
+    if (s?.type === 'weekly' && !Array.isArray(s.weekdays)) {
+      task.schedule = {
+        type: 'weekly',
+        weekdays: typeof s.weekday === 'number' ? [s.weekday] : [],
+        time: s.time ?? '00:00'
+      }
+    }
+  }
+}
+
 interface StoreData {
   tasks: AutomationTask[]
   runs: AutomationRun[]
@@ -83,6 +99,7 @@ export class AutomationService {
       const raw = await fsp.readFile(this.storePath, 'utf8')
       const parsed = JSON.parse(raw) as StoreData
       this.data = { tasks: parsed.tasks ?? [], runs: parsed.runs ?? [] }
+      normalizeTaskSchedules(this.data.tasks)
       // 崩溃残留的 running 记录：标记为 failed
       for (const run of this.data.runs) {
         if (run.status === 'running') {
@@ -166,9 +183,11 @@ export class AutomationService {
       return 'due'
     }
 
-    // daily / weekly：同一时间窗口判定，weekly 额外要求星期匹配
+    // daily / weekly：同一时间窗口判定，weekly 额外要求星期匹配（多选任一命中即可）
     if (schedule.type === 'daily' || schedule.type === 'weekly') {
-      if (schedule.type === 'weekly' && weekdayToJsDay(schedule.weekday) !== now.getDay()) return 'none'
+      if (schedule.type === 'weekly' && !schedule.weekdays.some((w) => weekdayToJsDay(w) === now.getDay())) {
+        return 'none'
+      }
       const sec = parseDailyTime(schedule.time)
       if (sec === null) return 'none'
       const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()

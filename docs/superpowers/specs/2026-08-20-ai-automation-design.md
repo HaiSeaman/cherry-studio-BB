@@ -2,6 +2,7 @@
 
 日期：2026-08-20
 状态：已确认（用户已批准方案方向）
+> 修订（2026-08-20 · v1.5.1）：任务执行配置由「绑定助手」改为「任务自包含」，详见文末《§11 改动记录 v1.5.1》。
 
 ## 1. 功能定位
 
@@ -281,3 +282,47 @@ App 顶层 hook（useAutomationRunner）：useEffect 注册 `window.api.automati
 3. `pnpm test` 现有 3500+ 用例不回归
 4. 构建通过
 5. 手工冒烟（用户执行）：新建任务（每天 1 分钟后）→ 触发 → 查看运行详情步骤 → 通知开关生效 → 关闭主窗口（托盘）任务仍触发
+
+## 11. 改动记录 v1.5.1（2026-08-20）
+
+本轮将**任务执行配置从「绑定助手」改为「任务自包含」**，并加了一处设置页入口。背景：原「执行助手」把模型+提示词+MCP 打包在一起，MCP 开关只控制「用不用」、却决定不了「用哪些」（由助手决定），语义分裂；任务还依赖一个可能被删除的助手。
+
+### 11.1 执行配置自包含
+
+任务自身直接保存执行所需的一切，不再强依赖某个助手：
+
+| 字段 | 说明 |
+|---|---|
+| `model` | 执行的模型快照（结构兼容渲染进程 Model）。运行时按快照的 provider id 定位服务商，模型/服务商被删则明确报错，不再静默乱跑。 |
+| `prompt` | 选填自定义提示词（作为系统提示词，留空用默认）。 |
+| `mcpServerIds` | 任务级勾选的 MCP 服务器 id（仅当 `useMcpTools` 时生效）。 |
+| `weekdays` | weekly 调度由单值 `weekday` 改为数组，支持一次多选星期（如每周一/三/五）。 |
+
+- 表单把「执行助手」下拉换成「AI 模型」下拉（复用聊天页 ModelSelector 组件，按服务商分组），新增「自定义提示词」多行框。
+- MCP 开关保留；打开后出现多选框，**默认空选**（须至少选一个），未启用的服务器置灰标注（届时运行跳过并记一条 `notice` 黄色提示）。
+- weekly 调度的星期改为多选（antd Select `mode="multiple"`），列表展示形如「每周一/三/五 08:00」。
+
+### 11.2 旧数据自动迁移（无需用户操作）
+
+- 主进程加载 `automation.json` 时调用 `normalizeTaskSchedules()`：把旧的 `weekly.weekday` 单选转成 `weekdays` 数组（幂等）。
+- 运行期对无 `model` 的老任务：回退取 `assistantId` 绑定助手的模型/提示词/MCP 配置（沿用原助手设置），保证旧任务照常执行；编辑保存一次后即转为新格式。
+- schema 兼容：`assistantId` 降级为可选，仅作「运行简报归属的工作台助手/话题」用途，不再决定执行模型。
+
+### 11.3 运行时间线新增 `notice` 类型
+
+`AutomationRunStep.type` 增加 `'notice'`（黄色「提示」），用于记录「勾选的 MCP 服务器未启用/已删除 → 跳过」，避免无声失效。
+
+### 11.4 边界修复（本次审查中发现并修复）
+
+- 模型有效性校验不再依赖 `provider.models[]` 里不一定存在的 `provider` 字段，改为按快照的 provider id 从 store 定位服务商再校验模型 id。
+- 表单加载 effect 此前依赖 `assistants` 数组（任何对话变动都会触发）→ 会反复重置/覆盖用户未保存的编辑；改为 `getAssistantById` 直读 store（不订阅）并修正 deps。
+- 老任务（auto 模式）MCP 回显会带入虚拟 Hub 服务器 id，保存后运行必报「未启用」→ 回显时过滤掉非设置面板内的服务器 id。
+
+### 11.5 设置页「关注」
+
+常规设置 → 开发者模式下方新增「关注」分组：显示软件名 `cherry-studio-BB` + 当前版本号（`window.api.getAppInfo().version` 实时读取），右侧「发布地址」按钮把 `https://github.com/HaiSeaman/cherry-studio-BB` 复制到剪贴板并 toast 提示。
+
+### 11.6 测试与验证
+
+- `AutomationService.test.ts` 由 21 → 28 例：新增 weekly 多选星期命中/未命中/空数组、`normalizeTaskSchedules` 归一化（单选→数组、幂等、非 weekly 不变、缺失 weekday）。
+- 全量验证通过：`pnpm typecheck`（node/web/aicore）、eslint/oxlint、28 个 AutomationService 测试全绿。

@@ -19,7 +19,7 @@ vi.mock('node:fs/promises', () => ({
   close: vi.fn()
 }))
 
-import AutomationService from '../AutomationService'
+import AutomationService, { normalizeTaskSchedules } from '../AutomationService'
 
 // 只测调度判定与任务 CRUD 纯逻辑；类实例化不触发 Electron API（init 才会）
 const svc = AutomationService as unknown as {
@@ -83,28 +83,46 @@ describe('evaluateSchedule', () => {
     it('星期匹配 + 90 秒窗口内 → due', () => {
       const now = new Date(2026, 7, 20, 8, 0, 30)
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekday: 4, time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [4], time: '08:00' } }), now, now.getTime())
       ).toBe('due')
     })
 
     it('星期不匹配（今天周四，任务定周五）→ none', () => {
       const now = new Date(2026, 7, 20, 8, 0, 30)
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekday: 5, time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [5], time: '08:00' } }), now, now.getTime())
       ).toBe('none')
+    })
+
+    it('多选星期：今天不在所选星期内 → none', () => {
+      const now = new Date(2026, 7, 20, 8, 0, 30) // 周四
+      expect(
+        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [1, 3, 5], time: '08:00' } }), now, now.getTime())
+      ).toBe('none')
+    })
+
+    it('多选星期：今天在所选星期内 → due', () => {
+      const now = new Date(2026, 7, 20, 8, 0, 30) // 周四
+      expect(
+        svc.evaluateSchedule(
+          makeTask({ schedule: { type: 'weekly', weekdays: [1, 3, 4, 5], time: '08:00' } }),
+          now,
+          now.getTime()
+        )
+      ).toBe('due')
     })
 
     it('周日边界：weekday=7 → getDay()=0 匹配', () => {
       const now = new Date(2026, 7, 23, 8, 0, 30) // 2026-08-23 周日
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekday: 7, time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [7], time: '08:00' } }), now, now.getTime())
       ).toBe('due')
     })
 
     it('星期匹配但窗口完全过去 → missed', () => {
       const now = new Date(2026, 7, 20, 9, 0, 0)
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekday: 4, time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [4], time: '08:00' } }), now, now.getTime())
       ).toBe('missed')
     })
 
@@ -112,10 +130,17 @@ describe('evaluateSchedule', () => {
       const now = new Date(2026, 7, 20, 9, 0, 0)
       expect(
         svc.evaluateSchedule(
-          makeTask({ schedule: { type: 'weekly', weekday: 4, time: '08:00' }, lastTriggerKey: '2026-08-20' }),
+          makeTask({ schedule: { type: 'weekly', weekdays: [4], time: '08:00' }, lastTriggerKey: '2026-08-20' }),
           now,
           now.getTime()
         )
+      ).toBe('none')
+    })
+
+    it('空 weekdays → none（不崩溃，永不触发）', () => {
+      const now = new Date(2026, 7, 20, 8, 0, 30)
+      expect(
+        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [], time: '08:00' } }), now, now.getTime())
       ).toBe('none')
     })
   })
@@ -183,6 +208,32 @@ describe('evaluateSchedule', () => {
         now.getTime()
       )
     ).toBe('due')
+  })
+})
+
+describe('normalizeTaskSchedules 旧数据归一化', () => {
+  it('weekly 单选 weekday → weekdays 数组', () => {
+    const task = makeTask({ schedule: { type: 'weekly', weekday: 3, time: '08:00' } as never })
+    normalizeTaskSchedules([task])
+    expect(task.schedule).toEqual({ type: 'weekly', weekdays: [3], time: '08:00' })
+  })
+
+  it('已是 weekdays 数组 → 不变（幂等）', () => {
+    const task = makeTask({ schedule: { type: 'weekly', weekdays: [1, 3, 5], time: '08:00' } })
+    normalizeTaskSchedules([task])
+    expect(task.schedule).toEqual({ type: 'weekly', weekdays: [1, 3, 5], time: '08:00' })
+  })
+
+  it('非 weekly 调度 → 不变', () => {
+    const task = makeTask({ schedule: { type: 'daily', time: '08:00' } })
+    normalizeTaskSchedules([task])
+    expect(task.schedule).toEqual({ type: 'daily', time: '08:00' })
+  })
+
+  it('老数据缺 weekday → weekdays 空数组（不崩溃）', () => {
+    const task = makeTask({ schedule: { type: 'weekly', time: '08:00' } as never })
+    normalizeTaskSchedules([task])
+    expect(task.schedule).toEqual({ type: 'weekly', weekdays: [], time: '08:00' })
   })
 })
 
