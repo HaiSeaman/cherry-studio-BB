@@ -37,13 +37,19 @@ body,
 #root {
   height: 100%;
   width: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
   margin: 0;
+  overflow: hidden;
 }
 
 #root {
   display: flex;
   flex-direction: row;
   flex: 1;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 body {

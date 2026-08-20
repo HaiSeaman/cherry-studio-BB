@@ -1,6 +1,9 @@
 import { db } from '@renderer/databases'
 import { TopicManager } from '@renderer/hooks/useTopic'
+import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { removeTopic } from '@renderer/store/assistants'
+import { newMessagesActions } from '@renderer/store/newMessage'
+import { setLastGeneration } from './store/paintSlice'
 import type { Assistant, Topic } from '@renderer/types'
 import { MessageBlockType } from '@renderer/types/newMessage'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -67,11 +70,20 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
 
   const handleDelete = useCallback(
     async (topic: Topic) => {
-      // db 行 + 消息块由 TopicManager 清理；redux 助手话题条目在此移除
+      // 1. 从 Dexie 数据库中物理删除该 topic 的所有 message 与 messageBlock，以及 topic 记录
       await TopicManager.removeTopic(topic.id)
+      // 2. 清除 Redux 内存中的消息缓存（newMessage slice）
+      dispatch(newMessagesActions.clearTopicMessages(topic.id))
+      // 3. 从助手 topics 列表中移除该 topic（若为当前激活 topic 会在 useActiveTopic 自动置空或切回第一项）
       dispatch(removeTopic({ assistantId: assistant.id, topic }))
+      // 4. 同步清除 paint 全局状态中的 lastGeneration 结果（避免当前视图残留）
+      dispatch(setLastGeneration(null))
+      // 5. 若当前激活的正是被删除的话题，切换回默认话题
+      if (activeTopicId === topic.id) {
+        onSelect(getDefaultTopic(assistant.id))
+      }
     },
-    [assistant.id, dispatch]
+    [assistant.id, dispatch, activeTopicId, onSelect]
   )
 
   const sorted = (items ?? []).slice().sort((a, b) => (b.topic.updatedAt || '').localeCompare(a.topic.updatedAt || ''))
@@ -184,7 +196,7 @@ const Item = styled.div`
   &:hover {
     background: var(--color-background-soft);
     .del-btn {
-      opacity: 1;
+      opacity: 0.9;
     }
   }
   &.active {
@@ -233,19 +245,25 @@ const Meta = styled.div`
   font-variant-numeric: tabular-nums;
 `
 
-const DeleteBtn = styled.div`
+const DeleteBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
+  border: none;
+  background: transparent;
   flex-shrink: 0;
   color: var(--color-text-3);
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.6;
+  padding: 0;
+  pointer-events: auto;
+  z-index: 2;
   transition: all 0.15s ease;
   &:hover {
+    opacity: 1;
     color: var(--color-error);
     background: color-mix(in srgb, var(--color-error) 12%, transparent);
   }

@@ -83,21 +83,33 @@ describe('evaluateSchedule', () => {
     it('星期匹配 + 90 秒窗口内 → due', () => {
       const now = new Date(2026, 7, 20, 8, 0, 30)
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [4], time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(
+          makeTask({ schedule: { type: 'weekly', weekdays: [4], time: '08:00' } }),
+          now,
+          now.getTime()
+        )
       ).toBe('due')
     })
 
     it('星期不匹配（今天周四，任务定周五）→ none', () => {
       const now = new Date(2026, 7, 20, 8, 0, 30)
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [5], time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(
+          makeTask({ schedule: { type: 'weekly', weekdays: [5], time: '08:00' } }),
+          now,
+          now.getTime()
+        )
       ).toBe('none')
     })
 
     it('多选星期：今天不在所选星期内 → none', () => {
       const now = new Date(2026, 7, 20, 8, 0, 30) // 周四
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [1, 3, 5], time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(
+          makeTask({ schedule: { type: 'weekly', weekdays: [1, 3, 5], time: '08:00' } }),
+          now,
+          now.getTime()
+        )
       ).toBe('none')
     })
 
@@ -115,14 +127,22 @@ describe('evaluateSchedule', () => {
     it('周日边界：weekday=7 → getDay()=0 匹配', () => {
       const now = new Date(2026, 7, 23, 8, 0, 30) // 2026-08-23 周日
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [7], time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(
+          makeTask({ schedule: { type: 'weekly', weekdays: [7], time: '08:00' } }),
+          now,
+          now.getTime()
+        )
       ).toBe('due')
     })
 
     it('星期匹配但窗口完全过去 → missed', () => {
       const now = new Date(2026, 7, 20, 9, 0, 0)
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [4], time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(
+          makeTask({ schedule: { type: 'weekly', weekdays: [4], time: '08:00' } }),
+          now,
+          now.getTime()
+        )
       ).toBe('missed')
     })
 
@@ -140,7 +160,11 @@ describe('evaluateSchedule', () => {
     it('空 weekdays → none（不崩溃，永不触发）', () => {
       const now = new Date(2026, 7, 20, 8, 0, 30)
       expect(
-        svc.evaluateSchedule(makeTask({ schedule: { type: 'weekly', weekdays: [], time: '08:00' } }), now, now.getTime())
+        svc.evaluateSchedule(
+          makeTask({ schedule: { type: 'weekly', weekdays: [], time: '08:00' } }),
+          now,
+          now.getTime()
+        )
       ).toBe('none')
     })
   })

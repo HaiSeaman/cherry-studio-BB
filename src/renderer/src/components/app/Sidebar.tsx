@@ -243,8 +243,10 @@ const SidebarGlass = styled.div`
   -webkit-app-region: none;
   background: color-mix(in srgb, var(--color-background) 50%, transparent);
   backdrop-filter: blur(18px) saturate(1.45);
-  border-left: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+  [navbar-position='right'] & {
+    border-left: 1px solid var(--glass-border);
+  }
 `
 
 const AvatarImg = styled(Avatar)`

@@ -50,9 +50,7 @@ function dateKey(d: Date): string {
 /** 旧数据归一化：weekly 单选 weekday → weekdays 数组（幂等，加载时调用） */
 export function normalizeTaskSchedules(tasks: AutomationTask[]): void {
   for (const task of tasks) {
-    const s = task.schedule as
-      | { type?: string; weekday?: number; weekdays?: number[]; time?: string }
-      | undefined
+    const s = task.schedule as { type?: string; weekday?: number; weekdays?: number[]; time?: string } | undefined
     if (s?.type === 'weekly' && !Array.isArray(s.weekdays)) {
       task.schedule = {
         type: 'weekly',

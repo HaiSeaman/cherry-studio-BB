@@ -26,11 +26,7 @@ const PaintWorkspace: FC<Props> = ({ assistant, activeTopic, setActiveTopic }) =
       <PaintHistoryList assistant={assistant} activeTopicId={validTopicId} onSelect={setActiveTopic} />
       <Main>
         <PaintContent topicId={validTopicId} assistantId={assistant.id} />
-        <PaintInputbar
-          topicId={validTopicId}
-          assistantId={assistant.id}
-          onTopicChange={setActiveTopic}
-        />
+        <PaintInputbar topicId={validTopicId} assistantId={assistant.id} onTopicChange={setActiveTopic} />
       </Main>
     </Container>
   )

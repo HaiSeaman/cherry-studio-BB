@@ -49,28 +49,13 @@ const NotesPanel: FC<{ bottomSlot?: ReactNode }> = ({ bottomSlot }) => {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // 无选中或选中已不在列表 → 自动选第一条；无便签自动新建一条
+  // 无选中或选中已不在列表 → 自动选第一条
   useEffect(() => {
     if (active.length === 0) return
     if (currentId == null || !active.some((n) => n.id === currentId)) {
       setCurrentId(active[0].id ?? null)
     }
   }, [active, currentId])
-
-  useEffect(() => {
-    if (
-      (notes ?? []).length === 0 &&
-      (archived ?? []).length === 0 &&
-      (trashed ?? []).length === 0 &&
-      !creating.current
-    ) {
-      creating.current = true
-      const now = Date.now()
-      void db.hub_notes.add({ content: '', createdAt: now, updatedAt: now, status: 'active' }).finally(() => {
-        creating.current = false
-      })
-    }
-  }, [notes, archived, trashed])
 
   const filtered = useMemo(
     () => (searchQuery ? active.filter((n) => (n.content || '').toLowerCase().includes(searchQuery)) : active),
