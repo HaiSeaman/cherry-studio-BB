@@ -3,16 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useLocalPlayer } from '../hooks/useLocalPlayer'
 import { audioEngine } from '../services/audioEngine'
+import { playerStore } from '../services/playerStore'
 import type { MusicTrack } from '../types'
 
 vi.mock('@renderer/store', () => ({
   useAppDispatch: () => vi.fn(),
   useAppSelector: (selector: (state: unknown) => unknown) =>
     selector({ musicSettings: { playMode: 'sequential', favoritesActive: false } })
-}))
-
-vi.mock('../services/autoAdvance', () => ({
-  registerAutoAdvance: vi.fn()
 }))
 
 const TRACK: MusicTrack = {
@@ -48,8 +45,9 @@ function fakeWritableElState(state: { duration?: number; currentTime?: number })
 }
 
 beforeEach(() => {
-  // 复位引擎：避免测试间相互污染
+  // 复位引擎与全局状态机：避免测试间相互污染
   audioEngine.stop()
+  playerStore.resetForTest()
   fakeElState({ paused: true, duration: 0, currentTime: 0 })
 })
 

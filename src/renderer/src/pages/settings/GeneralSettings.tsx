@@ -59,6 +59,10 @@ const GeneralSettings: FC = () => {
     launchToTray,
     trayOnClose,
     tray,
+    stickyWidgetLaunchOnBoot,
+    setStickyWidgetLaunchOnBoot,
+    musicWidgetLaunchOnBoot,
+    setMusicWidgetLaunchOnBoot,
     proxyMode: storeProxyMode,
     enableSpellCheck,
     disableHardwareAcceleration,
@@ -70,9 +74,18 @@ const GeneralSettings: FC = () => {
   const { enableDeveloperMode, setEnableDeveloperMode } = useEnableDeveloperMode()
   const { setTimeoutTimer } = useTimer()
   const [appVersion, setAppVersion] = useState('')
+  // 桌面便签挂件：当前窗口显示状态（瞬态，实际状态以主进程为准）
+  const [stickyWidgetVisible, setStickyWidgetVisible] = useState(false)
+  // 桌面音乐挂件：同上
+  const [musicWidgetVisible, setMusicWidgetVisible] = useState(false)
 
   useEffect(() => {
     void window.api.getAppInfo().then((info) => setAppVersion(info.version))
+  }, [])
+
+  useEffect(() => {
+    void window.api.stickyWidget.isVisible().then(setStickyWidgetVisible)
+    void window.api.musicWidget.isVisible().then(setMusicWidgetVisible)
   }, [])
 
   const updateTray = (isShowTray: boolean) => {
@@ -350,6 +363,52 @@ const GeneralSettings: FC = () => {
         <SettingRow>
           <SettingRowTitle>{'启动时最小化到托盘'}</SettingRowTitle>
           <Switch checked={launchToTray} onChange={(checked) => updateLaunchToTray(checked)} />
+        </SettingRow>
+      </SettingGroup>
+      <SettingGroup theme={theme}>
+        <SettingTitle>{'桌面便签挂件'}</SettingTitle>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{'显示挂件'}</SettingRowTitle>
+          <Switch
+            checked={stickyWidgetVisible}
+            onChange={(checked) => {
+              setStickyWidgetVisible(checked)
+              if (checked) {
+                void window.api.stickyWidget.show()
+              } else {
+                void window.api.stickyWidget.close()
+              }
+            }}
+          />
+        </SettingRow>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{'启动应用时自动显示挂件'}</SettingRowTitle>
+          <Switch checked={stickyWidgetLaunchOnBoot} onChange={setStickyWidgetLaunchOnBoot} />
+        </SettingRow>
+      </SettingGroup>
+      <SettingGroup theme={theme}>
+        <SettingTitle>{'桌面音乐挂件'}</SettingTitle>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{'显示挂件'}</SettingRowTitle>
+          <Switch
+            checked={musicWidgetVisible}
+            onChange={(checked) => {
+              setMusicWidgetVisible(checked)
+              if (checked) {
+                void window.api.musicWidget.show()
+              } else {
+                void window.api.musicWidget.close()
+              }
+            }}
+          />
+        </SettingRow>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{'启动应用时自动显示挂件'}</SettingRowTitle>
+          <Switch checked={musicWidgetLaunchOnBoot} onChange={setMusicWidgetLaunchOnBoot} />
         </SettingRow>
       </SettingGroup>
       <SettingGroup theme={theme}>

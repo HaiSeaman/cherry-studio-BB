@@ -22,6 +22,134 @@ import { initSessionUserAgent } from './WebviewService'
 const DEFAULT_MINIWINDOW_WIDTH = 550
 const DEFAULT_MINIWINDOW_HEIGHT = 400
 
+/** 桌面挂件窗口配置（便签/音乐挂件共用同一控制器） */
+type WidgetWindowConfig = {
+  /** electron-window-state 持久化文件名 */
+  stateFile: string
+  defaultWidth: number
+  defaultHeight: number
+  minWidth: number
+  minHeight: number
+  /** 渲染入口 HTML 文件名（dev 时拼 ELECTRON_RENDERER_URL，prod 时 loadFile） */
+  htmlFile: string
+  /** webContents 安全处理（导航拦截等，复用 WindowService 的现有逻辑） */
+  setupWebContents: (win: BrowserWindow) => void
+}
+
+/**
+ * 桌面挂件窗口控制器：懒创建 / 位置记忆 / 置顶 / 锁定 / 拖拽与拉伸（原生能力）。
+ * 设计约束（与 miniWindow 的差异）：
+ * - 不注册 blur 自动隐藏，不参与"主窗口显示时隐藏迷你窗口"——挂件是桌面常驻伴侣
+ * - 关闭 = destroy 完全释放内存（数据在 Dexie/主窗口，无损失）
+ * - 已移除贴边吸附/折叠功能（离屏 setPosition 在多显示器下易产生 NaN 导致主进程崩溃，
+ *   且交互复杂，按需求回归"固定/置顶/拖拽/缩放"即可）
+ */
+class WidgetWindowController {
+  private win: BrowserWindow | null = null
+
+  constructor(private cfg: WidgetWindowConfig) {}
+
+  get(): BrowserWindow | null {
+    return this.win && !this.win.isDestroyed() ? this.win : null
+  }
+
+  /** 是否已通过懒创建生成过窗口（首次点击后置位，用于幂等 show） */
+  private shown = false
+
+  show(): void {
+    const win = this.get()
+    if (win) {
+      // 已存在：若界面已在加载（未 ready-to-show），交给其内部回调 show，避免提前显示白窗闪烁
+      if (!win.isVisible() && this.shown) {
+        win.show()
+      }
+      return
+    }
+    this.shown = true
+    this.create()
+  }
+
+  /** 可见则隐藏，否则显示/懒创建（侧边栏按钮、托盘、设置开关共用） */
+  toggle(): void {
+    const win = this.get()
+    if (win && win.isVisible()) {
+      win.hide()
+      return
+    }
+    this.show()
+  }
+
+  /** 销毁窗口并完全释放内存 */
+  close(): void {
+    this.get()?.destroy()
+  }
+
+  setPin(pinned: boolean): void {
+    this.get()?.setAlwaysOnTop(pinned, 'screen-saver')
+  }
+
+  setLock(locked: boolean): void {
+    this.get()?.setResizable(!locked)
+  }
+
+  private create(): BrowserWindow {
+    const state = windowStateKeeper({
+      defaultWidth: this.cfg.defaultWidth,
+      defaultHeight: this.cfg.defaultHeight,
+      file: this.cfg.stateFile
+    })
+
+    this.win = new BrowserWindow({
+      x: state.x,
+      y: state.y,
+      width: state.width,
+      height: state.height,
+      minWidth: this.cfg.minWidth,
+      minHeight: this.cfg.minHeight,
+      show: false,
+      autoHideMenuBar: true,
+      frame: false,
+      alwaysOnTop: true,
+      useContentSize: true,
+      skipTaskbar: true,
+      resizable: true,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false,
+        // 与 miniWindow 一致：file:// 下确保 IndexedDB（Dexie）可靠可用
+        webSecurity: false
+      }
+    })
+
+    this.cfg.setupWebContents(this.win)
+    state.manage(this.win)
+    this.win.setAlwaysOnTop(true, 'screen-saver')
+    // 挂件应常驻所有工作区并覆盖全屏应用/游戏，与 miniWindow 一致
+    this.win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
+    this.win.on('ready-to-show', () => {
+      this.win?.show()
+      // 通知主窗口渲染层重推当前主题 token，让新建的挂件跟随主程序配色
+      windowService.getMainWindow()?.webContents.send(IpcChannel.Theme_RequestPush)
+    })
+    this.win.on('closed', () => {
+      this.win = null
+      this.shown = false
+    })
+
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      void this.win.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/' + this.cfg.htmlFile)
+    } else {
+      void this.win.loadFile(join(__dirname, '../renderer/', this.cfg.htmlFile))
+    }
+
+    return this.win
+  }
+}
+
 // const logger = loggerService.withContext('WindowService')
 const logger = loggerService.withContext('WindowService')
 
@@ -654,6 +782,75 @@ export class WindowService {
 
   public setPinMiniWindow(isPinned) {
     this.isPinnedMiniWindow = isPinned
+  }
+
+  // ---------------- 桌面挂件（Sticky / Music Widget） ----------------
+  private stickyWidget = new WidgetWindowController({
+    stateFile: 'sticky-widget-state.json',
+    defaultWidth: 320,
+    defaultHeight: 480,
+    minWidth: 260,
+    minHeight: 320,
+    htmlFile: 'stickyWidget.html',
+    setupWebContents: (win) => this.setupWebContentsHandlers(win)
+  })
+
+  private musicWidget = new WidgetWindowController({
+    stateFile: 'music-widget-state.json',
+    defaultWidth: 380,
+    defaultHeight: 220,
+    minWidth: 280,
+    minHeight: 120,
+    htmlFile: 'musicWidget.html',
+    setupWebContents: (win) => this.setupWebContentsHandlers(win)
+  })
+
+  public getStickyWidget(): BrowserWindow | null {
+    return this.stickyWidget.get()
+  }
+
+  public showStickyWidget(): void {
+    this.stickyWidget.show()
+  }
+
+  public toggleStickyWidget(): void {
+    this.stickyWidget.toggle()
+  }
+
+  public closeStickyWidget(): void {
+    this.stickyWidget.close()
+  }
+
+  public setStickyWidgetPin(pinned: boolean): void {
+    this.stickyWidget.setPin(pinned)
+  }
+
+  public setStickyWidgetLock(locked: boolean): void {
+    this.stickyWidget.setLock(locked)
+  }
+
+  public getMusicWidget(): BrowserWindow | null {
+    return this.musicWidget.get()
+  }
+
+  public showMusicWidget(): void {
+    this.musicWidget.show()
+  }
+
+  public toggleMusicWidget(): void {
+    this.musicWidget.toggle()
+  }
+
+  public closeMusicWidget(): void {
+    this.musicWidget.close()
+  }
+
+  public setMusicWidgetPin(pinned: boolean): void {
+    this.musicWidget.setPin(pinned)
+  }
+
+  public setMusicWidgetLock(locked: boolean): void {
+    this.musicWidget.setLock(locked)
   }
 
   /**

@@ -67,6 +67,33 @@ export enum IpcChannel {
   MiniWindow_ConsumeScreenshot = 'miniwindow:consume-screenshot',
   MiniWindow_ReadClipboardImage = 'miniwindow:read-clipboard-image',
 
+  // 桌面便签挂件（Sticky Widget）
+  StickyWidget_Show = 'sticky-widget:show',
+  StickyWidget_Close = 'sticky-widget:close',
+  StickyWidget_Toggle = 'sticky-widget:toggle',
+  StickyWidget_SetPin = 'sticky-widget:set-pin',
+  StickyWidget_SetLock = 'sticky-widget:set-lock',
+  StickyWidget_IsVisible = 'sticky-widget:is-visible',
+  // 双用途：挂件渲染进程 invoke（唤醒主窗口）；主进程 send 给主窗口渲染层（导航到便签页）
+  StickyWidget_OpenMain = 'sticky-widget:open-main',
+
+  // 桌面音乐挂件（Music Widget）
+  MusicWidget_Show = 'music-widget:show',
+  MusicWidget_Close = 'music-widget:close',
+  MusicWidget_Toggle = 'music-widget:toggle',
+  MusicWidget_SetPin = 'music-widget:set-pin',
+  MusicWidget_SetLock = 'music-widget:set-lock',
+  MusicWidget_IsVisible = 'music-widget:is-visible',
+  MusicWidget_OpenMain = 'music-widget:open-main',
+  // 挂件 ↔ 主窗口消息桥（主进程中转，替代 BroadcastChannel）
+  MusicWidget_MsgFromWidget = 'music-widget:msg-from-widget',
+  MusicWidget_MsgToWidget = 'music-widget:msg-to-widget',
+  MusicWidget_OnMsg = 'music-widget:on-msg',
+  // 主题 token 广播：主窗口渲染层 → 主进程 → 两个挂件（跟随主程序配色）
+  Theme_FromRenderer = 'theme:from-renderer',
+  Theme_ToWidget = 'theme:to-widget',
+  Theme_RequestPush = 'theme:request-push',
+
   // Mcp
   Mcp_AddServer = 'mcp:add-server',
   Mcp_RemoveServer = 'mcp:remove-server',

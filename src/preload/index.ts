@@ -250,9 +250,54 @@ const api = {
     consumeScreenshot: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ConsumeScreenshot),
     readClipboardImage: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ReadClipboardImage)
   },
+  stickyWidget: {
+    show: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_Show),
+    close: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_Close),
+    toggle: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_Toggle),
+    setPin: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_SetPin, pinned),
+    setLock: (locked: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_SetLock, locked),
+    isVisible: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.StickyWidget_IsVisible),
+    openMain: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_OpenMain)
+  },
+  musicWidget: {
+    show: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_Show),
+    close: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_Close),
+    toggle: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_Toggle),
+    setPin: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_SetPin, pinned),
+    setLock: (locked: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_SetLock, locked),
+    isVisible: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.MusicWidget_IsVisible),
+    openMain: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_OpenMain),
+    // ---- 播放状态/命令消息桥（主进程中转） ----
+    /** 挂件窗口调用：消息送往主窗口渲染层 */
+    postToHost: (msg: unknown): void => {
+      ipcRenderer.send(IpcChannel.MusicWidget_MsgFromWidget, msg)
+    },
+    /** 主窗口渲染层调用：消息送往挂件窗口（挂件未开时由主进程静默丢弃） */
+    postToWidget: (msg: unknown): void => {
+      ipcRenderer.send(IpcChannel.MusicWidget_MsgToWidget, msg)
+    },
+    /** 双方监听对端消息（主进程按目标窗口定向投递，无回声） */
+    onMessage: (callback: (msg: unknown) => void): (() => void) => {
+      const listener = (_: Electron.IpcRendererEvent, msg: unknown) => callback(msg)
+      ipcRenderer.on(IpcChannel.MusicWidget_OnMsg, listener)
+      return () => ipcRenderer.removeListener(IpcChannel.MusicWidget_OnMsg, listener)
+    }
+  },
   aes: {
     decrypt: (encryptedData: string, iv: string, secretKey: string) =>
       ipcRenderer.invoke(IpcChannel.Aes_Decrypt, encryptedData, iv, secretKey)
+  },
+  themeTokens: {
+    /** 主窗口渲染层调用：把当前主题的关键 CSS 变量 token 发送到主进程，由主进程转发给两个挂件 */
+    push: (tokens: Record<string, string>): void => {
+      ipcRenderer.send(IpcChannel.Theme_FromRenderer, tokens)
+    },
+    /** 挂件窗口调用：接收主窗口推送的主题 token */
+    onChange: (callback: (tokens: Record<string, string>) => void): (() => void) => {
+      const listener = (_: Electron.IpcRendererEvent, tokens: Record<string, string>) => callback(tokens)
+      ipcRenderer.on(IpcChannel.Theme_ToWidget, listener)
+      return () => ipcRenderer.removeListener(IpcChannel.Theme_ToWidget, listener)
+    }
   },
   mcp: {
     removeServer: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_RemoveServer, server),

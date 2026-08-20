@@ -86,6 +86,10 @@ export interface SettingsState {
   launchToTray: boolean
   trayOnClose: boolean
   tray: boolean
+  /** 桌面便签挂件：应用启动时自动显示 */
+  stickyWidgetLaunchOnBoot: boolean
+  /** 桌面音乐挂件：应用启动时自动显示 */
+  musicWidgetLaunchOnBoot: boolean
   theme: ThemeMode
   /** 主题 ID（晨间绿洲/浅蓝晴空/…）；theme 字段兼容保留，实际以 themeId 为准 */
   themeId: ThemeId
@@ -270,6 +274,8 @@ export const initialState: SettingsState = {
   launchToTray: false,
   trayOnClose: true,
   tray: true,
+  stickyWidgetLaunchOnBoot: false,
+  musicWidgetLaunchOnBoot: false,
   theme: ThemeMode.system,
   themeId: 'oasis',
   userTheme: {
@@ -503,6 +509,12 @@ const settingsSlice = createSlice({
     },
     setTrayOnClose: (state, action: PayloadAction<boolean>) => {
       state.trayOnClose = action.payload
+    },
+    setStickyWidgetLaunchOnBoot: (state, action: PayloadAction<boolean>) => {
+      state.stickyWidgetLaunchOnBoot = action.payload
+    },
+    setMusicWidgetLaunchOnBoot: (state, action: PayloadAction<boolean>) => {
+      state.musicWidgetLaunchOnBoot = action.payload
     },
     setTheme: (state, action: PayloadAction<ThemeMode>) => {
       state.theme = action.payload
@@ -885,6 +897,8 @@ export const {
   setLaunchToTray,
   setTrayOnClose,
   setTray,
+  setStickyWidgetLaunchOnBoot,
+  setMusicWidgetLaunchOnBoot,
   setTheme,
   setThemeId,
   setUserTheme,

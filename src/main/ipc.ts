@@ -619,6 +619,46 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.MiniWindow_Hide, () => windowService.hideMiniWindow())
   ipcMain.handle(IpcChannel.MiniWindow_Close, () => windowService.closeMiniWindow())
   ipcMain.handle(IpcChannel.MiniWindow_SetPin, (_, isPinned) => windowService.setPinMiniWindow(isPinned))
+
+  // 桌面便签挂件（Sticky Widget）
+  ipcMain.handle(IpcChannel.StickyWidget_Show, () => windowService.showStickyWidget())
+  ipcMain.handle(IpcChannel.StickyWidget_Close, () => windowService.closeStickyWidget())
+  ipcMain.handle(IpcChannel.StickyWidget_Toggle, () => windowService.toggleStickyWidget())
+  ipcMain.handle(IpcChannel.StickyWidget_SetPin, (_, pinned: boolean) => windowService.setStickyWidgetPin(pinned))
+  ipcMain.handle(IpcChannel.StickyWidget_SetLock, (_, locked: boolean) => windowService.setStickyWidgetLock(locked))
+  ipcMain.handle(IpcChannel.StickyWidget_IsVisible, () => windowService.getStickyWidget()?.isVisible() ?? false)
+  ipcMain.handle(IpcChannel.StickyWidget_OpenMain, () => {
+    windowService.showMainWindow()
+    // 主窗口渲染层（Sidebar）监听同名事件并导航到 /notes
+    windowService.getMainWindow()?.webContents.send(IpcChannel.StickyWidget_OpenMain)
+  })
+
+  // 桌面音乐挂件（Music Widget）
+  ipcMain.handle(IpcChannel.MusicWidget_Show, () => windowService.showMusicWidget())
+  ipcMain.handle(IpcChannel.MusicWidget_Close, () => windowService.closeMusicWidget())
+  ipcMain.handle(IpcChannel.MusicWidget_Toggle, () => windowService.toggleMusicWidget())
+  ipcMain.handle(IpcChannel.MusicWidget_SetPin, (_, pinned: boolean) => windowService.setMusicWidgetPin(pinned))
+  ipcMain.handle(IpcChannel.MusicWidget_SetLock, (_, locked: boolean) => windowService.setMusicWidgetLock(locked))
+  ipcMain.handle(IpcChannel.MusicWidget_IsVisible, () => windowService.getMusicWidget()?.isVisible() ?? false)
+  ipcMain.handle(IpcChannel.MusicWidget_OpenMain, () => {
+    windowService.showMainWindow()
+    // 主窗口渲染层（Sidebar）监听同名事件并导航到 /notes（效率中控台音乐模块）
+    windowService.getMainWindow()?.webContents.send(IpcChannel.MusicWidget_OpenMain)
+  })
+
+  // 音乐挂件 ↔ 主窗口消息桥（主进程纯中转；挂件关闭时静默丢弃）
+  ipcMain.on(IpcChannel.MusicWidget_MsgFromWidget, (_event, msg: unknown) => {
+    windowService.getMainWindow()?.webContents.send(IpcChannel.MusicWidget_OnMsg, msg)
+  })
+  ipcMain.on(IpcChannel.MusicWidget_MsgToWidget, (_event, msg: unknown) => {
+    windowService.getMusicWidget()?.webContents.send(IpcChannel.MusicWidget_OnMsg, msg)
+  })
+
+  // 主题 token 广播：主窗口渲染层主题变化 → 转发给两个挂件（跟随主程序配色）
+  ipcMain.on(IpcChannel.Theme_FromRenderer, (_event, tokens: unknown) => {
+    windowService.getStickyWidget()?.webContents.send(IpcChannel.Theme_ToWidget, tokens)
+    windowService.getMusicWidget()?.webContents.send(IpcChannel.Theme_ToWidget, tokens)
+  })
   ipcMain.handle(IpcChannel.MiniWindow_ConsumeScreenshot, () => screenshotService.consumePendingScreenshot())
   ipcMain.handle(IpcChannel.MiniWindow_ReadClipboardImage, () => {
     const image = clipboard.readImage()

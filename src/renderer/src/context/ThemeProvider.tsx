@@ -63,13 +63,41 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     initUserTheme()
 
+    // 主题 token 推送：收集当前主题的关键 CSS 变量（含用户自定义），经主进程转发给桌面挂件跟随配色
+    // 绑定在主窗口生命周期事件上，主进程在挂件创建时会发 Theme_RequestPush 让这里重推
+    const pushThemeTokens = () => {
+      const cs = getComputedStyle(window.document.body)
+      const pick = (name: string) => cs.getPropertyValue(name).trim()
+      const tokens: Record<string, string> = {
+        primary: pick('--color-primary'),
+        background: pick('--color-background'),
+        backgroundSoft: pick('--color-background-soft'),
+        border: pick('--color-border'),
+        text: pick('--color-text'),
+        text2: pick('--color-text-2'),
+        text3: pick('--color-text-3'),
+        mode
+      }
+      if (tokens.primary) void window.api.themeTokens.push(tokens)
+    }
+    const raf = window.requestAnimationFrame(pushThemeTokens)
+    const reqPush = window.electron.ipcRenderer.on(IpcChannel.Theme_RequestPush, () => {
+      window.requestAnimationFrame(pushThemeTokens)
+    })
+
     // main 进程的主题事件：渲染进程以 themeId 为准，仅重放当前主题属性
-    return window.electron.ipcRenderer.on(IpcChannel.ThemeUpdated, () => {
+    const themeUpdated = window.electron.ipcRenderer.on(IpcChannel.ThemeUpdated, () => {
       document.body.setAttribute('theme-mode', mode)
       document.body.setAttribute('theme-id', themeId)
       document.body.classList.remove('dark', 'light')
       document.body.classList.add(mode)
+      window.requestAnimationFrame(pushThemeTokens)
     })
+    return () => {
+      window.cancelAnimationFrame(raf)
+      reqPush()
+      themeUpdated()
+    }
   }, [themeId, mode, initUserTheme, language, navbarPosition])
 
   useEffect(() => {

@@ -1,0 +1,654 @@
+/* ============================================================
+   桌面音乐挂件 —— 对齐主程序「晨间绿洲」设计语言
+   （配色烘焙自主程序 mx.ts：主色 #10b981 / 背景 #f5f9f6 / 16px 圆角 / 柔和主色阴影）
+   深浅模式跟随系统 prefers-color-scheme（与主程序 nativeTheme 同步）
+   ============================================================ */
+:root {
+  --bg: #f5f9f6;
+  --card: #ffffff;
+  --card-solid: #ffffff;
+  --soft: #edf5f0;
+  --softer: #f5f9f6;
+  --border: #dde7e1;
+  --text: #2a2f2b;
+  --text-2: #5c665f;
+  --text-3: #9aa79f;
+  --accent: #10b981;
+  --accent-strong: #0ea16d;
+  --accent-soft: rgba(16, 185, 129, 0.12);
+  --amber: #f5a623;
+  --live: #f0594b;
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --gradient: linear-gradient(135deg, #34d399, #10b981);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 30px rgba(16, 185, 129, 0.07);
+  --strip: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+  --radius: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #23262b;
+    --card: #2b2f35;
+    --card-solid: #2b2f35;
+    --soft: #33373e;
+    --softer: #23262b;
+    --border: #3a3f46;
+    --text: #e6eaed;
+    --text-2: #a3acb3;
+    --text-3: #6f7880;
+    --accent: #6fbf9b;
+    --accent-strong: #7fcca9;
+    --accent-soft: rgba(111, 191, 155, 0.16);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.14);
+    --gradient: linear-gradient(135deg, #8fd0b0, #6fbf9b);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg);
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- 单行菜单栏（拖拽区） ---------- */
+.header {
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 12px;
+  background: var(--card-solid);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+.header.locked {
+  -webkit-app-region: no-drag;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+  padding: 3px;
+}
+
+.btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.btns button {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btns button:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+
+.btns button.active {
+  color: var(--accent);
+}
+
+.btns button.mode-btn {
+  color: var(--accent);
+  background: var(--accent-soft);
+  margin-right: 2px;
+}
+
+.btns button.mode-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.btns button.close:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ---------- 主体 ---------- */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.disconnected {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-3);
+}
+
+.retry-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  padding: 5px 18px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.retry-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ---------- 本地音乐视图 ---------- */
+.local-view,
+.fm-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+  gap: 8px;
+}
+
+.track-info {
+  min-height: 36px;
+}
+
+.track-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- CSS 模拟频谱（零 JS，暂停即静止） ---------- */
+.spectrum {
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px 0;
+}
+
+.spectrum i {
+  width: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.3;
+  height: 6px;
+  transition: opacity 0.2s ease;
+}
+
+.spectrum.on i {
+  opacity: 1;
+  animation: eq 1s ease-in-out infinite alternate;
+}
+
+.spectrum.on i:nth-child(1) {
+  animation-duration: 0.9s;
+}
+.spectrum.on i:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: 0.1s;
+}
+.spectrum.on i:nth-child(3) {
+  animation-duration: 1.1s;
+  animation-delay: 0.2s;
+}
+.spectrum.on i:nth-child(4) {
+  animation-duration: 0.8s;
+  animation-delay: 0.05s;
+}
+.spectrum.on i:nth-child(5) {
+  animation-duration: 1s;
+  animation-delay: 0.15s;
+}
+.spectrum.on i:nth-child(6) {
+  animation-duration: 0.75s;
+  animation-delay: 0.25s;
+}
+.spectrum.on i:nth-child(7) {
+  animation-duration: 1.05s;
+  animation-delay: 0.1s;
+}
+
+@keyframes eq {
+  from {
+    height: 5px;
+  }
+  to {
+    height: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spectrum.on i {
+    animation: none;
+    height: 14px;
+  }
+}
+
+/* ---------- 进度条（ref 直更） ---------- */
+.progress-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.progress-row input[type='range'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: var(--gradient);
+  transition: width 0.25s linear;
+}
+
+.time-label {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  flex-shrink: 0;
+  min-width: 76px;
+  text-align: right;
+}
+
+/* ---------- 控制栏 ---------- */
+.controls {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+
+.ctl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+.ctl:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+
+.ctl:active {
+  transform: scale(0.94);
+}
+
+.ctl.small {
+  width: 24px;
+  height: 24px;
+}
+
+.ctl.main {
+  width: 36px;
+  height: 36px;
+  color: #fff;
+  background: var(--gradient);
+  box-shadow: 0 4px 12px var(--accent-soft);
+  margin: 0 2px;
+}
+
+.ctl.main:hover {
+  transform: translateY(-1px) scale(1.04);
+  background: var(--gradient);
+  color: #fff;
+  box-shadow: 0 6px 16px var(--accent-soft);
+}
+
+.ctl.main:active {
+  transform: scale(0.95);
+}
+
+/* ---------- 音量 ---------- */
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 92px;
+}
+
+.volume input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 2px;
+  background: var(--soft);
+  cursor: pointer;
+  background: linear-gradient(to right, var(--accent) var(--vol, 80%), var(--soft) var(--vol, 80%));
+}
+
+.volume input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ---------- FM 视图 ---------- */
+.fm-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 22px;
+  flex-shrink: 0;
+}
+
+.fm-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex-shrink: 0;
+}
+
+.fm-dot.connecting {
+  background: var(--amber);
+}
+
+.fm-dot.playing {
+  background: var(--live);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+.fm-dot.error {
+  background: var(--danger);
+}
+
+.fm-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fm-state {
+  font-size: 10.5px;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.fm-kbps {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 1px 8px;
+  flex-shrink: 0;
+}
+
+.fm-error {
+  font-size: 10.5px;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.fm-grid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.fm-grid::-webkit-scrollbar {
+  width: 5px;
+}
+
+.fm-grid::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.fm-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text-2);
+  padding: 4px 12px;
+  font-size: 11.5px;
+  cursor: pointer;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.15s ease;
+}
+
+.fm-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.fm-chip.current {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 500;
+}
+
+/* ---------- 歌单抽屉 ---------- */
+.drawer-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(1px);
+}
+
+.drawer {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  top: 44px;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.drawer-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.drawer-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.drawer-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.drawer-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  padding: 7px 11px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.13s ease;
+}
+
+.drawer-row:hover {
+  background: var(--soft);
+}
+
+.drawer-row.current .drawer-title {
+  color: var(--accent);
+}
+
+.drawer-title {
+  font-size: 12.5px;
+  color: var(--text);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawer-artist {
+  font-size: 10.5px;
+  color: var(--text-3);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawer-empty {
+  padding: 26px 12px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-3);
+}

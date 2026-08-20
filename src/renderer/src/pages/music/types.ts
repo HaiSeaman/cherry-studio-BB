@@ -12,6 +12,8 @@ export type RadioStation = {
 
 export type PlayMode = 'sequential' | 'shuffle' | 'single'
 
+export type FmStatus = 'idle' | 'connecting' | 'playing' | 'paused' | 'error'
+
 /** 本地音乐曲目（Dexie music_tracks 表记录） */
 export type MusicTrack = {
   id?: number

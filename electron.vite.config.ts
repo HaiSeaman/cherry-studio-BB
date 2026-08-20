@@ -97,6 +97,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
           miniWindow: resolve(__dirname, 'src/renderer/miniWindow.html'),
+          stickyWidget: resolve(__dirname, 'src/renderer/stickyWidget.html'),
+          musicWidget: resolve(__dirname, 'src/renderer/musicWidget.html'),
           selectionToolbar: resolve(__dirname, 'src/renderer/selectionToolbar.html'),
           selectionAction: resolve(__dirname, 'src/renderer/selectionAction.html')
         },
@@ -109,13 +111,25 @@ export default defineConfig({
           // 首页只加载自己依赖的 chunk，缩短首屏解析时间
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined
+            // React 核心独立成块（先于 antd/react 规则匹配）：
+            // 挂件轻量入口（stickyWidget/musicWidget）只依赖 react+dexie+lucide，
+            // 若 react 核心混入 antd/主应用生态大块，挂件会整块执行数 MB 依赖（回归：挂件内存超标）
+            if (/node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id) || id.includes('use-sync-external-store')) {
+              return 'reactcore'
+            }
+            // lucide（含核心工厂 createLucideIcon）独立成块且唯一命名：
+            // 该工厂同时被 antd 内部图标与 lucide 图标共享，若并入 antd 块，
+            // 挂件会通过图标反向加载 2.7MB antd。独立 chunk 让 antd 改为从它 import。
+            if (id.includes('lucide')) return 'lucide'
+            if (id.includes('/classnames/')) return 'lucide' // lucide 核心依赖
+            if (id.includes('dexie')) return 'vendor-dexie'
             if (id.includes('antd') || id.includes('@ant-design') || id.includes('rc-')) return 'vendor-antd'
             if (id.includes('react') || id.includes('scheduler')) return 'vendor-react'
             if (id.includes('motion')) return 'vendor-motion'
             if (id.includes('highlight')) return 'vendor-highlight'
             if (id.includes('lodash')) return 'vendor-lodash'
             if (id.includes('redux') || id.includes('@reduxjs') || id.includes('reselect')) return 'vendor-redux'
-            if (id.includes('dexie') || id.includes('fake-indexeddb')) return 'vendor-dexie'
+            if (id.includes('fake-indexeddb')) return 'vendor-dexie'
             // 其余 node_modules 不强制合并，交给打包器按共享度自动分包
             return undefined
           }

@@ -79,6 +79,14 @@ export class TrayService {
         label: trayLocale.show_mini_window,
         click: () => windowService.showMiniWindow()
       },
+      {
+        label: '便签挂件',
+        click: () => windowService.toggleStickyWidget()
+      },
+      {
+        label: '音乐挂件',
+        click: () => windowService.toggleMusicWidget()
+      },
       (isWin || isMac) && {
         label: selectionLocale.name + (selectionAssistantEnabled ? ' - On' : ' - Off'),
         click: () => {

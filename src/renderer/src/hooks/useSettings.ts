@@ -7,10 +7,12 @@ import {
   setImageSavePath,
   setLaunchOnBoot,
   setLaunchToTray,
+  setMusicWidgetLaunchOnBoot as _setMusicWidgetLaunchOnBoot,
   setNavbarPosition,
   setPinTopicsToTop,
   setSendMessageShortcut as _setSendMessageShortcut,
   setSidebarIcons,
+  setStickyWidgetLaunchOnBoot as _setStickyWidgetLaunchOnBoot,
   setTargetLanguage,
   setTheme,
   setTopicPosition,
@@ -52,6 +54,15 @@ export function useSettings() {
         dispatch(setTrayOnClose(isTrayOnClose))
         void window.api.setTrayOnClose(isTrayOnClose)
       }
+    },
+    setStickyWidgetLaunchOnBoot(stickyWidgetLaunchOnBoot: boolean) {
+      dispatch(_setStickyWidgetLaunchOnBoot(stickyWidgetLaunchOnBoot))
+      // 主进程开机自检（无渲染层）读取 configManager，需持久化到主进程配置
+      void window.api.config.set('stickyWidgetLaunchOnBoot', stickyWidgetLaunchOnBoot)
+    },
+    setMusicWidgetLaunchOnBoot(musicWidgetLaunchOnBoot: boolean) {
+      dispatch(_setMusicWidgetLaunchOnBoot(musicWidgetLaunchOnBoot))
+      void window.api.config.set('musicWidgetLaunchOnBoot', musicWidgetLaunchOnBoot)
     },
 
     setTheme(theme: ThemeMode) {

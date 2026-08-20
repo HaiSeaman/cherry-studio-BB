@@ -13,7 +13,12 @@ import { CodeStyleProvider } from './context/CodeStyleProvider'
 import { NotificationProvider } from './context/NotificationProvider'
 import StyleSheetManager from './context/StyleSheetManager'
 import { ThemeProvider } from './context/ThemeProvider'
+// 音乐播放器全局状态机 + 挂件消息桥：主窗口启动即初始化（不依赖用户访问音乐页）
+import { initWidgetBridge } from './pages/music/services/widgetBridge'
 import Router from './Router'
+
+// 顶层副作用初始化（幂等；playerStore/消息桥常驻，切页不丢播放控制）
+initWidgetBridge()
 
 const logger = loggerService.withContext('App.tsx')
 

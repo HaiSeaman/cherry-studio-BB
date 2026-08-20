@@ -39,6 +39,8 @@ export enum ConfigKeys {
   UseSystemTitleBar = 'useSystemTitleBar',
   Proxy = 'proxy',
   EnableDeveloperMode = 'enableDeveloperMode',
+  StickyWidgetLaunchOnBoot = 'stickyWidgetLaunchOnBoot',
+  MusicWidgetLaunchOnBoot = 'musicWidgetLaunchOnBoot',
   // Master switch for the hub `exec` tool (arbitrary JS execution). Defaults
   // to off so that prompt-injected tool calls cannot reach code execution.
   HubExecEnabled = 'hubExecEnabled'
@@ -146,6 +148,14 @@ export class ConfigManager {
 
   getEnableQuickAssistant(): boolean {
     return this.get(ConfigKeys.EnableQuickAssistant, false)
+  }
+
+  getStickyWidgetLaunchOnBoot(): boolean {
+    return this.get<boolean>(ConfigKeys.StickyWidgetLaunchOnBoot, false)
+  }
+
+  getMusicWidgetLaunchOnBoot(): boolean {
+    return this.get<boolean>(ConfigKeys.MusicWidgetLaunchOnBoot, false)
   }
 
   // Selection Assistant: is enabled the selection assistant
