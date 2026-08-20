@@ -107,7 +107,7 @@ describe('processMessages', () => {
       },
       prompt: '',
       topics: [],
-      type: 'assistant'
+      type: 'chat'
     } as Assistant
 
     mockTopic = {

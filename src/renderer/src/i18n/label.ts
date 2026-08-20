@@ -126,12 +126,10 @@ export const getRestoreProgressLabel = (key: string): string => {
 }
 
 const sidebarIconKeyMap = {
-  assistants: '助手',
+  assistants: 'AI 助手',
   store: '助手库',
   minapp: '小程序',
-  paint: '图片生成',
-  music: '音乐',
-  notes: '闹钟便签'
+  notes: '效率助手'
 } as const
 
 export const getSidebarIconLabel = (key: string): string => {

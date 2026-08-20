@@ -59,10 +59,10 @@ const PlayerControls: FC<PlayerControlsProps> = ({
 
   return (
     <Dock>
-      <NowPlaying>
+      <TopRow>
         <DiscWrap className={isPlaying ? 'spin' : ''}>
           <DiscBase>
-            <Music2 size={18} />
+            <Music2 size={16} />
           </DiscBase>
           {track && (track.thumbPath || track.coverPath) && (
             <DiscCover
@@ -89,115 +89,107 @@ const PlayerControls: FC<PlayerControlsProps> = ({
                 className={track.favorite === 1 ? 'favorited' : ''}
                 onClick={() => onToggleFavoriteTrack(track)}
                 title={track.favorite === 1 ? '取消收藏' : '收藏'}>
-                <Star size={14} fill={track.favorite === 1 ? 'currentColor' : 'none'} />
+                <Star size={13} fill={track.favorite === 1 ? 'currentColor' : 'none'} />
               </FavStar>
             )}
           </TitleRow>
           <Artist>{track ? track.artist || '未知艺术家' : '从列表挑一首开始吧'}</Artist>
         </Info>
-      </NowPlaying>
+        <Right>
+          <VolumeControl />
+        </Right>
+      </TopRow>
 
-      <Center>
-        <Buttons>
-          <FilterPill
-            $active={favoritesActive}
-            onClick={onToggleFavorites}
-            aria-pressed={favoritesActive}
-            title="只在收藏中播放">
-            <Star size={12} fill={favoritesActive ? 'currentColor' : 'none'} />
-            收藏夹
-          </FilterPill>
-          <RoundBtn onClick={onPrev} title="上一首">
-            <SkipBack size={16} />
-          </RoundBtn>
-          <MainBtn onClick={onToggle} title={isPlaying ? '暂停' : '播放'}>
-            {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: 2 }} />}
-          </MainBtn>
-          <RoundBtn onClick={onNext} title="下一首">
-            <SkipForward size={16} />
-          </RoundBtn>
-          <RoundBtn onClick={onToggleMode} title={MODE_META[playMode].label} $active={playMode !== 'sequential'}>
-            {MODE_META[playMode].icon}
-          </RoundBtn>
-        </Buttons>
-        <ProgressWrap>
-          <Time>{formatTime(shownTime)}</Time>
-          <ProgressTrack>
-            <ProgressFill style={{ width: `${pct}%` }} />
-            <ProgressThumb style={{ left: `${pct}%` }} />
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={0.1}
-              value={pct}
-              aria-label="播放进度"
-              onChange={() => {}}
-              onInput={(e) => {
-                onSeekingChange(true)
-                setSeekPreview(Number((e.target as HTMLInputElement).value))
-              }}
-              onMouseUp={(e) => {
+      <Buttons>
+        <FilterPill
+          $active={favoritesActive}
+          onClick={onToggleFavorites}
+          aria-pressed={favoritesActive}
+          title="只在收藏中播放">
+          <Star size={11} fill={favoritesActive ? 'currentColor' : 'none'} />
+          收藏夹
+        </FilterPill>
+        <RoundBtn onClick={onPrev} title="上一首">
+          <SkipBack size={15} />
+        </RoundBtn>
+        <MainBtn onClick={onToggle} title={isPlaying ? '暂停' : '播放'}>
+          {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
+        </MainBtn>
+        <RoundBtn onClick={onNext} title="下一首">
+          <SkipForward size={15} />
+        </RoundBtn>
+        <RoundBtn onClick={onToggleMode} title={MODE_META[playMode].label} $active={playMode !== 'sequential'}>
+          {MODE_META[playMode].icon}
+        </RoundBtn>
+      </Buttons>
+
+      <ProgressWrap>
+        <Time>{formatTime(shownTime)}</Time>
+        <ProgressTrack>
+          <ProgressFill style={{ width: `${pct}%` }} />
+          <ProgressThumb style={{ left: `${pct}%` }} />
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={0.1}
+            value={pct}
+            aria-label="播放进度"
+            onChange={() => {}}
+            onInput={(e) => {
+              onSeekingChange(true)
+              setSeekPreview(Number((e.target as HTMLInputElement).value))
+            }}
+            onMouseUp={(e) => {
+              commitSeek(Number((e.target as HTMLInputElement).value))
+              e.currentTarget.blur()
+            }}
+            onKeyUp={(e) => {
+              if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
                 commitSeek(Number((e.target as HTMLInputElement).value))
-                e.currentTarget.blur()
-              }}
-              onKeyUp={(e) => {
-                if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
-                  commitSeek(Number((e.target as HTMLInputElement).value))
-                }
-              }}
-              onTouchEnd={(e) => commitSeek(Number((e.target as HTMLInputElement).value))}
-              onBlur={(e) => {
-                if (seekPreview != null) commitSeek(Number((e.target as HTMLInputElement).value))
-              }}
-              disabled={!track || duration <= 0}
-            />
-          </ProgressTrack>
-          <Time>{formatTime(duration)}</Time>
-        </ProgressWrap>
-      </Center>
-
-      <Right>
-        <VolumeControl />
-      </Right>
+              }
+            }}
+            onTouchEnd={(e) => commitSeek(Number((e.target as HTMLInputElement).value))}
+            onBlur={(e) => {
+              if (seekPreview != null) commitSeek(Number((e.target as HTMLInputElement).value))
+            }}
+            disabled={!track || duration <= 0}
+          />
+        </ProgressTrack>
+        <Time>{formatTime(duration)}</Time>
+      </ProgressWrap>
     </Dock>
   )
 }
 
+/**
+ * 底部「播放舱」：紧凑三行自适应布局（当前曲目+音量 / 控制按钮 / 进度条），
+ * 窄容器（半宽卡片）不溢出；与 FM 播放舱统一 min-height 底部对齐
+ */
 const Dock = styled.div`
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) auto minmax(130px, 1fr);
-  gap: 12px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  min-height: 128px;
   margin-top: 10px;
   padding: 12px 14px;
   background: ${mx.soft2};
   border: 1px solid ${mx.border};
   border-radius: 16px;
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'center' 'now-playing' 'right';
-    gap: 8px;
-    .now-playing {
-      justify-content: center;
-    }
-    .right {
-      justify-content: center;
-    }
-  }
 `
 
-const NowPlaying = styled.div.attrs({ className: 'now-playing' })`
+const TopRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 `
 
 const DiscWrap = styled.div`
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   flex-shrink: 0;
   overflow: hidden;
@@ -238,8 +230,8 @@ const DiscHole = styled.span`
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: ${mx.soft2};
@@ -293,19 +285,11 @@ const Artist = styled.div`
   margin-top: 2px;
 `
 
-const Center = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-width: 280px;
-  max-width: 480px;
-`
-
 const Buttons = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
 `
 
 const FilterPill = styled.button<{ $active: boolean }>`
@@ -332,8 +316,8 @@ const RoundBtn = styled.button<{ $active?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   border: 1px solid ${(p) => (p.$active ? mx.accent : mx.border)};
   background: ${mx.card};
@@ -352,8 +336,8 @@ const MainBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: 50%;
   color: #fff;

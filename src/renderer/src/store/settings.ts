@@ -222,6 +222,7 @@ export interface SettingsState {
   notification: {
     assistant: boolean
     backup: boolean
+    automation: boolean
   }
   // Local backup settings
   localBackupDir: string
@@ -398,7 +399,8 @@ export const initialState: SettingsState = {
   },
   notification: {
     assistant: false,
-    backup: false
+    backup: false,
+    automation: true
   },
   // Local backup settings
   localBackupDir: '',

@@ -65,7 +65,7 @@ describe('Poe Provider Reasoning Support', () => {
     prompt: '',
     topics: [],
     messages: [],
-    type: 'assistant',
+    type: 'chat',
     regularPhrases: [],
     settings: {
       reasoning_effort,

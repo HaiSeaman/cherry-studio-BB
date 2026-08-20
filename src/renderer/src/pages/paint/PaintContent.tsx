@@ -15,6 +15,8 @@ import { setIsGenerating, setLastGeneration } from './store/paintSlice'
 
 interface Props {
   topicId: string | null
+  /** 归属的生图助手 id（编辑重生成时写入消息元数据，避免回退到遗留值 'paint'） */
+  assistantId?: string
 }
 
 type TopicRow = {
@@ -30,7 +32,7 @@ type TopicRow = {
  * - user 消息：提示词气泡（可选中复制 / 复制按钮 / 编辑重生成）
  * - assistant 消息：图片卡片网格（左对齐，含 PENDING 骨架）
  */
-const PaintContent: FC<Props> = ({ topicId }) => {
+const PaintContent: FC<Props> = ({ topicId, assistantId }) => {
   const dispatch = useAppDispatch()
   const lastGeneration = useAppSelector((s) => s.paint.lastGeneration)
   const isGenerating = useAppSelector((s) => s.paint.isGenerating)
@@ -107,7 +109,8 @@ const PaintContent: FC<Props> = ({ topicId }) => {
         aspectRatio: last.aspectRatio,
         personGeneration: last.personGeneration,
         batchSize: last.batchSize,
-        topicId
+        topicId,
+        ...(assistantId ? { assistantId } : {})
       })
       dispatch(setLastGeneration({ ...last, prompt: content }))
     } catch (error) {

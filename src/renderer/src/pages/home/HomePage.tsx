@@ -1,17 +1,20 @@
+import { ensureDefaultAutomationAssistant } from '@renderer/automation/runner'
 import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
+import { reassociatePaintTopics } from '@renderer/pages/paint/services/paintService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
+import { getAssistantType } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
-import { startTransition, useCallback, useEffect, useState } from 'react'
+import { lazy, startTransition, Suspense, useCallback, useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -19,7 +22,14 @@ import styled from 'styled-components'
 import Chat from './Chat'
 import HomeTabs from './Tabs'
 
+// 助手形态工作区懒加载：不进聊天首屏 chunk
+const PaintWorkspace = lazy(() => import('./PaintWorkspace'))
+const AutomationWorkspace = lazy(() => import('./AutomationWorkspace'))
+
 let _activeAssistant: Assistant
+
+// 每会话只跑一次：启动期数据回流（绘画话题挂回生图助手 / 补建自动化助手入口，均幂等）
+let _startupMigrated = false
 
 const HomePage: FC = () => {
   const { assistants } = useAssistants()
@@ -100,6 +110,15 @@ const HomePage: FC = () => {
     NavigationService.setNavigate(navigate)
   }, [navigate])
 
+  // 首次进入：把游离的绘画话题挂到生图助手名下（/paint 页下线后的数据回流，幂等）；
+  // 同时为有遗留任务但无自动化助手的用户补建入口（/automation 页下线，幂等）
+  useEffect(() => {
+    if (_startupMigrated || assistants.length === 0) return
+    _startupMigrated = true
+    void reassociatePaintTopics()
+    void ensureDefaultAutomationAssistant()
+  }, [assistants])
+
   useEffect(() => {
     state?.assistant && setActiveAssistant(state?.assistant)
     state?.topic && setActiveTopic(state?.topic)
@@ -139,12 +158,22 @@ const HomePage: FC = () => {
           )}
         </AnimatePresence>
         <ErrorBoundary>
-          <Chat
-            assistant={activeAssistant}
-            activeTopic={activeTopic}
-            setActiveTopic={setActiveTopic}
-            setActiveAssistant={setActiveAssistant}
-          />
+          {getAssistantType(activeAssistant) === 'image_gen' ? (
+            <Suspense fallback={null}>
+              <PaintWorkspace assistant={activeAssistant} activeTopic={activeTopic} setActiveTopic={setActiveTopic} />
+            </Suspense>
+          ) : getAssistantType(activeAssistant) === 'automation' ? (
+            <Suspense fallback={null}>
+              <AutomationWorkspace assistant={activeAssistant} />
+            </Suspense>
+          ) : (
+            <Chat
+              assistant={activeAssistant}
+              activeTopic={activeTopic}
+              setActiveTopic={setActiveTopic}
+              setActiveAssistant={setActiveAssistant}
+            />
+          )}
         </ErrorBoundary>
       </ContentContainer>
     </Container>

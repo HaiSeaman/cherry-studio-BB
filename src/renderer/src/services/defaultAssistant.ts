@@ -44,7 +44,7 @@ export function getDefaultAssistant(): Assistant {
     prompt: '',
     topics: [getDefaultTopic('default')],
     messages: [],
-    type: 'assistant',
+    type: 'chat',
     regularPhrases: [], // Added regularPhrases
     settings: DEFAULT_ASSISTANT_SETTINGS
   }

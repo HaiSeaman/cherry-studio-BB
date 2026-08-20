@@ -10,7 +10,7 @@ describe('assistant', () => {
     name: 'assistant',
     prompt: '',
     topics: [],
-    type: ''
+    type: 'chat'
   }
 
   describe('isToolUseModeFunction', () => {

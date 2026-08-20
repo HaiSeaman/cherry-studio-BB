@@ -336,7 +336,7 @@ describe('streamCallback Integration Tests', () => {
     enableWebSearch: false,
     enableGenerateImage: false,
     topics: [],
-    type: 'test'
+    type: 'chat'
   }
 
   beforeEach(() => {

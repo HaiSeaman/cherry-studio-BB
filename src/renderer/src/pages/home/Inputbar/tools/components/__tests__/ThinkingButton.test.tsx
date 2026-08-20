@@ -150,7 +150,7 @@ const createAssistant = (overrides: Partial<Assistant> = {}): Assistant => ({
   model: createModel(),
   prompt: '',
   topics: [],
-  type: 'default',
+  type: 'chat',
   settings: {
     reasoning_effort: 'none',
     temperature: 0.7,

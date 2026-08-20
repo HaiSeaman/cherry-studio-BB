@@ -189,11 +189,11 @@ const TodoPanel: FC = () => {
 }
 
 const Panel = styled.div`
-  grid-area: todos;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
   min-height: 0;
   padding: 14px;
   background: ${mx.card};

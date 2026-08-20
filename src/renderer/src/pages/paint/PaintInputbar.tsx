@@ -19,7 +19,7 @@ import {
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
-import { isSystemProvider, type Model } from '@renderer/types'
+import { isSystemProvider, type Model, type Topic } from '@renderer/types'
 import { getErrorMessage, isAbortError } from '@renderer/utils/error'
 import { convertToBase64 } from '@renderer/utils/image'
 import { Button, Input, Modal, Select, Tooltip, Upload } from 'antd'
@@ -28,15 +28,23 @@ import { type FC, useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 import { abortCurrentGeneration, enhancePrompt, findModelByUniqId, generatePaintImage } from './services/paintService'
-import { setActiveTopicId, setIsGenerating, setLastGeneration, setSelectedModel } from './store/paintSlice'
+import { setIsGenerating, setLastGeneration, setSelectedModel } from './store/paintSlice'
 
 const logger = loggerService.withContext('PaintInputbar')
 
-const PaintInputbar: FC = () => {
+interface Props {
+  /** 当前绘画会话话题 id（由工作台传入；为空时生成会自动建会话） */
+  topicId: string | null
+  /** 归属的生图助手 id（写入消息元数据，替代历史遗留的 'paint'） */
+  assistantId?: string
+  /** 自动新建会话后切换当前话题（由工作台传入 setActiveTopic） */
+  onTopicChange?: (topic: Topic) => void
+}
+
+const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
   const dispatch = useAppDispatch()
   const isGenerating = useAppSelector((s) => s.paint.isGenerating)
   const selectedModel = useAppSelector((s) => s.paint.selectedModel)
-  const activeTopicId = useAppSelector((s) => s.paint.activeTopicId)
   const lastGeneration = useAppSelector((s) => s.paint.lastGeneration)
   const storeProviders = useAppSelector((s) => s.llm.providers)
 
@@ -141,7 +149,11 @@ const PaintInputbar: FC = () => {
     }
     dispatch(setIsGenerating(true))
     try {
-      const result = await generatePaintImage({ ...params, model })
+      const result = await generatePaintImage({ ...params, model, ...(assistantId ? { assistantId } : {}) })
+      // 无活跃会话时本次生成自动新建了会话：同步切换工作台当前话题，否则生成结果不可见
+      if (result.topic && onTopicChange) {
+        onTopicChange(result.topic)
+      }
       // 记录本次生成参数（供重新生成 / 编辑重生成使用）
       dispatch(
         setLastGeneration({
@@ -154,10 +166,6 @@ const PaintInputbar: FC = () => {
           inputImages: params.inputImages
         })
       )
-      // 无活跃会话时（自动创建的新会话）同步切换
-      if (result.topicId !== activeTopicId) {
-        dispatch(setActiveTopicId(result.topicId))
-      }
       logger.debug('图片生成完成:', { count: result.images.length, topicId: result.topicId })
       if (clearInput) {
         setPrompt('')
@@ -203,7 +211,7 @@ const PaintInputbar: FC = () => {
       ...(isGemini ? { aspectRatio } : {}),
       ...(isGemini && personGeneration ? { personGeneration } : {}),
       batchSize: isGemini ? 1 : batchSize,
-      topicId: activeTopicId
+      topicId
     })
   }
 
@@ -226,7 +234,7 @@ const PaintInputbar: FC = () => {
       aspectRatio: last.aspectRatio,
       personGeneration: last.personGeneration,
       batchSize: last.batchSize,
-      topicId: activeTopicId,
+      topicId,
       clearInput: false
     })
   }

@@ -1,6 +1,5 @@
 import paintReducer, {
   type PaintState,
-  setActiveTopicId,
   setIsGenerating,
   setLastGeneration,
   setSelectedModel
@@ -18,24 +17,10 @@ const createModel = (id: string, name?: string): Model =>
   }) as unknown as Model
 
 const buildState = (partial: Partial<PaintState> = {}): PaintState => ({
-  activeTopicId: null,
   isGenerating: false,
   selectedModel: null,
   lastGeneration: null,
   ...partial
-})
-
-describe('paint slice — setActiveTopicId', () => {
-  it('updates active topic id', () => {
-    const next = paintReducer(buildState(), setActiveTopicId('topic-1'))
-    expect(next.activeTopicId).toBe('topic-1')
-  })
-
-  it('can clear active topic id', () => {
-    const state = buildState({ activeTopicId: 'topic-1' })
-    const next = paintReducer(state, setActiveTopicId(null))
-    expect(next.activeTopicId).toBeNull()
-  })
 })
 
 describe('paint slice — setIsGenerating', () => {

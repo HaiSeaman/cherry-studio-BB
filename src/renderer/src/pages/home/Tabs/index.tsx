@@ -1,10 +1,12 @@
 import { useAssistants, useDefaultAssistant } from '@renderer/hooks/useAssistant'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import { useShowTopics } from '@renderer/hooks/useStore'
+import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
-import type { Assistant, Topic } from '@renderer/types'
+import type { Assistant, AssistantType, Topic } from '@renderer/types'
 import type { Tab } from '@renderer/types/chat'
 import { classNames, uuid } from '@renderer/utils'
+import { Modal } from 'antd'
 import type { FC } from 'react'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -23,6 +25,25 @@ interface Props {
 
 let _tab: Tab | null = null
 
+/** 助手创建模板：三形态向导（类型标识由默认 emoji 承载） */
+const ASSISTANT_TEMPLATES: { type: AssistantType; emoji: string; title: string; name: string; desc: string }[] = [
+  { type: 'chat', emoji: '💬', title: '通用对话助手', name: '新助手', desc: '标准聊天：消息流、模型选择、文件与工具' },
+  {
+    type: 'image_gen',
+    emoji: '🎨',
+    title: '灵感生图助手',
+    name: '灵感生图',
+    desc: '文字生成图片：参数胶囊、参考图、提示词优化'
+  },
+  {
+    type: 'automation',
+    emoji: '⚡',
+    title: '自动化任务助手',
+    name: '自动化',
+    desc: '定时执行 AI 任务，结果简报回流助手'
+  }
+]
+
 const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant, setActiveTopic, position, style }) => {
   const { addAssistant } = useAssistants()
   const { topicPosition } = useSettings()
@@ -30,6 +51,7 @@ const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant,
   const { toggleShowTopics } = useShowTopics()
   const { isLeftNavbar } = useNavbarPosition()
   const [tab, setTab] = useState<Tab>(position === 'left' ? _tab || 'assistants' : 'topic')
+  const [typePickerOpen, setTypePickerOpen] = useState(false)
   const borderStyle = '0.5px solid var(--color-border)'
   const border =
     position === 'left'
@@ -42,8 +64,19 @@ const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant,
 
   const showTab = position === 'left' && topicPosition === 'left'
 
-  const onCreateAssistant = () => {
-    const assistant = { ...defaultAssistant, id: uuid() }
+  const onCreateAssistant = () => setTypePickerOpen(true)
+
+  const createAssistantOfType = (type: AssistantType) => {
+    setTypePickerOpen(false)
+    const id = uuid()
+    const template = ASSISTANT_TEMPLATES.find((t) => t.type === type)!
+    // chat 保持既有行为（继承默认助手配置）；生图/自动化换名字/emoji 并配全新默认话题
+    const assistant: Assistant = {
+      ...defaultAssistant,
+      id,
+      type,
+      ...(type === 'chat' ? {} : { name: template.name, emoji: template.emoji, topics: [getDefaultTopic(id)] })
+    }
     addAssistant(assistant)
     setActiveAssistant(assistant)
   }
@@ -82,7 +115,7 @@ const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant,
       {position === 'left' && topicPosition === 'left' && (
         <CustomTabs>
           <TabItem active={tab === 'assistants'} onClick={() => setTab('assistants')}>
-            {'助手'}
+            {'AI 助手'}
           </TabItem>
           <TabItem active={tab === 'topic'} onClick={() => setTab('topic')}>
             {'话题'}
@@ -107,6 +140,23 @@ const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant,
           />
         )}
       </TabContent>
+
+      <Modal
+        open={typePickerOpen}
+        onCancel={() => setTypePickerOpen(false)}
+        footer={null}
+        title="选择助手类型"
+        width={520}>
+        <TemplateGrid>
+          {ASSISTANT_TEMPLATES.map((t) => (
+            <TemplateCard key={t.type} onClick={() => createAssistantOfType(t.type)}>
+              <TemplateEmoji>{t.emoji}</TemplateEmoji>
+              <TemplateName>{t.title}</TemplateName>
+              <TemplateDesc>{t.desc}</TemplateDesc>
+            </TemplateCard>
+          ))}
+        </TemplateGrid>
+      </Modal>
     </Container>
   )
 }
@@ -202,3 +252,44 @@ const TabItem = styled.button<{ active: boolean }>`
 `
 
 export default HomeTabs
+
+const TemplateGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 4px 0 8px;
+`
+
+const TemplateCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-primary);
+    background: var(--color-background-soft);
+  }
+`
+
+const TemplateEmoji = styled.span`
+  font-size: 28px;
+`
+
+const TemplateName = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+`
+
+const TemplateDesc = styled.div`
+  font-size: 11px;
+  color: var(--color-text-2);
+  line-height: 1.4;
+`

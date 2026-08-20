@@ -19,6 +19,7 @@ import { appMenuService } from './services/AppMenuService'
 import { configManager } from './services/ConfigManager'
 import mcpService from './services/MCPService'
 import powerMonitorService from './services/PowerMonitorService'
+import automationService from './services/AutomationService'
 import {
   CHERRY_STUDIO_PROTOCOL,
   handleProtocolUrl,
@@ -157,6 +158,9 @@ if (!app.requestSingleInstanceLock()) {
 
     powerMonitorService.init()
 
+    // AI 自动化定时任务调度（主进程常驻，不依赖窗口）
+    await automationService.init()
+
     // Extract bundled rtk binary to ~/.cherrystudio/bin/ on first run
     extractRtkBinaries().catch((error) => {
       logger.warn('Failed to extract rtk binaries (non-fatal)', {
@@ -234,6 +238,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', async () => {
     try {
+      automationService.destroy()
       await mcpService.cleanup()
     } catch (error) {
       logger.warn('Error cleaning up services:', error as Error)

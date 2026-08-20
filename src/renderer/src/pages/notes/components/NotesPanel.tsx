@@ -1,6 +1,7 @@
 import { db } from '@renderer/databases'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Archive, FileText, Plus, Search, Trash2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 
@@ -21,8 +22,8 @@ import {
 } from './mx'
 import NoteEditor from './NoteEditor'
 
-/** 左上卡片：便签列表（搜索/新建/归档/垃圾桶）+ 编辑器 */
-const NotesPanel: FC = () => {
+/** 左上卡片：便签列表（搜索/新建/归档/垃圾桶）+ 编辑器；bottomSlot 渲染在编辑器下方（如待办区） */
+const NotesPanel: FC<{ bottomSlot?: ReactNode }> = ({ bottomSlot }) => {
   const notes = useLiveQuery(async () => (await db.hub_notes.where('status').equals('active').toArray()) ?? [], [], [])
   const archived = useLiveQuery(
     async () => (await db.hub_notes.where('status').equals('archived').toArray()) ?? [],
@@ -196,7 +197,10 @@ const NotesPanel: FC = () => {
           )}
         </List>
       </ListCol>
-      <NoteEditor note={currentNote} onContentChange={onContentChange} />
+      <RightCol>
+        <NoteEditor note={currentNote} onContentChange={onContentChange} />
+        {bottomSlot && <BottomSlot>{bottomSlot}</BottomSlot>}
+      </RightCol>
 
       <FolderModal
         open={archiveOpen}
@@ -231,11 +235,11 @@ const NotesPanel: FC = () => {
 }
 
 const Panel = styled.div`
-  grid-area: notes;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: row;
   gap: 10px;
-  min-width: 0;
   min-height: 0;
   padding: 14px;
   background: ${mx.card};
@@ -246,13 +250,29 @@ const Panel = styled.div`
 `
 
 const ListCol = styled.div`
-  flex: 4;
+  flex: 3;
   min-width: 150px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   border-right: 1px solid ${mx.border};
   padding-right: 10px;
+`
+
+/** 右侧内容列（宽 7）：上=便签编辑器，下=bottomSlot（待办区） */
+const RightCol = styled.div`
+  flex: 7;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`
+
+const BottomSlot = styled.div`
+  flex: 6;
+  min-height: 0;
+  display: flex;
 `
 
 const SearchBox = styled.div`

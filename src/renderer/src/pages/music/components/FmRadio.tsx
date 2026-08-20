@@ -279,30 +279,6 @@ const FmRadio: FC = () => {
 
   return (
     <MXCard data-no-dnd>
-      <LiveBar>
-        <LiveDot className={live ? 'on' : player.status === 'connecting' ? 'connecting' : ''} />
-        <LiveText>
-          {player.currentStation ? player.currentStation.name : STATUS_TEXT[player.status]}
-          {player.currentStation ? ` · ${STATUS_TEXT[player.status]}` : ''}
-        </LiveText>
-        {live && <KbpsChip>{player.kbps} KB/s</KbpsChip>}
-        {player.errorMsg && <ErrorText>{player.errorMsg}</ErrorText>}
-      </LiveBar>
-      <ControlsRow>
-        <MXIconButton onClick={player.prev} title="上一台">
-          <SkipBack size={16} />
-        </MXIconButton>
-        <MainBtn onClick={player.toggle} title={live ? '暂停' : '播放'}>
-          {live ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: 2 }} />}
-        </MainBtn>
-        <MXIconButton onClick={() => player.next()} title="下一台">
-          <SkipForward size={16} />
-        </MXIconButton>
-        <VolumeControl />
-        <MXIconButton onClick={forceRefresh} title="强制刷新（清 7 天缓存）">
-          <RotateCw size={16} />
-        </MXIconButton>
-      </ControlsRow>
       <TabsRow>
         <MXTabs
           value={tab}
@@ -372,6 +348,39 @@ const FmRadio: FC = () => {
           <StationList>{stationRows}</StationList>
         )}
       </ListArea>
+      {/* 底部「播放舱」：与本地音乐 PlayerControls 同构对齐（统一 min-height）。
+          行1：左=换台/播放主控、右=音量/刷新，同一水平线；行2：当前播放状态栏 */}
+      <ControlsDock>
+        <DockMainRow>
+          <TransportGroup>
+            <MXIconButton onClick={player.prev} title="上一台">
+              <SkipBack size={15} />
+            </MXIconButton>
+            <MainBtn onClick={player.toggle} title={live ? '暂停' : '播放'}>
+              {live ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
+            </MainBtn>
+            <MXIconButton onClick={() => player.next()} title="下一台">
+              <SkipForward size={15} />
+            </MXIconButton>
+          </TransportGroup>
+          <ToolGroup>
+            <VolumeControl />
+            <MXIconButton onClick={forceRefresh} title="强制刷新（清 7 天缓存）">
+              <RotateCw size={15} />
+            </MXIconButton>
+          </ToolGroup>
+        </DockMainRow>
+        {/* 状态栏（原顶部 LiveBar 移入）：在功能键下方显示当前电台/状态 */}
+        <DockStatusRow>
+          <LiveDot className={live ? 'on' : player.status === 'connecting' ? 'connecting' : ''} />
+          <LiveText>
+            {player.currentStation ? player.currentStation.name : STATUS_TEXT[player.status]}
+            {player.currentStation ? ` · ${STATUS_TEXT[player.status]}` : ''}
+          </LiveText>
+          {live && <KbpsChip>{player.kbps} KB/s</KbpsChip>}
+          {player.errorMsg && <ErrorText>{player.errorMsg}</ErrorText>}
+        </DockStatusRow>
+      </ControlsDock>
       <MXDialog
         open={customOpen}
         title="添加自定义电台"
@@ -481,18 +490,7 @@ const StationRow: FC<StationRowProps> = memo(function StationRow({
   )
 })
 
-const LiveBar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border: 1px solid ${mx.border};
-  border-radius: 999px;
-  background: ${mx.soft2};
-  margin-bottom: 10px;
-  min-height: 36px;
-`
-
+/** 播放舱状态点：绿=播放中 / 琥珀=连接中 / 灰=未播放 */
 const LiveDot = styled.span`
   width: 8px;
   height: 8px;
@@ -534,21 +532,62 @@ const ErrorText = styled.span`
   flex-shrink: 0;
 `
 
-const ControlsRow = styled.div`
+/**
+ * 底部播放舱：与本地音乐 PlayerControls 同构容器（统一 min-height/间距/视觉），
+ * 行1=主控制（换台/播放），行2=工具（音量/刷新）
+ */
+const ControlsDock = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  min-height: 128px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: ${mx.soft2};
+  border: 1px solid ${mx.border};
+  border-radius: 16px;
+`
+
+const DockMainRow = styled.div`
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
+`
+
+/** 左侧主控组（上一台/播放/下一台） */
+const TransportGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`
+
+/** 右侧工具组（音量/刷新） */
+const ToolGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`
+
+/** 舱内状态栏：功能键下方一行显示当前电台/状态/网速/错误 */
+const DockStatusRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: ${mx.card};
+  border: 1px solid ${mx.border};
 `
 
 const MainBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: 50%;
   color: #fff;

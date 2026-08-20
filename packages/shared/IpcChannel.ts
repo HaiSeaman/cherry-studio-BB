@@ -151,6 +151,22 @@ export enum IpcChannel {
   // PDF
   Pdf_ExtractText = 'pdf:extractText',
 
+  // Automation（AI 自动化定时任务）
+  Automation_GetTasks = 'automation:get-tasks',
+  Automation_SaveTask = 'automation:save-task',
+  Automation_DeleteTask = 'automation:delete-task',
+  Automation_RunTask = 'automation:run-task',
+  Automation_GetRuns = 'automation:get-runs',
+  Automation_GetRun = 'automation:get-run',
+  Automation_TriggerRun = 'automation:trigger-run',
+  Automation_UpdateRun = 'automation:update-run',
+  Automation_FinishRun = 'automation:finish-run',
+  Automation_TasksChanged = 'automation:tasks-changed',
+  Automation_SysFileRead = 'automation:sys-file-read',
+  Automation_SysFileWrite = 'automation:sys-file-write',
+  Automation_SysFileList = 'automation:sys-file-list',
+  Automation_SysPower = 'automation:sys-power',
+
   // file service
   FileService_Upload = 'file-service:upload',
   FileService_List = 'file-service:list',

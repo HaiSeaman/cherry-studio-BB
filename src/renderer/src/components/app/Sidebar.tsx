@@ -11,17 +11,7 @@ import { getSidebarIconLabel } from '@renderer/i18n/label'
 import type { SidebarIcon } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
-import {
-  Image as ImageIcon,
-  LayoutGrid,
-  MessageSquare,
-  Minus,
-  Music,
-  Settings,
-  Square,
-  StickyNote,
-  X
-} from 'lucide-react'
+import { LayoutGrid, MessageSquare, Minus, Settings, Square, StickyNote, X } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -42,7 +32,9 @@ const Sidebar: FC = () => {
   const avatar = useAvatar()
   const onEditUser = () => UserPopup.show()
 
-  const showPinnedApps = pinned.length > 0 && sidebarIcons.visible.includes('minapp')
+  // 老版本持久化 settings 可能缺 sidebarIcons 字段（autoMerge 整体替换），缺省按空列表兜底
+  const visibleIcons = sidebarIcons?.visible ?? []
+  const showPinnedApps = pinned.length > 0 && visibleIcons.includes('minapp')
 
   // 生成中禁止切换（modelGenerating 拒绝）：静默拦截，弹窗保持打开，
   // 避免"弹窗关了却没跳转"的困惑，也不产生未处理的 Promise 拒绝
@@ -190,23 +182,19 @@ const MainMenus: FC = () => {
   const iconMap = {
     assistants: <MessageSquare size={18} className="icon" />,
     minapp: <LayoutGrid size={18} className="icon" />,
-    paint: <ImageIcon size={18} className="icon" />,
-    music: <Music size={18} className="icon" />,
     notes: <StickyNote size={18} className="icon" />
   }
 
   const pathMap = {
     assistants: '/',
     minapp: '/apps',
-    paint: '/paint',
-    music: '/music',
     notes: '/notes'
   }
 
   // 右侧导航栏下段（从上往下）：顺序以「显示设置→侧边栏设置」的拖拽排序为准，
   // 聊天（assistants）固定在底部（迁移 216 已把持久化顺序归一化为设计顺序）
   const renderOrder: SidebarIcon[] = [
-    ...sidebarIcons.visible.filter((icon) => icon !== 'assistants' && icon in pathMap),
+    ...(sidebarIcons?.visible ?? []).filter((icon) => icon !== 'assistants' && icon in pathMap),
     'assistants'
   ]
   return renderOrder.map((icon) => {

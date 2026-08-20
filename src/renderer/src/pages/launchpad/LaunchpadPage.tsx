@@ -1,7 +1,7 @@
 import App from '@renderer/components/MinApp/MinApp'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { Image as ImageIcon, LayoutGrid, MessageSquare, Music, StickyNote } from 'lucide-react'
+import { LayoutGrid, MessageSquare, StickyNote } from 'lucide-react'
 import type { FC } from 'react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -15,33 +15,21 @@ const LaunchpadPage: FC = () => {
   const appMenuItems = [
     {
       icon: <MessageSquare size={32} className="icon" />,
-      text: 'AI 聊天',
+      text: 'AI 助手',
       path: '/',
-      bgColor: 'linear-gradient(135deg, #3B82F6, #60A5FA)' // AI 聊天：蓝色，代表对话与智能
-    },
-    {
-      icon: <ImageIcon size={32} className="icon" />,
-      text: 'AI 绘画',
-      path: '/paint',
-      bgColor: 'linear-gradient(135deg, #EC4899, #F472B6)' // AI 绘画：粉色，代表艺术与创作
+      bgColor: 'linear-gradient(135deg, #3B82F6, #60A5FA)' // AI 助手：蓝色，代表对话与智能（生图/自动化并入助手工作台）
     },
     {
       icon: <LayoutGrid size={32} className="icon" />,
       text: '小程序',
       path: '/apps',
-      bgColor: 'linear-gradient(135deg, #8B5CF6, #A855F7)' // 小程序：紫色，代表多功能和灵活性
-    },
-    {
-      icon: <Music size={32} className="icon" />,
-      text: '音乐',
-      path: '/music',
-      bgColor: 'linear-gradient(135deg, #10B981, #34D399)' // 音乐：绿色，代表轻快与放松
+      bgColor: 'linear-gradient(135deg, #8B5CF6, #A555F7)' // 小程序：紫色，代表多功能和灵活性
     },
     {
       icon: <StickyNote size={32} className="icon" />,
-      text: '闹钟便签',
+      text: '效率助手',
       path: '/notes',
-      bgColor: 'linear-gradient(135deg, #F59E0B, #FBBF24)' // 闹钟便签：琥珀色，代表提醒与记录
+      bgColor: 'linear-gradient(135deg, #F59E0B, #FBBF24)' // 效率助手：琥珀色，代表提醒与记录
     }
   ]
 

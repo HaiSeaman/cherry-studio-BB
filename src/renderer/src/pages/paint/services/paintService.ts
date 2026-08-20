@@ -1,16 +1,17 @@
 import { loggerService } from '@logger'
 import { PAINT_ENHANCE_PROMPT } from '@renderer/config/paint'
 import { db } from '@renderer/databases'
-import { TopicManager } from '@renderer/hooks/useTopic'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { getDefaultAssistant, getTranslateModel } from '@renderer/services/AssistantService'
 import { dbService } from '@renderer/services/db'
 import FileManager from '@renderer/services/FileManager'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import store from '@renderer/store'
-import type { Assistant, Model } from '@renderer/types'
+import { addAssistant, addTopic, updateTopic, updateTopics,updateTopicUpdatedAt } from '@renderer/store/assistants'
+import type { Assistant, Model, Topic } from '@renderer/types'
 import type { FileMetadata } from '@renderer/types'
 import { TopicType } from '@renderer/types'
+import { getAssistantType } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
 import type { SerializedError } from '@renderer/types/error'
@@ -105,6 +106,42 @@ export async function enhancePrompt(prompt: string): Promise<string> {
   return trimmedText
 }
 
+/**
+ * 把游离的绘画话题（db.topics 中 type=paint 且不属于任何助手）挂到生图助手名下：
+ * 聊天首页话题列表来自 Redux assistant.topics（持久化），故动作是 dispatch 话题元数据进去。
+ * 无生图助手时先创建默认「灵感生图」助手；幂等：已被任何助手认领的话题不再重复挂载。
+ */
+export async function reassociatePaintTopics(): Promise<void> {
+  const assistants: Assistant[] = store.getState().assistants.assistants
+  const claimed = new Set(assistants.flatMap((a) => (a.topics ?? []).map((t) => t.id)))
+  const orphanRows = (await db.topics.filter((t) => (t as { type?: string }).type === 'paint').toArray())
+    .filter((t) => !claimed.has(t.id))
+    .sort((a, b) => (a.updatedAt || '').localeCompare(b.updatedAt || ''))
+  if (orphanRows.length === 0) return
+
+  let target = assistants.find((a) => getAssistantType(a) === 'image_gen')
+  if (!target) {
+    target = { ...getDefaultAssistant(), id: uuid(), name: '灵感生图', emoji: '🎨', type: 'image_gen', topics: [] }
+    store.dispatch(addAssistant(target))
+  }
+  const targetId = target.id
+  const additions = orphanRows.map(
+    (t) =>
+      ({
+        id: t.id,
+        assistantId: targetId,
+        name: t.name || '绘画会话',
+        createdAt: t.updatedAt,
+        updatedAt: t.updatedAt,
+        messages: []
+      }) as Topic
+  )
+  // dispatch 前重读最新 topics：上面的 await 期间用户可能已新增话题，用快照会覆盖丢失
+  const latestTopics =
+    store.getState().assistants.assistants.find((a) => a.id === targetId)?.topics ?? target.topics ?? []
+  store.dispatch(updateTopics({ assistantId: targetId, topics: [...latestTopics, ...additions] }))
+}
+
 /** 创建新的绘画会话，返回话题 id */
 export async function createPaintTopic(): Promise<string> {
   const id = uuid()
@@ -117,16 +154,6 @@ export async function createPaintTopic(): Promise<string> {
     updatedAt: now
   })
   return id
-}
-
-/** 重命名绘画会话 */
-export async function renamePaintTopic(id: string, name: string): Promise<void> {
-  await db.topics.update(id, { name, updatedAt: new Date().toISOString() })
-}
-
-/** 删除绘画会话（连带消息块与文件清理，复用聊天话题删除逻辑） */
-export async function deletePaintTopic(id: string): Promise<void> {
-  await TopicManager.removeTopic(id)
 }
 
 /** 获取当前设置的图片保存路径（空 = 使用默认目录 用户图片目录/CherryStudio） */
@@ -232,6 +259,8 @@ export type GeneratePaintImageParams = {
   batchSize: number
   /** 目标会话 id；为空时自动创建新会话 */
   topicId?: string | null
+  /** 消息归属的助手 id；缺省沿用历史遗留值 'paint'（老数据兼容） */
+  assistantId?: string
   /** 中止信号（点击「停止生成」时触发） */
   signal?: AbortSignal
 }
@@ -239,6 +268,8 @@ export type GeneratePaintImageParams = {
 export type GeneratePaintImageResult = {
   topicId: string
   images: string[]
+  /** 自动新建会话时挂到助手名下的话题（供调用方切换 activeTopic；已存在会话时为 undefined） */
+  topic?: Topic
 }
 
 /**
@@ -259,6 +290,7 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
     personGeneration,
     batchSize,
     topicId,
+    assistantId,
     signal
   } = params
 
@@ -270,18 +302,36 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
   }
 
   let targetTopicId = topicId ?? null
+  let createdTopic: Topic | undefined
   if (!targetTopicId) {
     targetTopicId = await createPaintTopic()
   }
   const currentTopicId = targetTopicId
+  const messageAssistantId = assistantId ?? 'paint'
+
+  // 自动新建的会话同步挂到助手名下（历史列表/话题列表读 Redux assistant.topics）。
+  // addTopic reducer 按 id 去重且置顶，天然防并发重复挂载。
+  if (!topicId && messageAssistantId !== 'paint') {
+    const row = await db.topics.get(currentTopicId)
+    const nowIso = row?.updatedAt ?? new Date().toISOString()
+    createdTopic = {
+      id: currentTopicId,
+      assistantId: messageAssistantId,
+      name: row?.name || '绘画会话',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      messages: []
+    } as Topic
+    store.dispatch(addTopic({ assistantId: messageAssistantId, topic: createdTopic }))
+  }
 
   // 用户提示词消息
-  const userMessage = createMessage('user', currentTopicId, 'paint')
+  const userMessage = createMessage('user', currentTopicId, messageAssistantId)
   const userBlock = createMainTextBlock(userMessage.id, prompt)
   userMessage.blocks = [userBlock.id]
 
   // 助手图片消息（PENDING，生成完成后更新为 SUCCESS）
-  const assistantMessage = createAssistantMessage('paint', currentTopicId, { model, modelId: model.id })
+  const assistantMessage = createAssistantMessage(messageAssistantId, currentTopicId, { model, modelId: model.id })
   const imageBlock = createImageBlock(assistantMessage.id, { status: MessageBlockStatus.PENDING })
   assistantMessage.blocks = [imageBlock.id]
 
@@ -291,11 +341,31 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
 
   // 首次生成时用提示词命名会话（按 Unicode 码点切分，避免 emoji 代理对被截断产生乱码）
   const topicRow = await db.topics.get(currentTopicId)
+  let renamedTo: string | undefined
   if (topicRow && (!topicRow.name || topicRow.name === '新的绘画会话')) {
+    renamedTo = Array.from(prompt).slice(0, 20).join('')
     await db.topics.update(currentTopicId, {
-      name: Array.from(prompt).slice(0, 20).join(''),
+      name: renamedTo,
       updatedAt: new Date().toISOString()
     })
+  }
+
+  // 同步 Redux 话题元数据（历史列表的名称/排序读 assistant.topics，只写 db 会陈旧）
+  if (messageAssistantId !== 'paint') {
+    const owner = store.getState().assistants.assistants.find((a) => a.id === messageAssistantId)
+    const reduxTopic = owner?.topics?.find((t) => t.id === currentTopicId)
+    if (reduxTopic) {
+      if (renamedTo && reduxTopic.name !== renamedTo) {
+        store.dispatch(
+          updateTopic({
+            assistantId: messageAssistantId,
+            topic: { ...reduxTopic, name: renamedTo }
+          })
+        )
+      } else {
+        store.dispatch(updateTopicUpdatedAt({ topicId: currentTopicId }))
+      }
+    }
   }
 
   try {
@@ -337,7 +407,7 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
       }
     })
 
-    return { topicId: currentTopicId, images }
+    return { topicId: currentTopicId, images, ...(createdTopic ? { topic: createdTopic } : {}) }
   } catch (error) {
     if (isAbortError(error)) {
       // 用户主动中止 ≠ 失败：落 PAUSED 状态（不渲染红色错误卡），由调用方提示"已停止生成"

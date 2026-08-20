@@ -59,7 +59,7 @@ describe('searchOrchestrationPlugin', () => {
       name: 'Test Assistant',
       prompt: '',
       topics: [],
-      type: 'assistant',
+      type: 'chat',
       model,
       webSearchProviderId: 'tavily'
     } as Assistant

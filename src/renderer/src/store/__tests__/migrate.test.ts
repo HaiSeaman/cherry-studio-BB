@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'vitest'
+
+import { migrate } from '../migrate'
+
+/** 构造带 sidebarIcons 的持久化 state */
+function stateWith(visible: string[] | undefined, disabled?: string[]) {
+  return {
+    settings: {
+      sidebarIcons: visible === undefined && disabled === undefined ? undefined : { visible, disabled: disabled ?? [] }
+    }
+  }
+}
+
+describe('persist migrate — 侧边栏图标（v0~v3 → v4 各历史升级路径）', () => {
+  it('v1 老数据（含 music/paint/automation）：过滤后 notes 保留', async () => {
+    const s = stateWith(['assistants', 'minapp', 'paint', 'music', 'notes', 'automation'])
+    const out: any = await migrate(s)
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes'])
+  })
+
+  it('v0 极老数据（无 paint/automation，仅 music）：notes 保留', async () => {
+    const s = stateWith(['assistants', 'minapp', 'music', 'notes'])
+    const out: any = await migrate(s)
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes'])
+  })
+
+  it('disabled 列表中的死图标同样被清除', async () => {
+    const s = stateWith(['assistants', 'minapp', 'notes'], ['paint', 'music'])
+    const out: any = await migrate(s)
+    expect(out.settings.sidebarIcons.disabled).toEqual([])
+  })
+
+  it('已是最新格式（3 图标）：原样放行，notes 不丢', async () => {
+    const s = stateWith(['assistants', 'minapp', 'notes'])
+    const out: any = await migrate(s)
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes'])
+  })
+
+  it('settings 无 sidebarIcons 字段（更老的数据）：不崩溃、原样返回', async () => {
+    const s = stateWith(undefined)
+    const out: any = await migrate(s)
+    expect(out.settings.sidebarIcons).toBeUndefined()
+  })
+
+  it('state 为 null：原样返回', async () => {
+    expect(await migrate(null)).toBeNull()
+  })
+})
+
+describe('persist migrate — 通知设置（老用户补 automation 默认值）', () => {
+  it('老数据 notification 不含 automation：补 true（否则被 NotificationService 当 false 拦截）', async () => {
+    const s = { settings: { notification: { assistant: false, backup: true } } }
+    const out: any = await migrate(s)
+    expect(out.settings.notification).toEqual({ assistant: false, backup: true, automation: true })
+  })
+
+  it('新数据已含 automation=false（用户主动关闭）：不覆盖', async () => {
+    const s = { settings: { notification: { assistant: false, backup: false, automation: false } } }
+    const out: any = await migrate(s)
+    expect(out.settings.notification.automation).toBe(false)
+  })
+
+  it('settings 无 notification 字段（极老数据）：补完整默认值', async () => {
+    const s = { settings: {} }
+    const out: any = await migrate(s)
+    expect(out.settings.notification).toEqual({ assistant: false, backup: false, automation: true })
+  })
+
+  it('settings 整体缺失：原样返回（autoMerge 用 initialState，默认值本就完整）', async () => {
+    const out: any = await migrate({ assistants: [] })
+    expect(out.settings).toBeUndefined()
+    expect(out).toEqual({ assistants: [] })
+  })
+})

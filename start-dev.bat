@@ -1,51 +1,107 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
+chcp 65001 >nul
 cd /d "%~dp0"
 
-REM ============================================================
-REM  Cherry Studio dev launcher (Windows)
-REM
-REM  Purpose: run the app in dev mode without packaging an EXE
-REM  Usage:   double-click this file, or run start-dev.bat
-REM
-REM  Notes:
-REM  - First run auto-installs missing dependencies
-REM  - If ELECTRON_RUN_AS_NODE is set in the environment (injected
-REM    by WorkBuddy/CI sandbox), Electron would run as Node.js and
-REM    the app would not start. cmd cannot delete env vars, so the
-REM    launch step is delegated to PowerShell which removes it.
-REM ============================================================
+echo ============================================================
+echo  Cherry Studio Dev Launcher
+echo ============================================================
+echo.
 
-echo [1/3] Checking pnpm...
-
-where pnpm >nul 2>&1
-if errorlevel 1 (
-  echo [ERROR] pnpm not found. Install it first: npm install -g pnpm
+echo [1/4] Checking Node.js runtime...
+where node >nul 2>&1
+if !errorlevel! neq 0 (
+  echo [ERROR] Node.js was not found in your PATH.
+  echo Please make sure Node.js is installed.
+  echo.
   pause
   exit /b 1
 )
+node -v
 
-echo [2/3] Checking dependencies...
+echo.
+echo [2/4] Checking Package Manager (pnpm)...
+set "PNPM_BIN="
 
-if not exist node_modules\electron-screenshots (
-  echo       First run: installing dependencies...
-  call pnpm install --offline
-  if errorlevel 1 call pnpm install
-  if errorlevel 1 (
-    echo [ERROR] Dependency install failed. Check your network and retry.
+REM 1. Prefer pnpm.cmd on Windows to prevent PowerShell script execution policy blocks
+where pnpm.cmd >nul 2>&1
+if !errorlevel! equ 0 (
+  set "PNPM_BIN=pnpm.cmd"
+  goto :pnpm_ok
+)
+
+REM 2. Check standard pnpm
+where pnpm >nul 2>&1
+if !errorlevel! equ 0 (
+  set "PNPM_BIN=pnpm"
+  goto :pnpm_ok
+)
+
+REM 3. Check AppData global npm directory
+if exist "%APPDATA%\npm\pnpm.cmd" (
+  set "PNPM_BIN=%APPDATA%\npm\pnpm.cmd"
+  goto :pnpm_ok
+)
+
+REM 4. Fallback to corepack or npx if pnpm is not in global PATH
+where corepack >nul 2>&1
+if !errorlevel! equ 0 (
+  set "PNPM_BIN=corepack pnpm"
+  goto :pnpm_ok
+)
+
+where npx >nul 2>&1
+if !errorlevel! equ 0 (
+  set "PNPM_BIN=npx pnpm"
+  goto :pnpm_ok
+)
+
+echo [ERROR] pnpm is not found.
+echo Please run: npm install -g pnpm
+echo.
+pause
+exit /b 1
+
+:pnpm_ok
+echo Using package manager: !PNPM_BIN!
+call !PNPM_BIN! -v
+
+echo.
+echo [3/4] Checking dependencies...
+if not exist node_modules (
+  echo node_modules not found, running !PNPM_BIN! install...
+  call !PNPM_BIN! install
+  if !errorlevel! neq 0 (
+    echo.
+    echo [ERROR] pnpm install failed.
     pause
     exit /b 1
   )
 ) else (
-  echo       Dependencies ready
+  echo Dependencies are installed.
 )
 
-echo [3/3] Starting Cherry Studio dev mode...
-echo       Close the app to exit; this window will close afterwards.
+echo.
+echo [4/4] Starting Cherry Studio dev mode...
+REM Clear ELECTRON_RUN_AS_NODE to prevent Electron from running in headless node CLI mode
+set "ELECTRON_RUN_AS_NODE="
+
+if "%~1"=="--dry-run" (
+  echo [DRY RUN] All startup checks passed successfully.
+  exit /b 0
+)
+
+echo Launching dev server and Electron app...
+echo (Close the Cherry Studio window or press Ctrl+C to terminate)
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:ELECTRON_RUN_AS_NODE = $null; npm run dev"
+call !PNPM_BIN! run dev
+
+if !errorlevel! neq 0 (
+  echo.
+  echo [WARNING] Dev process ended with exit code !errorlevel!.
+)
 
 echo.
-echo App exited. Press any key to close this window.
+echo Application exited. Press any key to close this window.
 pause >nul

@@ -1,4 +1,12 @@
 import { electronAPI } from '@electron-toolkit/preload'
+import type {
+  AutomationRun,
+  AutomationRunStep,
+  AutomationSysFileListResult,
+  AutomationSysFileResult,
+  AutomationSysPowerResult,
+  AutomationTask
+} from '@shared/automation'
 import type { LogLevel, LogSourceWithContext } from '@shared/config/logger'
 import type { FileChangeEvent, WebviewKeyEvent } from '@shared/config/types'
 import type { MCPServerLogEntry } from '@shared/config/types'
@@ -394,6 +402,43 @@ const api = {
         ipcRenderer.removeListener(channel, listener)
       }
     }
+  },
+  automation: {
+    getTasks: (): Promise<AutomationTask[]> => ipcRenderer.invoke(IpcChannel.Automation_GetTasks),
+    saveTask: (task: AutomationTask): Promise<AutomationTask> =>
+      ipcRenderer.invoke(IpcChannel.Automation_SaveTask, task),
+    deleteTask: (taskId: string): Promise<void> => ipcRenderer.invoke(IpcChannel.Automation_DeleteTask, taskId),
+    runTask: (taskId: string): Promise<AutomationRun | null> =>
+      ipcRenderer.invoke(IpcChannel.Automation_RunTask, taskId),
+    getRuns: (limit?: number): Promise<AutomationRun[]> => ipcRenderer.invoke(IpcChannel.Automation_GetRuns, limit),
+    getRun: (runId: string): Promise<AutomationRun | null> => ipcRenderer.invoke(IpcChannel.Automation_GetRun, runId),
+    updateRun: (runId: string, step: AutomationRunStep): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.Automation_UpdateRun, runId, step),
+    finishRun: (
+      runId: string,
+      payload: { status: 'success' | 'failed' | 'timeout'; output?: string; error?: string }
+    ): Promise<void> => ipcRenderer.invoke(IpcChannel.Automation_FinishRun, runId, payload),
+    /** 主进程触发任务执行（main → renderer） */
+    onTriggerRun: (callback: (payload: { task: AutomationTask; runId: string }) => void): (() => void) => {
+      const listener = (_: Electron.IpcRendererEvent, payload: { task: AutomationTask; runId: string }) =>
+        callback(payload)
+      ipcRenderer.on(IpcChannel.Automation_TriggerRun, listener)
+      return () => ipcRenderer.removeListener(IpcChannel.Automation_TriggerRun, listener)
+    },
+    /** 任务/运行数据变化（main → renderer），UI 收到后重新拉取 */
+    onTasksChanged: (callback: () => void): (() => void) => {
+      const listener = () => callback()
+      ipcRenderer.on(IpcChannel.Automation_TasksChanged, listener)
+      return () => ipcRenderer.removeListener(IpcChannel.Automation_TasksChanged, listener)
+    },
+    sysFileRead: (filePath: string): Promise<AutomationSysFileResult> =>
+      ipcRenderer.invoke(IpcChannel.Automation_SysFileRead, filePath),
+    sysFileWrite: (filePath: string, content: string): Promise<AutomationSysFileResult> =>
+      ipcRenderer.invoke(IpcChannel.Automation_SysFileWrite, filePath, content),
+    sysFileList: (dirPath: string): Promise<AutomationSysFileListResult> =>
+      ipcRenderer.invoke(IpcChannel.Automation_SysFileList, dirPath),
+    sysPower: (action: 'shutdown' | 'restart' | 'lock'): Promise<AutomationSysPowerResult> =>
+      ipcRenderer.invoke(IpcChannel.Automation_SysPower, action)
   }
 }
 

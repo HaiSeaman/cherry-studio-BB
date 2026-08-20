@@ -64,7 +64,7 @@ describe('prompt', () => {
       name: name,
       model: mockModel,
       prompt: '',
-      type: 'assistant',
+      type: 'chat',
       topics: []
     }
   }

@@ -13,8 +13,6 @@ export type PaintLastGeneration = {
 }
 
 export interface PaintState {
-  /** 当前活跃的绘画会话话题 id */
-  activeTopicId: string | null
   /** 是否正在生成图片 */
   isGenerating: boolean
   /** 当前选择的绘画模型（不持久化） */
@@ -24,7 +22,6 @@ export interface PaintState {
 }
 
 const initialState: PaintState = {
-  activeTopicId: null,
   isGenerating: false,
   selectedModel: null,
   lastGeneration: null
@@ -34,9 +31,6 @@ const paintSlice = createSlice({
   name: 'paint',
   initialState,
   reducers: {
-    setActiveTopicId: (state, action: PayloadAction<string | null>) => {
-      state.activeTopicId = action.payload
-    },
     setIsGenerating: (state, action: PayloadAction<boolean>) => {
       state.isGenerating = action.payload
     },
@@ -49,5 +43,5 @@ const paintSlice = createSlice({
   }
 })
 
-export const { setActiveTopicId, setIsGenerating, setSelectedModel, setLastGeneration } = paintSlice.actions
+export const { setIsGenerating, setSelectedModel, setLastGeneration } = paintSlice.actions
 export default paintSlice.reducer

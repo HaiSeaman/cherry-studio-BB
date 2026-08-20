@@ -78,7 +78,7 @@ const createAssistant = (settings: Assistant['settings'] = {}): Assistant => {
     name: 'Test Assistant',
     prompt: 'prompt',
     topics: [createTopic(assistantId)],
-    type: 'assistant',
+    type: 'chat',
     settings
   }
 }

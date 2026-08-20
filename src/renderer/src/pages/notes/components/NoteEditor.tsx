@@ -226,8 +226,10 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
 }
 
 const Wrap = styled.div`
-  flex: 6;
+  /* 与 NotesPanel.BottomSlot 的 flex:6 配对：便签内容框:待办 = 4:6 */
+  flex: 4;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;

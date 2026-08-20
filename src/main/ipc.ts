@@ -9,6 +9,13 @@ import { generateSignature } from '@main/integration/cherryai'
 import { getIpCountry } from '@main/utils/ipService'
 import { isBinaryExists, runInstallScript } from '@main/utils/process'
 import { handleZoomFactor } from '@main/utils/zoom'
+import type {
+  AutomationRunStep,
+  AutomationSysFileListResult,
+  AutomationSysFileResult,
+  AutomationSysPowerResult,
+  AutomationTask
+} from '@shared/automation'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { IpcChannel } from '@shared/IpcChannel'
 import { extractPdfText } from '@shared/utils/pdf'
@@ -27,6 +34,7 @@ import {
 import fontList from 'font-list'
 
 import appService from './services/AppService'
+import automationService from './services/AutomationService'
 import BackupManager from './services/BackupManager'
 import { configManager } from './services/ConfigManager'
 import DxtService from './services/DxtService'
@@ -386,6 +394,39 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.Notification_Send, async (_, notification: Notification) => {
     await notificationService.sendNotification(notification)
   })
+
+  // automation（AI 自动化定时任务）
+  ipcMain.handle(IpcChannel.Automation_GetTasks, () => automationService.getTasks())
+  ipcMain.handle(IpcChannel.Automation_SaveTask, (_, task: AutomationTask) => automationService.saveTask(task))
+  ipcMain.handle(IpcChannel.Automation_DeleteTask, (_, taskId: string) => automationService.deleteTask(taskId))
+  ipcMain.handle(IpcChannel.Automation_RunTask, (_, taskId: string) => automationService.runTaskNow(taskId))
+  ipcMain.handle(IpcChannel.Automation_GetRuns, (_, limit?: number) => automationService.getRuns(limit ?? 100))
+  ipcMain.handle(IpcChannel.Automation_GetRun, (_, runId: string) => automationService.getRun(runId))
+  ipcMain.handle(IpcChannel.Automation_UpdateRun, (_, runId: string, step: AutomationRunStep) =>
+    automationService.updateRun(runId, step)
+  )
+  ipcMain.handle(
+    IpcChannel.Automation_FinishRun,
+    (_, runId: string, payload: { status: 'success' | 'failed' | 'timeout'; output?: string; error?: string }) =>
+      automationService.finishRun(runId, payload)
+  )
+  ipcMain.handle(
+    IpcChannel.Automation_SysFileRead,
+    (_, filePath: string): Promise<AutomationSysFileResult> => automationService.sysFileRead(filePath)
+  )
+  ipcMain.handle(
+    IpcChannel.Automation_SysFileWrite,
+    (_, filePath: string, content: string): Promise<AutomationSysFileResult> =>
+      automationService.sysFileWrite(filePath, content)
+  )
+  ipcMain.handle(
+    IpcChannel.Automation_SysFileList,
+    (_, dirPath: string): Promise<AutomationSysFileListResult> => automationService.sysFileList(dirPath)
+  )
+  ipcMain.handle(
+    IpcChannel.Automation_SysPower,
+    (_, action: 'shutdown' | 'restart' | 'lock'): AutomationSysPowerResult => automationService.sysPower(action)
+  )
   // zip
   ipcMain.handle(IpcChannel.Zip_Decompress, (_, text: Buffer) => decompress(text))
 

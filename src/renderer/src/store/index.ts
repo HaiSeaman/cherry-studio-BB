@@ -68,11 +68,21 @@ const rootReducer = combineReducers({
 
 // ponytail: version 基线重置为 0。旧版持久化数据为当前 reducer 同构格式，
 // redux-persist 无 migrate 时原样放行，数据零丢失；历史 216 个迁移函数已整体移除。
+// v1: 侧边栏新增「自动化」图标（后被 v4 反转：自动化并入助手工作台）
+// v2: 「音乐」并入闹钟便签中控台（/music 下线）
+// v3: 「图片生成」并入助手工作台（/paint 下线）
+// v4: 「自动化」并入助手工作台（/automation 下线），侧边栏入口收敛为 3+设置。
+//     migrate 累积原则：对任何旧版本只调用本函数一次，须覆盖全部历史净效果——
+//     三个已删入口直接从持久化列表过滤即可，天然覆盖 v0~v3 所有老用户。
+//     实现见 migrate.ts（纯函数，单测覆盖各历史版本升级路径）。
+import { migrate } from './migrate'
+
 const persistedReducer = persistReducer(
   {
     key: 'cherry-studio',
     storage,
-    version: 0,
+    version: 4,
+    migrate,
     blacklist: ['runtime', 'messages', 'messageBlocks', 'tabs', 'toolPermissions', 'paint']
   },
   rootReducer

@@ -116,7 +116,7 @@ class ImportServiceClass {
         prompt: '',
         topics: result.topics,
         messages: [],
-        type: 'assistant',
+        type: 'chat',
         settings: DEFAULT_ASSISTANT_SETTINGS
       }
 

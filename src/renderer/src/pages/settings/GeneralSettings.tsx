@@ -259,6 +259,14 @@ const GeneralSettings: FC = () => {
           <SettingRowTitle>{'备份'}</SettingRowTitle>
           <Switch checked={notificationSettings.backup} onChange={(v) => handleNotificationChange('backup', v)} />
         </SettingRow>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{'自动化'}</SettingRowTitle>
+          <Switch
+            checked={notificationSettings.automation}
+            onChange={(v) => handleNotificationChange('automation', v)}
+          />
+        </SettingRow>
       </SettingGroup>
       <SettingGroup theme={theme}>
         <SettingTitle>{'启动'}</SettingTitle>

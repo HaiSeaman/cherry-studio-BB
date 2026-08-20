@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 
+import { useAutomationRunner } from './automation/useAutomationRunner'
 import TopViewContainer from './components/TopView'
 import AntdProvider from './context/AntdProvider'
 import { CodeStyleProvider } from './context/CodeStyleProvider'
@@ -28,6 +29,9 @@ const queryClient = new QueryClient({
 
 function App(): React.ReactElement {
   logger.info('App initialized')
+
+  // 监听主进程自动化任务触发（顶层挂载，窗口隐藏时仍生效）
+  useAutomationRunner()
 
   return (
     <Provider store={store}>

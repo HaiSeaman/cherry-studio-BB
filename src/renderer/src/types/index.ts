@@ -23,12 +23,24 @@ export * from './serialize'
 
 export type McpMode = 'disabled' | 'auto' | 'manual'
 
+/** 助手形态：对话 / 生图 / 自动化（老数据兜底见 getAssistantType） */
+export type AssistantType = 'chat' | 'image_gen' | 'automation'
+
+/**
+ * 读取助手形态，老数据兜底：type 缺失或为历史遗留值（如 'assistant'）时一律按对话助手处理。
+ * 所有按形态分支的代码统一走此函数，勿直接读 assistant.type。
+ */
+export function getAssistantType(a: Pick<Assistant, 'type'> | undefined): AssistantType {
+  const t = a?.type
+  return t === 'image_gen' || t === 'automation' ? t : 'chat'
+}
+
 export type Assistant = {
   id: string
   name: string
   prompt: string
   topics: Topic[]
-  type: string
+  type: AssistantType
   emoji?: string
   description?: string
   model?: Model
@@ -465,7 +477,7 @@ export type TranslateLanguage = {
   emoji: string
 }
 
-export type SidebarIcon = 'assistants' | 'minapp' | 'paint' | 'music' | 'notes'
+export type SidebarIcon = 'assistants' | 'minapp' | 'notes'
 
 export type ExternalToolResult = {
   mcpTools?: MCPTool[]
