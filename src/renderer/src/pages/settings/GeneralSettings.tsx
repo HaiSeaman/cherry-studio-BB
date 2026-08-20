@@ -24,8 +24,10 @@ import { Avatar, Button, Flex, Input, Switch, Tooltip } from 'antd'
 import type { FC } from 'react'
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
+import styled from 'styled-components'
 
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '.'
+import NotificationSoundRow from './NotificationSoundRow'
 
 type SpellCheckOption = { readonly value: string; readonly label: string; readonly flag: string }
 
@@ -134,8 +136,27 @@ const GeneralSettings: FC = () => {
   const notificationSettings = useSelector((state: RootState) => state.settings.notification)
   const spellCheckLanguages = useSelector((state: RootState) => state.settings.spellCheckLanguages)
 
+  // 兼容新旧结构：老布尔值视为 { enabled: 布尔, sound: 'default' }
+  const getNotificationItem = (type: NotificationSource) => {
+    const item = notificationSettings?.[type]
+    if (item && typeof item === 'object') return item
+    return { enabled: typeof item === 'boolean' ? item : false, sound: 'default' }
+  }
+
+  // 把所有来源规范化为新结构（避免老布尔数据与新增结构混写）
+  const normalizeNotification = () => {
+    const sources: NotificationSource[] = ['assistant', 'backup', 'update', 'automation', 'paint']
+    return Object.fromEntries(sources.map((s) => [s, getNotificationItem(s)])) as typeof notificationSettings
+  }
+
   const handleNotificationChange = (type: NotificationSource, value: boolean) => {
-    dispatch(setNotificationSettings({ ...notificationSettings, [type]: value }))
+    const current = getNotificationItem(type)
+    dispatch(setNotificationSettings({ ...normalizeNotification(), [type]: { ...current, enabled: value } }))
+  }
+
+  const handleNotificationSoundChange = (type: NotificationSource, sound: string) => {
+    const current = getNotificationItem(type)
+    dispatch(setNotificationSettings({ ...normalizeNotification(), [type]: { ...current, sound } }))
   }
 
   const handleSpellCheckLanguagesChange = (selectedLanguages: string[]) => {
@@ -255,25 +276,67 @@ const GeneralSettings: FC = () => {
         <SettingDivider />
         <SettingRow>
           <SettingRowTitle style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span>{'助手消息'}</span>
+            <span>{'通用对话助手'}</span>
             <Tooltip title={'如果响应成功，则只针对超过30秒的消息进行提醒'} placement="right">
               <InfoCircleOutlined style={{ cursor: 'pointer' }} />
             </Tooltip>
           </SettingRowTitle>
-          <Switch checked={notificationSettings.assistant} onChange={(v) => handleNotificationChange('assistant', v)} />
+          <RightGroup>
+            <NotificationSoundRow
+              source="assistant"
+              sound={getNotificationItem('assistant').sound}
+              onSoundChange={(s) => handleNotificationSoundChange('assistant', s)}
+            />
+            <Switch
+              checked={getNotificationItem('assistant').enabled}
+              onChange={(v) => handleNotificationChange('assistant', v)}
+            />
+          </RightGroup>
         </SettingRow>
         <SettingDivider />
         <SettingRow>
           <SettingRowTitle>{'备份'}</SettingRowTitle>
-          <Switch checked={notificationSettings.backup} onChange={(v) => handleNotificationChange('backup', v)} />
+          <RightGroup>
+            <NotificationSoundRow
+              source="backup"
+              sound={getNotificationItem('backup').sound}
+              onSoundChange={(s) => handleNotificationSoundChange('backup', s)}
+            />
+            <Switch
+              checked={getNotificationItem('backup').enabled}
+              onChange={(v) => handleNotificationChange('backup', v)}
+            />
+          </RightGroup>
         </SettingRow>
         <SettingDivider />
         <SettingRow>
-          <SettingRowTitle>{'自动化'}</SettingRowTitle>
-          <Switch
-            checked={notificationSettings.automation}
-            onChange={(v) => handleNotificationChange('automation', v)}
-          />
+          <SettingRowTitle>{'自动化任务助手'}</SettingRowTitle>
+          <RightGroup>
+            <NotificationSoundRow
+              source="automation"
+              sound={getNotificationItem('automation').sound}
+              onSoundChange={(s) => handleNotificationSoundChange('automation', s)}
+            />
+            <Switch
+              checked={getNotificationItem('automation').enabled}
+              onChange={(v) => handleNotificationChange('automation', v)}
+            />
+          </RightGroup>
+        </SettingRow>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{'灵感生图助手'}</SettingRowTitle>
+          <RightGroup>
+            <NotificationSoundRow
+              source="paint"
+              sound={getNotificationItem('paint').sound}
+              onSoundChange={(s) => handleNotificationSoundChange('paint', s)}
+            />
+            <Switch
+              checked={getNotificationItem('paint').enabled}
+              onChange={(v) => handleNotificationChange('paint', v)}
+            />
+          </RightGroup>
         </SettingRow>
       </SettingGroup>
       <SettingGroup theme={theme}>
@@ -335,5 +398,13 @@ const GeneralSettings: FC = () => {
     </SettingContainer>
   )
 }
+
+/** 通知行右侧组：声音选择按钮（左） + 开关（右），垂直居中对齐 */
+const RightGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+`
 
 export default GeneralSettings

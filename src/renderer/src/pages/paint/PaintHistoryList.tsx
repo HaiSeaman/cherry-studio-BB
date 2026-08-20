@@ -1,9 +1,9 @@
 import { db } from '@renderer/databases'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { getDefaultTopic } from '@renderer/services/AssistantService'
+import { useAppSelector } from '@renderer/store'
 import { removeTopic } from '@renderer/store/assistants'
 import { newMessagesActions } from '@renderer/store/newMessage'
-import { setLastGeneration } from './store/paintSlice'
 import type { Assistant, Topic } from '@renderer/types'
 import { MessageBlockType } from '@renderer/types/newMessage'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -11,6 +11,8 @@ import { History, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { type FC, useCallback } from 'react'
 import { useDispatch } from 'react-redux'
 import styled from 'styled-components'
+
+import { setLastGeneration } from './store/paintSlice'
 
 interface Props {
   assistant: Assistant
@@ -34,8 +36,14 @@ type HistoryItem = {
 const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => {
   const dispatch = useDispatch()
 
+  // 用 Redux 最新助手兜底：HomePage 的 activeAssistant 是稳定引用，删除 topic 后 props 引用不变化，
+  // 导致下方 useLiveQuery 的 [assistant] 依赖不更新、列表不刷新；这里从 store 取最新 topics 解决。
+  const liveAssistant = useAppSelector(
+    (state) => state.assistants.assistants.find((a) => a.id === assistant.id) ?? assistant
+  )
+
   const items = useLiveQuery(async (): Promise<HistoryItem[]> => {
-    const topics = assistant.topics ?? []
+    const topics = liveAssistant.topics ?? []
     if (topics.length === 0) return []
     const rows = await db.topics.bulkGet(topics.map((t) => t.id))
     // 收集所有消息块 id 后一次查询，避免逐话题 N+1
@@ -66,7 +74,7 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
       const thumb = last?.metadata?.generateImageResponse?.images?.[0] ?? null
       return { topic, thumb, imageCount }
     })
-  }, [assistant])
+  }, [liveAssistant])
 
   const handleDelete = useCallback(
     async (topic: Topic) => {

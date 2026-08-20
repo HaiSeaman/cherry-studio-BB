@@ -21,14 +21,39 @@ export const migrate = async (state: any) => {
     }
   }
 
-  // 老用户持久化的 notification 对象不含 automation 键（autoMergeLevel1 不会补嵌套默认值），
-  // undefined 会被 NotificationService 当 false 拦截 → 这里补上设计默认值 true
+  // 老用户持久化的 notification 结构升级：
+  // - v4 及更早：每个来源是布尔值（如 assistant:false），无声音配置；automation 键可能缺失
+  // - 新结构：{ source: { enabled: boolean, sound: 'default'|'custom:<path>' } }，新增 paint 源
+  // 这里把任意历史形态都规范为最新结构，保证 NotificationService 与设置页可读。
   if (settings.notification && typeof settings.notification === 'object') {
-    if (settings.notification.automation === undefined) {
-      settings.notification.automation = true
-    }
+    const old = settings.notification
+    const isLegacy = (v: unknown) => typeof v === 'boolean'
+    settings.notification = Object.fromEntries(
+      (['assistant', 'backup', 'update', 'automation', 'paint'] as const).map((source) => {
+        const v = old[source]
+        if (v && typeof v === 'object') {
+          // 已是新结构（幂等）：原样保留，缺失字段补默认
+          return [
+            source,
+            {
+              enabled: (v as { enabled?: boolean }).enabled ?? false,
+              sound: typeof (v as { sound?: string }).sound === 'string' ? (v as { sound?: string }).sound! : 'default'
+            }
+          ]
+        }
+        // 布尔（老数据）或 undefined → 默认音
+        const enabled = isLegacy(v) ? v : source === 'automation'
+        return [source, { enabled, sound: 'default' }]
+      })
+    )
   } else {
-    settings.notification = { assistant: false, backup: false, automation: true }
+    settings.notification = {
+      assistant: { enabled: false, sound: 'default' },
+      backup: { enabled: false, sound: 'default' },
+      update: { enabled: false, sound: 'default' },
+      automation: { enabled: true, sound: 'default' },
+      paint: { enabled: false, sound: 'default' }
+    }
   }
 
   return state

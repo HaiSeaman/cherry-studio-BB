@@ -27,6 +27,7 @@ import type {
   LanguageVarious,
   MathEngine,
   MinAppRegionFilter,
+  NotificationSource,
   OpenAIServiceTier,
   S3Config,
   SidebarIcon,
@@ -40,6 +41,19 @@ import type {
 } from '@renderer/types/aiCoreTypes'
 
 export type SendMessageShortcut = 'Enter' | 'Shift+Enter' | 'Ctrl+Enter' | 'Command+Enter' | 'Alt+Enter'
+
+/** 单个通知来源的开关与声音配置 */
+export type NotificationSettingItem = {
+  enabled: boolean
+  /** 'default'=默认提示音；'custom:<filePath>'=本地音频文件路径 */
+  sound: string
+}
+
+/** 通知设置：每个来源独立开关 + 自定义声音；老布尔数据经 migrate 升级为本结构 */
+export type NotificationSettings = Record<NotificationSource, NotificationSettingItem>
+
+/** 通知声音文件允许的扩展名（与闹钟自定义声音一致） */
+export const NOTIFICATION_SOUND_EXTENSIONS = ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac']
 
 // Re-export for backward compatibility
 export { DEFAULT_SIDEBAR_ICONS }
@@ -219,11 +233,7 @@ export interface SettingsState {
     }
   }
   // Notification
-  notification: {
-    assistant: boolean
-    backup: boolean
-    automation: boolean
-  }
+  notification: NotificationSettings
   // Local backup settings
   localBackupDir: string
   localBackupAutoSync: boolean
@@ -398,9 +408,11 @@ export const initialState: SettingsState = {
     }
   },
   notification: {
-    assistant: false,
-    backup: false,
-    automation: true
+    assistant: { enabled: false, sound: 'default' },
+    backup: { enabled: false, sound: 'default' },
+    update: { enabled: false, sound: 'default' },
+    automation: { enabled: true, sound: 'default' },
+    paint: { enabled: false, sound: 'default' }
   },
   // Local backup settings
   localBackupDir: '',

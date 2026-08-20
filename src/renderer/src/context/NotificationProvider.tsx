@@ -1,4 +1,7 @@
 import { NotificationQueue } from '@renderer/queue/NotificationQueue'
+import { playNotificationSound } from '@renderer/services/notificationSounds'
+import store from '@renderer/store'
+import { initialState as defaultSettings } from '@renderer/store/settings'
 import type { Notification } from '@renderer/types/notification'
 import { isFocused } from '@renderer/utils/window'
 import { notification } from 'antd'
@@ -31,6 +34,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     const queue = NotificationQueue.getInstance()
     const listener = async (notification: Notification) => {
+      // 播放该来源配置的提示音（默认叮 或 自定义本地文件）
+      const settings = store.getState().settings.notification || defaultSettings.notification
+      const item = settings[notification.source]
+      const sound = item && typeof item === 'object' && typeof item.sound === 'string' ? item.sound : 'default'
+      if (!notification.silent) {
+        playNotificationSound(sound)
+      }
       // 判断是否需要系统通知
       if (notification.channel === 'system' || !isFocused()) {
         void window.api.notification.send(notification)

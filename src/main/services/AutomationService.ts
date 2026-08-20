@@ -229,6 +229,14 @@ export class AutomationService {
    * 返回是否成功进入 running（窗口不可用时立即失败并返回 false，不占并发名额）。
    */
   private triggerRun(task: AutomationTask, nowMs: number, manual = false): boolean {
+    // 先确认主窗口可用再改调度状态：否则任务会因「窗口不可用」被永久消耗
+    // （once 置 enabled=false / daily weekly 记 lastTriggerKey / interval 重置 lastRunAt）
+    const win = windowService.getMainWindow()
+    if (!win || win.isDestroyed()) {
+      logger.warn('Automation run skipped: main window unavailable', { taskId: task.id })
+      return false
+    }
+
     const run = this.makeRun(task, 'running')
     this.appendRun(run)
     if (manual) {
@@ -257,17 +265,6 @@ export class AutomationService {
     }, RUN_TIMEOUT_MS)
     this.watchdogs.set(run.id, watchdog)
 
-    const win = windowService.getMainWindow()
-    if (!win || win.isDestroyed()) {
-      // 窗口不可用（应用退出中）：直接失败
-      clearTimeout(watchdog)
-      this.watchdogs.delete(run.id)
-      run.status = 'failed'
-      run.finishedAt = Date.now()
-      run.error = '主窗口不可用，无法执行'
-      logger.warn('Automation run skipped: main window unavailable', { taskId: task.id })
-      return false
-    }
     win.webContents.send(IpcChannel.Automation_TriggerRun, { task, runId: run.id })
     logger.info('Automation task triggered', { taskId: task.id, runId: run.id })
     return true

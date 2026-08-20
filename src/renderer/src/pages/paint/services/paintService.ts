@@ -6,6 +6,7 @@ import { getDefaultAssistant, getTranslateModel } from '@renderer/services/Assis
 import { dbService } from '@renderer/services/db'
 import FileManager from '@renderer/services/FileManager'
 import { getModelUniqId } from '@renderer/services/ModelService'
+import { NotificationService } from '@renderer/services/NotificationService'
 import store from '@renderer/store'
 import { addAssistant, addTopic, updateTopic, updateTopics, updateTopicUpdatedAt } from '@renderer/store/assistants'
 import type { Assistant, Model, Topic } from '@renderer/types'
@@ -399,6 +400,20 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
             })
             // 自动保存到用户设置目录（失败静默，不影响历史记录）
             void saveGeneratedImages(displayImages, files)
+            // 图片生成完成通知：仅当应用在后台（用户没盯着页面）时提醒，
+            // 受设置 → 通知 → 灵感生图助手 开关控制
+            if (!document.hasFocus()) {
+              void NotificationService.getInstance().send({
+                id: `paint_${Date.now()}`,
+                type: 'success',
+                title: '灵感生图助手',
+                message: `图片生成完成${displayImages.length > 0 ? `，共 ${displayImages.length} 张` : ''}`,
+                silent: false,
+                timestamp: Date.now(),
+                source: 'paint',
+                channel: 'system'
+              })
+            }
           }
           // 注：错误统一在 catch 分支落 ERROR 块，此处不再处理 ERROR chunk
         } catch {

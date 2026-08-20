@@ -153,7 +153,7 @@ export const TopicManagePanel: React.FC<TopicManagePanelProps> = ({
     updateTopics(actualRemainingTopics)
 
     // Switch to first remaining topic if current topic was deleted
-    if (successfulIds.has(activeTopic.id) && actualRemainingTopics.length > 0) {
+    if (activeTopic && successfulIds.has(activeTopic.id) && actualRemainingTopics.length > 0) {
       setActiveTopic(actualRemainingTopics[0])
     }
 
@@ -165,7 +165,7 @@ export const TopicManagePanel: React.FC<TopicManagePanelProps> = ({
       window.toast.error('删除失败，请重试')
     }
     exitManageMode()
-  }, [selectedIds, assistant.topics, activeTopic.id, setActiveTopic, exitManageMode, updateTopics])
+  }, [selectedIds, assistant.topics, activeTopic, setActiveTopic, exitManageMode, updateTopics])
 
   // Handle move selected topics to another assistant
   const handleMoveSelected = useCallback(
@@ -192,14 +192,14 @@ export const TopicManagePanel: React.FC<TopicManagePanelProps> = ({
       }
 
       // Switch to first remaining topic if current topic was moved
-      if (selectedIds.has(activeTopic.id)) {
+      if (activeTopic && selectedIds.has(activeTopic.id)) {
         setActiveTopic(remainingTopics[0])
       }
 
       window.toast.success(`已移动 ${movedCount} 个话题`)
       exitManageMode()
     },
-    [selectedIds, assistant.topics, assistants, moveTopic, activeTopic.id, setActiveTopic, exitManageMode]
+    [selectedIds, assistant.topics, assistants, moveTopic, activeTopic, setActiveTopic, exitManageMode]
   )
 
   // Enter search mode

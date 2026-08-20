@@ -14,7 +14,7 @@ import { useAlarmEngine } from './services/alarmScheduler'
 
 /**
  * 个人效率中控台（晨间绿洲浅色主题）
- * 2×2 四宫格：左上 便签(列表3+内容7，内容区上下拆：便签编辑器+待办) / 右上闹钟 / 左下 音乐(FM 左右并排) / 右下日历
+ * 2×2 四宫格：左上 闹钟 / 右上 便签(列表3+内容7，内容区上下拆：便签编辑器+待办) / 左下 日历 / 右下 音乐(FM 左右并排)
  * 闹钟调度器与音频引擎均为应用级单例，页面卸载后闹钟照响、音乐照播
  */
 const NotesPage: FC = () => {
@@ -67,12 +67,12 @@ const MainArea = styled.div`
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   grid-template-areas:
-    'notes alarm'
-    'music calendar';
+    'alarm notes'
+    'calendar music';
   @media (max-width: 1000px) {
     grid-template-columns: 1fr;
     grid-template-rows: none;
-    grid-template-areas: 'notes' 'music' 'alarm' 'calendar';
+    grid-template-areas: 'alarm' 'calendar' 'notes' 'music';
     overflow-y: auto;
   }
 `

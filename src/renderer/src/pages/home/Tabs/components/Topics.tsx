@@ -104,8 +104,10 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const dispatch = useDispatch()
 
   useEffect(() => {
-    dispatch(newMessagesActions.setTopicFulfilled({ topicId: activeTopic.id, fulfilled: false }))
-  }, [activeTopic.id, dispatch, topicFulfilledQuery])
+    if (activeTopic) {
+      dispatch(newMessagesActions.setTopicFulfilled({ topicId: activeTopic.id, fulfilled: false }))
+    }
+  }, [activeTopic, dispatch, topicFulfilledQuery])
 
   const isRenaming = useCallback(
     (topicId: string) => {
@@ -149,7 +151,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
         setActiveTopic(newTopic)
       } else {
         const index = findIndex(assistant.topics, (t) => t.id === topic.id)
-        if (topic.id === activeTopic.id) {
+        if (activeTopic && topic.id === activeTopic.id) {
           setActiveTopic(assistant.topics[index + 1 === assistant.topics.length ? index - 1 : index + 1])
         }
       }
@@ -157,7 +159,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       removeTopic(topic)
       setDeletingTopicId(null)
     },
-    [activeTopic.id, addTopic, assistant.id, assistant.topics, removeTopic, setActiveTopic]
+    [activeTopic, addTopic, assistant.id, assistant.topics, removeTopic, setActiveTopic]
   )
 
   const onPinTopic = useCallback(
@@ -304,7 +306,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
             (() => {
               const updatedTopic = { ...topic, prompt: prompt.trim() }
               updateTopic(updatedTopic)
-              topic.id === activeTopic.id && setActiveTopic(updatedTopic)
+              activeTopic && topic.id === activeTopic.id && setActiveTopic(updatedTopic)
             })()
         }
       },
@@ -475,7 +477,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     assistants,
     assistant,
     updateTopic,
-    activeTopic.id,
+    activeTopic,
     setActiveTopic,
     onPinTopic,
     onClearMessages,

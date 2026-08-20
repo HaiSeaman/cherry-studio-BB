@@ -47,23 +47,62 @@ describe('persist migrate — 侧边栏图标（v0~v3 → v4 各历史升级路�
   })
 })
 
-describe('persist migrate — 通知设置（老用户补 automation 默认值）', () => {
-  it('老数据 notification 不含 automation：补 true（否则被 NotificationService 当 false 拦截）', async () => {
+describe('persist migrate — 通知设置（老布尔 → 新 { enabled, sound } 结构 + 补 paint/automation 默认值）', () => {
+  it('老布尔数据（assistant/backup）：转新结构，automation/paint 补默认', async () => {
     const s = { settings: { notification: { assistant: false, backup: true } } }
     const out: any = await migrate(s)
-    expect(out.settings.notification).toEqual({ assistant: false, backup: true, automation: true })
+    expect(out.settings.notification).toEqual({
+      assistant: { enabled: false, sound: 'default' },
+      backup: { enabled: true, sound: 'default' },
+      update: { enabled: false, sound: 'default' },
+      automation: { enabled: true, sound: 'default' },
+      paint: { enabled: false, sound: 'default' }
+    })
   })
 
-  it('新数据已含 automation=false（用户主动关闭）：不覆盖', async () => {
-    const s = { settings: { notification: { assistant: false, backup: false, automation: false } } }
+  it('新数据已含 enabled/sound + automation=false（用户主动关闭）：原样保留不覆盖', async () => {
+    const s = {
+      settings: {
+        notification: {
+          assistant: { enabled: false, sound: 'custom:C:\\sounds\\a.mp3' },
+          backup: { enabled: false, sound: 'default' },
+          automation: { enabled: false, sound: 'default' },
+          update: { enabled: false, sound: 'default' },
+          paint: { enabled: false, sound: 'default' }
+        }
+      }
+    }
     const out: any = await migrate(s)
-    expect(out.settings.notification.automation).toBe(false)
+    expect(out.settings.notification.assistant).toEqual({ enabled: false, sound: 'custom:C:\\sounds\\a.mp3' })
+    expect(out.settings.notification.automation.enabled).toBe(false)
+    expect(out.settings.notification.paint.enabled).toBe(false)
+  })
+
+  it('新数据缺少某来源（如 paint）：补默认', async () => {
+    const s = {
+      settings: {
+        notification: {
+          assistant: { enabled: true, sound: 'default' },
+          backup: { enabled: false, sound: 'default' },
+          update: { enabled: false, sound: 'default' },
+          automation: { enabled: true, sound: 'default' }
+        }
+      }
+    }
+    const out: any = await migrate(s)
+    expect(out.settings.notification.paint).toEqual({ enabled: false, sound: 'default' })
   })
 
   it('settings 无 notification 字段（极老数据）：补完整默认值', async () => {
     const s = { settings: {} }
     const out: any = await migrate(s)
-    expect(out.settings.notification).toEqual({ assistant: false, backup: false, automation: true })
+    expect(out.settings.notification).toEqual({
+      assistant: { enabled: false, sound: 'default' },
+      backup: { enabled: false, sound: 'default' },
+      update: { enabled: false, sound: 'default' },
+      automation: { enabled: true, sound: 'default' },
+      paint: { enabled: false, sound: 'default' }
+    })
   })
 
   it('settings 整体缺失：原样返回（autoMerge 用 initialState，默认值本就完整）', async () => {

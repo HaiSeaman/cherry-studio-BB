@@ -25,9 +25,18 @@ export class NotificationService {
    * @param notification 要发送的通知
    */
   public async send(notification: Notification): Promise<void> {
-    const notificationSettings = store.getState().settings.notification || defaultSettings.notification
+    const settings = store.getState().settings.notification || defaultSettings.notification
+    const item = settings[notification.source]
 
-    if (notificationSettings[notification.source]) {
+    // 兼容新旧结构：新结构为 { enabled, sound }，老/异常数据按布尔或默认放行
+    const enabled =
+      item == null
+        ? defaultSettings.notification[notification.source]?.enabled
+        : typeof item === 'boolean'
+          ? item
+          : item.enabled
+
+    if (enabled) {
       void this.queue.add(notification)
     }
   }
