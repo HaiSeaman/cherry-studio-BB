@@ -20,7 +20,7 @@ import type { SystemProviderId } from '@renderer/types'
 import { isSystemProvider, isSystemProviderId, SystemProviderIds } from '@renderer/types'
 import type { ApiKeyConnectivity } from '@renderer/types/healthCheck'
 import { HealthStatus } from '@renderer/types/healthCheck'
-import { formatApiHost, formatApiKeys, getFancyProviderName, validateApiHost } from '@renderer/utils'
+import { getFancyProviderName, validateApiHost } from '@renderer/utils'
 import { serializeHealthCheckError } from '@renderer/utils/error'
 import {
   isAIGatewayProvider,
@@ -33,6 +33,7 @@ import {
   isOpenAIProvider,
   isSupportAnthropicPromptCacheProvider
 } from '@renderer/utils/provider'
+import { formatApiHost, formatApiKeys } from '@shared/utils'
 import { Button, Divider, Flex, Input, Space, Switch, Tooltip } from 'antd'
 import Link from 'antd/es/typography/Link'
 import { debounce, isEmpty } from 'lodash'

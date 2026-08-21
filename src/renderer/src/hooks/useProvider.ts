@@ -14,8 +14,8 @@ import {
 } from '@renderer/store/llm'
 import type { Assistant, Model, Provider } from '@renderer/types'
 import { isSystemProvider } from '@renderer/types'
-import { withoutTrailingSlash } from '@renderer/utils/api'
 import { isNewApiProvider } from '@renderer/utils/provider'
+import { withoutTrailingSlash } from '@shared/utils'
 import { useCallback, useMemo } from 'react'
 
 import { useDefaultModel } from './useAssistant'

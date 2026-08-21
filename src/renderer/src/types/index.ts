@@ -163,10 +163,6 @@ export type ThinkingOptionConfig = Record<ThinkingModelType, ThinkingOption[]>
 export type ReasoningEffortConfig = Record<ThinkingModelType, ReasoningEffortOption[]>
 export type EffortRatio = Record<ReasoningEffortOption, number>
 
-export function isThinkModelType(type: string): type is ThinkingModelType {
-  return ThinkModelTypes.some((t) => t === type)
-}
-
 export const EFFORT_RATIO: EffortRatio = {
   // 'default' is not expected to be used.
   default: 0,

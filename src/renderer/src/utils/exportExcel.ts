@@ -1,4 +1,3 @@
-import * as XLSX from '@e965/xlsx'
 import dayjs from 'dayjs'
 
 /**
@@ -55,7 +54,8 @@ export async function exportTableToExcel(markdown: string): Promise<boolean> {
     return false
   }
 
-  // 创建工作表
+  // 创建工作表（XLSX 体积大，仅在实际导出时动态加载，不进首屏 bundle）
+  const XLSX = await import('@e965/xlsx')
   const worksheet = XLSX.utils.aoa_to_sheet(data)
 
   // 设置列宽自适应

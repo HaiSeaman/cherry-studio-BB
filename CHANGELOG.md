@@ -5,6 +5,69 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.6.0] - 2026-08-22
+
+### 核心主题：桌面助手快捷键 + 全仓死代码清理与启动/内存性能优化
+
+**1. 新功能：桌面助手全局快捷键（默认 `Alt + ~`）**
+- 设置 → 快捷键新增「桌面助手」条目，与其他快捷键一致支持自定义录入、单行重置、清除、启停开关、全量重置。
+- 主进程注册为 **universal 快捷键**（`UNIVERSAL_SHORTCUT_KEYS`），主窗口失焦时仍可全局呼出/隐藏桌面助手挂件；
+  handler 复用 `windowService.toggleMusicWidget()`（与托盘/设置页开关同一入口）。
+- 老用户升级自动生效：redux-persist rehydrate 后 `mergeDefaultShortcuts()` 自动补入新条目，无需手动迁移。
+- 新增单测：默认值断言（`['Alt', '`']` / editable / system）+ `convertShortcutFormat` accelerator 转换。
+
+**2. 死代码清理（约 -700 行）**
+- 删除零引用文件：`packages/shared/config/providers.ts`（5 个导出全仓无引用）、`packages/shared/anthropic/__tests__/index.test.ts`
+  （随 `getSdkClient` 一并删除）、重复启动脚本 `start.cmd`（与 `start-dev.bat` 逐字节相同）、空目录
+  `resources/binaries/win32-arm64`（项目仅面向 win-x64）。
+- 删除 `getSdkClient()` 及其 OAuth 分支（`packages/shared/anthropic/index.ts` 172→63 行，生产代码仅用
+  `buildClaudeCodeSystemMessage`）。
+- 删除渲染层死 prompt（`config/prompts.ts` -330 行）：`AGENT_PROMPT`、`SUMMARIZE_PROMPT`、`SEARCH_SUMMARY_PROMPT`、
+  `SEARCH_SUMMARY_PROMPT_KNOWLEDGE_ONLY`、`FOOTNOTE_PROMPT`、`WEB_SEARCH_PROMPT_FOR_ZHIPU/OPENROUTER`（含连带 dayjs import）。
+- 删除其他零引用符号：`fetchNoteSummary`、`fetchAllActiveServerTools`（ApiService）、`selectActiveTodoInfo`+
+  `ActiveTodoInfo`（messageBlock）、`SimpleFieldInputTool`、`hasTokenLanYunToken`、`hasBailianToken`、
+  `deleteMessageFiles`、`moveProvider`、`isModernSdkSupported`、3 个 `is*Block` 类型守卫、`isThinkModelType`、
+  `isServiceTier`、`isAwsBedrockAuthType`、`MdiLightbulbOn10`、`ZHIPU_RESULT_TOKENS`、`NOT_SUPPORTED_RERANK_PROVIDERS`、
+  `ONLY_SUPPORTED_DIMENSION_PROVIDERS`、`builtinLangCodeList`、`validateMcpConfig`、`safeValidateMcpServerConfig` 等。
+- 收紧可见性：`messageThunk.ts` 的 4 个文件内辅助函数去掉多余 `export`。
+- 清理 `renderer/utils/api.ts` 的"向后兼容"re-export 层：6 个消费方改为直接从 `@shared/utils` /
+  `@shared/aiCore/provider/utils` 导入；`hasAPIVersion`/`withoutTrailingSharp`/`formatAzureOpenAIApiHost` 确认全仓
+  零消费者后随层删除。
+
+**3. 性能优化：按需加载重组件（首屏 JS 与主进程常驻内存双降）**
+- **`@e965/xlsx`（7.8MB）**：由 Markdown Table 静态链进首屏 bundle → 改为点击导出时 `await import`，
+  空表格提前返回不触发加载。
+- **rehype-mathjax（mathjax-full ~37MB 源码）**：与 KaTeX 双引擎原先同时静态加载 → 改为用户切换到 MathJax
+  时才懒加载（useState+useEffect 预载）；默认 KaTeX 引擎保持静态，零延迟不受影响。
+- **@aws-sdk/client-s3**：原经 `ipc.ts → BackupManager → S3Storage` 静态链在主进程启动即常驻 → S3Storage 重构为
+  SDK 懒加载（模块级单例 Promise + `getClient()` 延迟创建 client），构造签名不变、BackupManager 6 个调用点零改动；
+  未配置 S3 备份的用户完全不再加载该 SDK。
+- **docx**：ExportService 顶层静态 import → 仅导出 Word 时动态加载（转换函数改为接收 docx 模块参数）。
+- **music-metadata**：MusicService 静态 import → 读元数据时动态 import。
+
+### 依赖治理（-2 直接依赖，lockfile -78 包）
+- 移除 `react-player`：`MessageVideo` 仅用到 src/controls/currentTime/onReady，原生 `<video>` 元素全覆盖
+  （onLoadedMetadata 在 src 变化时会重新 seek，行为比 react-player 单次 onReady 更正确）。
+- 移除 `tsx`：无任何 script/文档/配置引用（vitest 依赖树内的 tsx 为独立 peer 解析，不受影响）。
+- 复核确认保留：`pako` 在 devDeps 是打包契约（仅 renderer 使用、vite 内联；main 进程 external 仅限 dependencies 区）；
+  dotenv/dotenv-cli 各有用途；全部 @types/* 均有真实消费。oxlint/eslint/biome 三工具分工明确非冗余。
+
+### BUG 修复
+- **修复 S3 懒加载失败缓存导致的永久失败**：动态 import 或 S3Client 构造失败后 rejected promise 被永久缓存，
+  网络恢复/配置修正后所有 S3 调用仍失败 → `getClient()` 与 `loadS3Sdk()` 均改为失败时清除缓存允许重试
+  （`===` 守卫防止并发场景误清后续新建的 promise）。
+- **修复 listModels 测试 mock 缺陷**：`vi.mock('@shared/utils')` 部分 mock 缺 `importOriginal`，import 路径调整后
+  15 例失败 → 补上真实模块展开。
+- 修复删除死代码后暴露的 5 处未用 import（TS6133）；`console.error` 违反仓库 LoggerService 规范改回
+  `loggerService.error`；4 处 `import()` 类型标注违反 oxlint consistent-type-imports 规则改类型别名+disable 注释。
+- 安全卫生：`tests/apis/*.http` 中硬编码的本地 API token 替换为占位符。
+
+### 测试与验证
+- `pnpm typecheck`（node / web / aiCore）零错误。
+- 全量测试 **206 文件 / 3582 用例通过**（8 skipped 与基线一致），较上版本净增用例。
+- oxlint 6 warnings + 0 errors、eslint 0 errors（warning 均为存量且位于本次未触碰文件）。
+- 死代码删除均经全仓 grep 二次验证零引用；lockfile 移除的 78 个包逐一核对均为被删依赖的传递依赖。
+
 ## [1.5.6] - 2026-08-21
 
 ### 核心主题：桌面挂件四合一（桌面助手）+ 本地音乐收藏按钮

@@ -35,7 +35,8 @@ vi.mock('@renderer/utils/provider', () => ({
   isOllamaProvider: (p: Provider) => p.id === 'ollama' || p.type === 'ollama'
 }))
 
-vi.mock('@shared/utils', () => ({
+vi.mock('@shared/utils', async (importOriginal) => ({
+  ...(await importOriginal()),
   defaultAppHeaders: () => ({ 'X-App': 'CherryStudio' })
 }))
 

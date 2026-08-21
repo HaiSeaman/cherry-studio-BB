@@ -7,6 +7,7 @@ import ImageViewer from '@renderer/components/ImageViewer'
 import MarkdownShadowDOMRenderer from '@renderer/components/MarkdownShadowDOMRenderer'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useSmoothStream } from '@renderer/hooks/useSmoothStream'
+import { loggerService } from '@renderer/services/LoggerService'
 import type {
   CompactMessageBlock,
   MainTextMessageBlock,
@@ -20,7 +21,6 @@ import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from
 import ReactMarkdown, { type Components, defaultUrlTransform } from 'react-markdown'
 import rehypeKatex from 'rehype-katex'
 // @ts-ignore rehype-mathjax is not typed
-import rehypeMathjax from 'rehype-mathjax'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkCjkFriendly from 'remark-cjk-friendly'
@@ -114,6 +114,21 @@ const Markdown: FC<Props> = ({ block, postProcess }) => {
     return removeSvgEmptyLines(processLatexBrackets(displayedContent))
   }, [block, displayedContent])
 
+  // MathJax 引擎较重(mathjax-full ~37MB 源码), 用户显式切换到 MathJax 时才懒加载
+  const [rehypeMathjax, setRehypeMathjax] = useState<Pluggable | null>(null)
+  useEffect(() => {
+    if (mathEngine !== 'MathJax' || rehypeMathjax) return
+    let cancelled = false
+    import('rehype-mathjax')
+      .then((mod) => {
+        if (!cancelled) setRehypeMathjax(mod.default as Pluggable)
+      })
+      .catch((err) => loggerService.error('Failed to load rehype-mathjax:', err as Error))
+    return () => {
+      cancelled = true
+    }
+  }, [mathEngine, rehypeMathjax])
+
   const rehypePlugins = useMemo(() => {
     const plugins: Pluggable[] = []
     if (ALLOWED_ELEMENTS.test(messageContent)) {
@@ -125,11 +140,11 @@ const Markdown: FC<Props> = ({ block, postProcess }) => {
     plugins.push([rehypeHeadingIds, { prefix: `heading-${block.id}` }])
     if (mathEngine === 'KaTeX') {
       plugins.push(rehypeKatex)
-    } else if (mathEngine === 'MathJax') {
+    } else if (mathEngine === 'MathJax' && rehypeMathjax) {
       plugins.push(rehypeMathjax)
     }
     return plugins
-  }, [mathEngine, messageContent, block.id])
+  }, [mathEngine, messageContent, block.id, rehypeMathjax])
 
   const components = useMemo(() => {
     return {

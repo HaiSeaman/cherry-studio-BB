@@ -3,23 +3,11 @@
 
 import { loggerService } from '@logger'
 import { t } from '@main/utils/locales'
-import {
-  AlignmentType,
-  BorderStyle,
-  Document,
-  ExternalHyperlink,
-  HeadingLevel,
-  Packer,
-  Paragraph,
-  ShadingType,
-  Table,
-  TableCell,
-  TableRow,
-  TextRun,
-  VerticalAlign,
-  WidthType
-} from 'docx'
 import { dialog } from 'electron'
+
+// oxlint-disable-next-line typescript-eslint(consistent-type-imports) -- 类型取自动态加载的 docx 模块
+type DocxModule = typeof import('docx')
+
 import MarkdownIt from 'markdown-it'
 
 import { fileStorage } from './FileStorage'
@@ -32,18 +20,32 @@ export class ExportService {
     this.md = new MarkdownIt()
   }
 
-  private convertMarkdownToDocxElements(markdown: string) {
+  private convertMarkdownToDocxElements(markdown: string, docx: DocxModule) {
+    const {
+      AlignmentType,
+      BorderStyle,
+      ExternalHyperlink,
+      HeadingLevel,
+      Paragraph,
+      ShadingType,
+      Table,
+      TableCell,
+      TableRow,
+      TextRun,
+      VerticalAlign,
+      WidthType
+    } = docx
     const tokens = this.md.parse(markdown, {})
     const elements: any[] = []
     let listLevel = 0
-    let currentTable: Table | null = null
-    let currentRowCells: TableCell[] = []
+    let currentTable: InstanceType<typeof Table> | null = null
+    let currentRowCells: InstanceType<typeof TableCell>[] = []
     let isHeaderRow = false
     let tableColumnCount = 0
-    let tableRows: TableRow[] = [] // Store rows temporarily
+    let tableRows: InstanceType<typeof TableRow>[] = [] // Store rows temporarily
 
-    const processInlineTokens = (tokens: any[], isHeaderRow: boolean): (TextRun | ExternalHyperlink)[] => {
-      const runs: (TextRun | ExternalHyperlink)[] = []
+    const processInlineTokens = (tokens: any[], isHeaderRow: boolean): (InstanceType<typeof TextRun> | InstanceType<typeof ExternalHyperlink>)[] => {
+      const runs: (InstanceType<typeof TextRun> | InstanceType<typeof ExternalHyperlink>)[] = []
       let linkText = ''
       let linkUrl = ''
       let insideLink = false
@@ -366,7 +368,10 @@ export class ExportService {
 
   public exportToWord = async (_: Electron.IpcMainInvokeEvent, markdown: string, fileName: string): Promise<void> => {
     try {
-      const elements = this.convertMarkdownToDocxElements(markdown)
+      // docx 体积大且仅导出 Word 时需要，动态加载避免常驻主进程内存
+      const docx = await import('docx')
+      const { Document, Packer } = docx
+      const elements = this.convertMarkdownToDocxElements(markdown, docx)
 
       const doc = new Document({
         styles: {

@@ -171,10 +171,6 @@ export function getProviderLogo(providerId: string) {
   return PROVIDER_LOGO_MAP[providerId as keyof typeof PROVIDER_LOGO_MAP]
 }
 
-// export const SUPPORTED_REANK_PROVIDERS = ['silicon', 'jina', 'voyageai', 'dashscope', 'aihubmix']
-export const NOT_SUPPORTED_RERANK_PROVIDERS = ['ollama'] as const satisfies SystemProviderId[]
-export const ONLY_SUPPORTED_DIMENSION_PROVIDERS = ['ollama'] as const satisfies SystemProviderId[]
-
 type ProviderUrls = {
   api: {
     url: string

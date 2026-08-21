@@ -1,6 +1,6 @@
 
 @host=http://127.0.0.1:23333
-@token=cs-sk-af798ed4-7cf5-4fd7-ae4b-df203b164194
+@token=YOUR_LOCAL_API_TOKEN
 @agent_id=agent_1758092281575_tn9dxio9k
 @session_id=session_1758278828236_mqj91e7c0
 

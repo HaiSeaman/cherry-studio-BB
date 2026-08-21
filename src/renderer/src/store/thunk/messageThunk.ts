@@ -194,7 +194,7 @@ export const cancelThrottledBlockUpdate = (id: string) => {
  * deleteMessage/deleteMessages/clearMessages); doing it here as well would
  * double-decrement the count and destroy files still referenced elsewhere.
  */
-export const cleanupMultipleBlocks = (dispatch: AppDispatch, blockIds: string[]) => {
+const cleanupMultipleBlocks = (dispatch: AppDispatch, blockIds: string[]) => {
   blockIds.forEach((id) => {
     cancelThrottledBlockUpdate(id)
   })
@@ -1393,7 +1393,7 @@ export const updateFileCount = async (fileId: string, delta: number, deleteIfZer
 /**
  * Delete a single message from database
  */
-export const deleteMessageFromDB = async (topicId: string, messageId: string): Promise<void> => {
+const deleteMessageFromDB = async (topicId: string, messageId: string): Promise<void> => {
   try {
     await dbService.deleteMessage(topicId, messageId)
     logger.silly('Deleted message via DbService', { topicId, messageId })
@@ -1406,7 +1406,7 @@ export const deleteMessageFromDB = async (topicId: string, messageId: string): P
 /**
  * Delete multiple messages from database
  */
-export const deleteMessagesFromDB = async (topicId: string, messageIds: string[]): Promise<void> => {
+const deleteMessagesFromDB = async (topicId: string, messageIds: string[]): Promise<void> => {
   try {
     await dbService.deleteMessages(topicId, messageIds)
     logger.silly('Deleted messages via DbService', {
@@ -1422,7 +1422,7 @@ export const deleteMessagesFromDB = async (topicId: string, messageIds: string[]
 /**
  * Clear all messages from a topic
  */
-export const clearMessagesFromDB = async (topicId: string): Promise<void> => {
+const clearMessagesFromDB = async (topicId: string): Promise<void> => {
   try {
     await dbService.clearMessages(topicId)
     logger.silly('Cleared all messages via DbService', { topicId })

@@ -21,10 +21,6 @@ export const clearTokenLanYunToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
 }
 
-export const hasTokenLanYunToken = (): boolean => {
-  return !!getTokenLanYunToken()
-}
-
 interface TokenLanYunServer {
   id: string
   /**

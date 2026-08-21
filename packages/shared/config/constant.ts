@@ -229,6 +229,14 @@ export const DEFAULT_SHORTCUTS = [
     system: true
   },
   {
+    //toggle the desktop widget (music/notes/todos overlay window)
+    key: 'desktop_widget',
+    shortcut: ['Alt', '`'],
+    editable: true,
+    enabled: true,
+    system: true
+  },
+  {
     key: 'new_topic',
     shortcut: ['CommandOrControl', 'N'],
     editable: true,

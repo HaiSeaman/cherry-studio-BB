@@ -3,7 +3,7 @@ import type { AppProviderId, AppProviderSettingsMap } from '@renderer/aiCore/typ
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import store from '@renderer/store'
 import { type Model, type Provider, SystemProviderIds } from '@renderer/types'
-import { formatApiHost, formatOllamaApiHost, isWithTrailingSharp, routeToEndpoint } from '@renderer/utils/api'
+import { routeToEndpoint } from '@renderer/utils/api'
 import {
   isAnthropicProvider,
   isAzureOpenAIProvider,
@@ -13,7 +13,8 @@ import {
   isPerplexityProvider,
   isSupportStreamOptionsProvider
 } from '@renderer/utils/provider'
-import { defaultAppHeaders, withoutTrailingApiVersion } from '@shared/utils'
+import { formatOllamaApiHost } from '@shared/aiCore/provider/utils'
+import { defaultAppHeaders, formatApiHost, isWithTrailingSharp, withoutTrailingApiVersion } from '@shared/utils'
 import { cloneDeep, isEmpty } from 'lodash'
 
 import type { ProviderConfig } from '../types'
@@ -129,10 +130,6 @@ export function getActualProvider(model: Model): Provider {
 
 export function adaptProvider({ provider }: { provider: Provider; model?: Model }): Provider {
   return formatProviderApiHost(cloneDeep(provider))
-}
-
-export function isModernSdkSupported(provider: Provider): boolean {
-  return hasProviderConfig(getAiSdkProviderId(provider))
 }
 
 // === Config Builders ===

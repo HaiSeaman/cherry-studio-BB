@@ -141,6 +141,7 @@ const shortcutKeyMap = {
   actions: '操作',
   clear_shortcut: '清除快捷键',
   clear_topic: '清空消息',
+  desktop_widget: '桌面助手',
   rename_topic: '重命名话题',
   copy_last_message: '复制上一条消息',
   edit_last_user_message: '编辑最后一条用户消息',

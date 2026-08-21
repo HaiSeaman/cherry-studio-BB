@@ -172,8 +172,6 @@ export const LanguagesEnum = {
 
 export const builtinLanguages: TranslateLanguage[] = Object.values(LanguagesEnum)
 
-export const builtinLangCodeList = builtinLanguages.map((lang) => lang.langCode)
-
 const QwenMTMap = {
   en: 'English',
   ru: 'Russian',

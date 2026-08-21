@@ -4,12 +4,12 @@ import { DEFAULT_CONTEXTCOUNT, MAX_CONTEXT_COUNT, UNLIMITED_CONTEXT_COUNT } from
 import { getTopicById } from '@renderer/hooks/useTopic'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
 import store from '@renderer/store'
-import { messageBlocksSelectors, removeManyBlocks } from '@renderer/store/messageBlock'
+import { removeManyBlocks } from '@renderer/store/messageBlock'
 import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import type { Assistant, FileMetadata, Model, Topic, Usage } from '@renderer/types'
 import { FILE_TYPE } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
-import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
 import { uuid } from '@renderer/utils'
 import { getTitleFromString } from '@renderer/utils/export'
 import {
@@ -54,25 +54,6 @@ export function getContextCount(assistant: Assistant, messages: Message[]) {
 }
 
 /** @deprecated Use safeDeleteFiles instead */
-export async function deleteMessageFiles(message: Message) {
-  const state = store.getState()
-  const fileDataList: FileMetadata[] = []
-
-  message.blocks?.forEach((blockId) => {
-    const block = messageBlocksSelectors.selectById(state, blockId)
-    if (block && (block.type === MessageBlockType.IMAGE || block.type === MessageBlockType.FILE)) {
-      const fileData = (block as any).file as FileMetadata | undefined
-      if (fileData) {
-        fileDataList.push(fileData)
-      }
-    }
-  })
-
-  if (fileDataList.length > 0) {
-    await FileManager.deleteFiles(fileDataList)
-  }
-}
-
 // 删除列表中的文件
 export async function safeDeleteFiles(filesToDelete: FileMetadata[]): Promise<void> {
   if (!filesToDelete || filesToDelete.length === 0) return

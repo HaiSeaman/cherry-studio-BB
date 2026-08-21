@@ -85,20 +85,12 @@ export type AnthropicCacheControlSettings = {
   cacheLastNMessages: number
 }
 
-export function isServiceTier(tier: string | null | undefined): tier is ServiceTier {
-  return isGroqServiceTier(tier) || isOpenAIServiceTier(tier)
-}
-
 export const AwsBedrockAuthTypes = {
   iam: 'iam',
   apiKey: 'apiKey'
 } as const
 
 export type AwsBedrockAuthType = keyof typeof AwsBedrockAuthTypes
-
-export function isAwsBedrockAuthType(type: string): type is AwsBedrockAuthType {
-  return Object.hasOwn(AwsBedrockAuthTypes, type)
-}
 
 export type Provider = {
   id: string

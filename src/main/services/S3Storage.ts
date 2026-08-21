@@ -1,15 +1,26 @@
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadBucketCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  S3Client
-} from '@aws-sdk/client-s3'
+import * as net from 'node:net'
+
+import type { S3Client as S3ClientType } from '@aws-sdk/client-s3'
 import { loggerService } from '@logger'
 import type { S3Config } from '@types'
-import * as net from 'net'
 import { Readable } from 'stream'
+
+// ponytail: @aws-sdk/client-s3 体积大且仅 S3 备份时需要, 动态加载避免主进程启动即常驻内存;
+// 若未来 SDK 提供更轻的按需 client 可替换此加载层。
+// oxlint-disable-next-line typescript-eslint(consistent-type-imports) -- 类型取自动态加载的 SDK 模块
+type S3Sdk = typeof import('@aws-sdk/client-s3')
+let s3SdkPromise: Promise<S3Sdk> | null = null
+
+function loadS3Sdk(): Promise<S3Sdk> {
+  if (!s3SdkPromise) {
+    s3SdkPromise = import('@aws-sdk/client-s3').catch((error) => {
+      // 失败不缓存, 允许下次调用重试
+      s3SdkPromise = null
+      throw error
+    })
+  }
+  return s3SdkPromise
+}
 
 const logger = loggerService.withContext('S3Storage')
 
@@ -30,51 +41,70 @@ const VIRTUAL_HOST_SUFFIXES = ['aliyuncs.com', 'myqcloud.com', 'volces.com']
 
 /**
  * 使用 AWS SDK v3 的简单 S3 封装，兼容之前 RemoteStorage 的最常用接口。
+ * SDK 模块在首次实际使用（构造客户端）时才动态加载。
  */
 export default class S3Storage {
-  private client: S3Client
   private bucket: string
   private root: string
+  private usePathStyle: boolean
+  private config: S3Config
+  private clientPromise: Promise<S3ClientType> | null = null
 
   constructor(config: S3Config) {
-    const { endpoint, region, accessKeyId, secretAccessKey, bucket, root } = config
-
-    const usePathStyle = (() => {
-      if (!endpoint) return false
-
-      try {
-        const { hostname } = new URL(endpoint)
-
-        if (hostname === 'localhost' || net.isIP(hostname) !== 0) {
-          return true
-        }
-
-        const isInWhiteList = VIRTUAL_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
-        return !isInWhiteList
-      } catch (e) {
-        logger.warn(`[S3Storage] Failed to parse endpoint, fallback to Path-Style: ${endpoint}`, e as Error)
-        return true
-      }
-    })()
-
-    this.client = new S3Client({
-      region,
-      endpoint: endpoint || undefined,
-      credentials: {
-        accessKeyId: accessKeyId,
-        secretAccessKey: secretAccessKey
-      },
-      forcePathStyle: usePathStyle
-    })
-
-    this.bucket = bucket
-    this.root = root?.replace(/^\/+/g, '').replace(/\/+$/g, '') || ''
+    this.config = config
+    this.bucket = config.bucket
+    this.root = config.root?.replace(/^\/+/g, '').replace(/\/+$/g, '') || ''
+    this.usePathStyle = S3Storage.resolveUsePathStyle(config.endpoint)
 
     this.putFileContents = this.putFileContents.bind(this)
     this.getFileContents = this.getFileContents.bind(this)
     this.deleteFile = this.deleteFile.bind(this)
     this.listFiles = this.listFiles.bind(this)
     this.checkConnection = this.checkConnection.bind(this)
+  }
+
+  private static resolveUsePathStyle(endpoint?: string): boolean {
+    if (!endpoint) return false
+
+    try {
+      const { hostname } = new URL(endpoint)
+
+      if (hostname === 'localhost' || net.isIP(hostname) !== 0) {
+        return true
+      }
+
+      const isInWhiteList = VIRTUAL_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
+      return !isInWhiteList
+    } catch (e) {
+      logger.warn(`[S3Storage] Failed to parse endpoint, fallback to Path-Style: ${endpoint}`, e as Error)
+      return true
+    }
+  }
+
+  /** 首次调用时才 import SDK 并创建 client（单例缓存；失败则清除缓存以便下次重试） */
+  private async getClient(): Promise<S3ClientType> {
+    if (!this.clientPromise) {
+      const promise = loadS3Sdk()
+        .then(({ S3Client }) => {
+          const { endpoint, region, accessKeyId, secretAccessKey } = this.config
+          return new S3Client({
+            region,
+            endpoint: endpoint || undefined,
+            credentials: {
+              accessKeyId,
+              secretAccessKey
+            },
+            forcePathStyle: this.usePathStyle
+          })
+        })
+        .catch((error) => {
+          // 不缓存 rejected promise：网络/配置恢复后允许下次调用重新初始化
+          if (this.clientPromise === promise) this.clientPromise = null
+          throw error
+        })
+      this.clientPromise = promise
+    }
+    return this.clientPromise
   }
 
   /**
@@ -89,8 +119,8 @@ export default class S3Storage {
     try {
       const contentType = key.endsWith('.zip') ? 'application/zip' : 'application/octet-stream'
 
-      return await this.client.send(
-        new PutObjectCommand({
+      return await (await this.getClient()).send(
+        new (await loadS3Sdk()).PutObjectCommand({
           Bucket: this.bucket,
           Key: this.buildKey(key),
           Body: data,
@@ -105,7 +135,9 @@ export default class S3Storage {
 
   async getFileContents(key: string): Promise<Buffer> {
     try {
-      const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: this.buildKey(key) }))
+      const res = await (
+        await this.getClient()
+      ).send(new (await loadS3Sdk()).GetObjectCommand({ Bucket: this.bucket, Key: this.buildKey(key) }))
       if (!res.Body || !(res.Body instanceof Readable)) {
         throw new Error('Empty body received from S3')
       }
@@ -122,7 +154,9 @@ export default class S3Storage {
       const variations = new Set([keyWithRoot, key.replace(/^\//, '')])
       for (const k of variations) {
         try {
-          await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: k }))
+          await (
+            await this.getClient()
+          ).send(new (await loadS3Sdk()).DeleteObjectCommand({ Bucket: this.bucket, Key: k }))
         } catch {
           // 忽略删除失败
         }
@@ -143,8 +177,10 @@ export default class S3Storage {
 
     try {
       do {
-        const res = await this.client.send(
-          new ListObjectsV2Command({
+        const res = await (
+          await this.getClient()
+        ).send(
+          new (await loadS3Sdk()).ListObjectsV2Command({
             Bucket: this.bucket,
             Prefix: fullPrefix === '' ? undefined : fullPrefix,
             ContinuationToken: continuationToken
@@ -175,7 +211,7 @@ export default class S3Storage {
    */
   async checkConnection() {
     try {
-      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }))
+      await (await this.getClient()).send(new (await loadS3Sdk()).HeadBucketCommand({ Bucket: this.bucket }))
       return true
     } catch (error) {
       logger.error('[S3Storage] Error checking connection:', error as Error)

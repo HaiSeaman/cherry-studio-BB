@@ -18,7 +18,7 @@ import type { WebSearchResultBlock } from '@anthropic-ai/sdk/resources'
 import type OpenAI from '@cherrystudio/openai'
 import type { GroundingMetadata } from '@google/genai'
 import { createEntityAdapter, createSelector, createSlice } from '@reduxjs/toolkit'
-import type { TodoItem, TodoWriteToolInput } from '@renderer/pages/home/Messages/Tools/MessageAgentTools/types'
+import type { TodoWriteToolInput } from '@renderer/pages/home/Messages/Tools/MessageAgentTools/types'
 import type {
   AISDKWebSearchResult,
   BaseTool,
@@ -343,70 +343,6 @@ export const isTodoWriteBlock = (block: MessageBlock | undefined): block is Todo
   if (!args || typeof args !== 'object' || Array.isArray(args)) return false
   return Array.isArray(args.todos)
 }
-
-/**
- * Information about active todos for PinnedTodoPanel
- */
-export interface ActiveTodoInfo {
-  /** All todos from the latest block with incomplete items */
-  todos: TodoItem[]
-  /** Current active todo (in_progress or first pending) */
-  activeTodo: TodoItem | undefined
-  /** Number of completed todos */
-  completedCount: number
-  /** Total number of todos */
-  totalCount: number
-  /** All TodoWrite blocks grouped by messageId (for batch deletion) */
-  blockIdsByMessage: Record<string, string[]>
-}
-
-/**
- * Select active todo info for a topic in a single pass.
- * Returns the latest TodoWrite block's todos, or undefined if none exist.
- *
- * Used by PinnedTodoPanel to display current task progress above the inputbar.
- */
-export const selectActiveTodoInfo = createSelector(
-  [
-    (state: RootState) => state.messages.entities,
-    (state: RootState) => state.messageBlocks.entities,
-    (state: RootState) => state.messages.messageIdsByTopic,
-    (_state: RootState, topicId: string) => topicId
-  ],
-  (messageEntities, blockEntities, messageIdsByTopic, topicId): ActiveTodoInfo | undefined => {
-    const topicMessageIds = messageIdsByTopic[topicId]
-    if (!topicMessageIds?.length) return undefined
-
-    const blockIdsByMessage: Record<string, string[]> = {}
-    let latestBlock: TodoWriteToolMessageBlock | undefined
-
-    for (const messageId of topicMessageIds) {
-      const message = messageEntities[messageId]
-      if (!message?.blocks?.length) continue
-
-      for (const blockId of message.blocks) {
-        const block = blockEntities[blockId]
-        if (isTodoWriteBlock(block)) {
-          const ids = (blockIdsByMessage[messageId] ??= [])
-          ids.push(blockId)
-          latestBlock = block
-        }
-      }
-    }
-    if (!latestBlock) return undefined
-    const todos = latestBlock.metadata.rawMcpToolResponse?.arguments?.todos
-    if (!todos) return undefined
-    const activeTodo =
-      todos.find((todo) => todo.status === 'in_progress') ?? todos.find((todo) => todo.status === 'pending')
-    return {
-      todos,
-      activeTodo,
-      completedCount: todos.filter((todo) => todo.status === 'completed').length,
-      totalCount: todos.length,
-      blockIdsByMessage
-    }
-  }
-)
 
 // --- Selector Integration --- END
 

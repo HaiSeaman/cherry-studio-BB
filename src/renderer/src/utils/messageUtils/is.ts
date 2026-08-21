@@ -5,8 +5,6 @@ import {
   type CodeMessageBlock,
   type CompactMessageBlock,
   type ErrorMessageBlock,
-  type FileMessageBlock,
-  type ImageMessageBlock,
   type MainTextMessageBlock,
   type MessageBlock,
   MessageBlockType,
@@ -25,36 +23,6 @@ import {
  */
 export function isMainTextBlock(block: MessageBlock): block is MainTextMessageBlock {
   return block.type === MessageBlockType.MAIN_TEXT
-}
-
-/**
- * Checks if a message block is an Image block.
- * Acts as a TypeScript type guard.
- * @param block - The message block to check.
- * @returns True if the block is an ImageMessageBlock, false otherwise.
- */
-export function isImageBlock(block: MessageBlock): block is ImageMessageBlock {
-  return block.type === MessageBlockType.IMAGE
-}
-
-/**
- * Checks if a message block is a File block.
- * Acts as a TypeScript type guard.
- * @param block - The message block to check.
- * @returns True if the block is a FileMessageBlock, false otherwise.
- */
-export function isFileBlock(block: MessageBlock): block is FileMessageBlock {
-  return block.type === MessageBlockType.FILE
-}
-
-/**
- * Checks if a message block is a Code block.
- * Acts as a TypeScript type guard.
- * @param block - The message block to check.
- * @returns True if the block is a CodeMessageBlock, false otherwise.
- */
-export function isCodeBlock(block: MessageBlock): block is CodeMessageBlock {
-  return block.type === MessageBlockType.CODE
 }
 
 /**

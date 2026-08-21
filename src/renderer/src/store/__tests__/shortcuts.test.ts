@@ -20,6 +20,15 @@ describe('shortcuts store', () => {
     expect(screenshot?.system).toBe(true)
   })
 
+  it('DEFAULT_SHORTCUTS contains the desktop widget shortcut, editable and enabled by default', () => {
+    const desktopWidget = DEFAULT_SHORTCUTS.find((s) => s.key === 'desktop_widget')
+    expect(desktopWidget).toBeDefined()
+    expect(desktopWidget?.enabled).toBe(true)
+    expect(desktopWidget?.editable).toBe(true)
+    expect(desktopWidget?.system).toBe(true)
+    expect(desktopWidget?.shortcut).toEqual(['Alt', '`'])
+  })
+
   it('initialState uses the shared DEFAULT_SHORTCUTS list', () => {
     expect(initialState.shortcuts).toEqual(DEFAULT_SHORTCUTS)
     expect(initialState.shortcuts.some((s) => s.key === 'screenshot')).toBe(true)

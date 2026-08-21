@@ -243,9 +243,6 @@ export type McpConfig = z.infer<typeof McpConfigSchema>
  * @returns 如果有效则为解析后的 `McpConfig` 对象，否则抛出 ZodError。
  */
 
-export function validateMcpConfig(config: unknown): McpConfig {
-  return McpConfigSchema.parse(config)
-}
 /**
  * 安全地验证一个未知对象，返回结果和可能的错误。
  * @param config - 要验证的配置对象
@@ -254,15 +251,6 @@ export function validateMcpConfig(config: unknown): McpConfig {
 
 export function safeValidateMcpConfig(config: unknown) {
   return McpConfigSchema.safeParse(config)
-}
-
-/**
- * 安全地验证一个未知对象是否为合法的MCP服务器配置。
- * @param config - 要验证的配置对象
- * @returns 包含成功/失败状态和数据的 `SafeParseResult`。
- */
-export function safeValidateMcpServerConfig(config: unknown) {
-  return McpServerConfigSchema.safeParse(config)
 }
 
 /**

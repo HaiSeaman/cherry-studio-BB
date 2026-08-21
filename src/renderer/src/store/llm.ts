@@ -113,17 +113,6 @@ const getIntegratedInitialState = () => {
   } as LlmState
 }
 
-export const moveProvider = (providers: Provider[], id: string, position: number) => {
-  const index = providers.findIndex((p) => p.id === id)
-  if (index === -1) return providers
-
-  const provider = providers[index]
-  const newProviders = [...providers]
-  newProviders.splice(index, 1)
-  newProviders.splice(position - 1, 0, provider)
-  return newProviders
-}
-
 const llmSlice = createSlice({
   name: 'llm',
   initialState: isLocalAi ? getIntegratedInitialState() : initialState,

@@ -12,9 +12,9 @@ import {
 import { loggerService } from '@logger'
 import type { EndpointType, Model, Provider } from '@renderer/types'
 import { SystemProviderIds } from '@renderer/types'
-import { formatApiHost, getDefaultGroupName, withoutTrailingSlash } from '@renderer/utils'
+import { getDefaultGroupName } from '@renderer/utils'
 import { isGeminiProvider, isOllamaProvider } from '@renderer/utils/provider'
-import { defaultAppHeaders } from '@shared/utils'
+import { defaultAppHeaders, formatApiHost, withoutTrailingSlash } from '@shared/utils'
 import * as z from 'zod'
 
 import {

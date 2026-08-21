@@ -5,7 +5,6 @@ import path from 'node:path'
 import { loggerService } from '@logger'
 import { imageExts } from '@shared/config/constant'
 import { app, type IpcMainInvokeEvent, nativeImage } from 'electron'
-import { parseStream } from 'music-metadata'
 
 const logger = loggerService.withContext('MusicService')
 
@@ -67,6 +66,8 @@ export class MusicService {
       const stream = fs.createReadStream(filePath, { highWaterMark: 1024 * 1024 })
       let parsed
       try {
+        // music-metadata 仅在读取音乐元数据时需要，动态加载避免常驻主进程内存
+        const { parseStream } = await import('music-metadata')
         parsed = await parseStream(stream)
       } finally {
         stream.destroy()

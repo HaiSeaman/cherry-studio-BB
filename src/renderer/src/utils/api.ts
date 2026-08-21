@@ -1,18 +1,9 @@
 import { withoutTrailingSlash } from '@shared/utils'
 import { trim } from 'lodash'
 
-// Re-export from shared, for backward compatibility
-export {
-  formatApiHost,
-  formatApiKeys,
-  hasAPIVersion,
-  isWithTrailingSharp,
-  withoutTrailingSharp,
-  withoutTrailingSlash
-} from '@shared/utils/api'
-
-// Re-export from shared, for backward compatibility
-export { formatAzureOpenAIApiHost, formatOllamaApiHost } from '@shared/aiCore/provider/utils'
+// formatApiHost/formatApiKeys/hasAPIVersion/isWithTrailingSharp/withoutTrailingSharp/
+// withoutTrailingSlash 已由 @shared/utils barrel 统一导出，请直接从 '@shared/utils' 导入。
+// formatAzureOpenAIApiHost/formatOllamaApiHost 位于 '@shared/aiCore/provider/utils'。
 
 // 目前对话界面只支持这些端点
 export const SUPPORTED_IMAGE_ENDPOINT_LIST = ['images/generations', 'images/edits', 'predict'] as const

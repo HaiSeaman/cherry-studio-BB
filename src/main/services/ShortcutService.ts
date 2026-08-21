@@ -34,7 +34,8 @@ const UNIVERSAL_SHORTCUT_KEYS = [
   'mini_window',
   'selection_assistant_toggle',
   'selection_assistant_select_text',
-  'screenshot'
+  'screenshot',
+  'desktop_widget'
 ]
 
 //indicate if the shortcuts are registered on app boot time
@@ -83,6 +84,10 @@ function getShortcutHandler(shortcut: Shortcut) {
     case 'screenshot':
       return () => {
         screenshotService.startCapture()
+      }
+    case 'desktop_widget':
+      return () => {
+        windowService.toggleMusicWidget()
       }
     default:
       return null

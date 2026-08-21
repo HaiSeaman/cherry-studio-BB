@@ -28,4 +28,8 @@ describe('convertShortcutFormat', () => {
   it('the default screenshot shortcut converts to a valid accelerator', () => {
     expect(convertShortcutFormat(['Alt', 'Shift', 'A'])).toBe('Alt+Shift+A')
   })
+
+  it('the default desktop widget shortcut converts to a valid accelerator', () => {
+    expect(convertShortcutFormat(['Alt', '`'])).toBe('Alt+`')
+  })
 })
