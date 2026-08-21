@@ -5,7 +5,7 @@ import useUserTheme from '@renderer/hooks/useUserTheme'
 import { ThemeMode } from '@renderer/types'
 import { IpcChannel } from '@shared/IpcChannel'
 import type { PropsWithChildren } from 'react'
-import React, { createContext, use, useEffect, useState } from 'react'
+import React, { createContext, use, useEffect, useRef, useState } from 'react'
 
 interface ThemeContextType {
   theme: ThemeMode
@@ -43,6 +43,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const mode = getThemeMode(themeId)
   const [theme, setThemeState] = useState<ThemeMode>(mode === 'dark' ? ThemeMode.dark : ThemeMode.light)
 
+  // 用 ref 保存最新的 mode/themeId，避免 ThemeUpdated 等异步回调捕获到过期的闭包值
+  const themeRef = useRef({ mode, themeId })
+  themeRef.current = { mode, themeId }
+
   useEffect(() => {
     setThemeState(mode === 'dark' ? ThemeMode.dark : ThemeMode.light)
   }, [mode])
@@ -76,7 +80,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         text: pick('--color-text'),
         text2: pick('--color-text-2'),
         text3: pick('--color-text-3'),
-        mode
+        // 从 ref 读取最新 mode，避免 Theme_RequestPush/ThemeUpdated 回调触发时闭包过期
+        mode: themeRef.current.mode
       }
       if (tokens.primary) void window.api.themeTokens.push(tokens)
     }
@@ -86,11 +91,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     })
 
     // main 进程的主题事件：渲染进程以 themeId 为准，仅重放当前主题属性
+    // 用 themeRef 读取最新 mode/themeId，避免闭包捕获过期值导致属性残留
     const themeUpdated = window.electron.ipcRenderer.on(IpcChannel.ThemeUpdated, () => {
-      document.body.setAttribute('theme-mode', mode)
-      document.body.setAttribute('theme-id', themeId)
+      const { mode: currentMode, themeId: currentThemeId } = themeRef.current
+      document.body.setAttribute('theme-mode', currentMode)
+      document.body.setAttribute('theme-id', currentThemeId)
       document.body.classList.remove('dark', 'light')
-      document.body.classList.add(mode)
+      document.body.classList.add(currentMode)
       window.requestAnimationFrame(pushThemeTokens)
     })
     return () => {

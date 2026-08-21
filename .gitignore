@@ -18,7 +18,9 @@ node_modules/
 
 # ---------- 构建与打包产物 ----------
 dist/
+dist-*/
 out/
+out-*/
 release/
 build-output/
 app-builds/

@@ -78,7 +78,7 @@
 }
 
 /* ===== 浅蓝晴空 ===== */
-[theme-id='sky'] {
+[theme-mode='light'][theme-id='sky'] {
   --color-white-soft: #e6f0f8;
   --color-white-mute: #ddebf5;
 
@@ -135,7 +135,7 @@
 }
 
 /* ===== 浅粉蔷薇 ===== */
-[theme-id='pink'] {
+[theme-mode='light'][theme-id='pink'] {
   --color-white-soft: #f6e9ee;
   --color-white-mute: #f1dfe7;
 
@@ -192,7 +192,7 @@
 }
 
 /* ===== 浅黄晨光 ===== */
-[theme-id='butter'] {
+[theme-mode='light'][theme-id='butter'] {
   --color-white-soft: #f5edda;
   --color-white-mute: #f0e5cc;
 
@@ -249,7 +249,7 @@
 }
 
 /* ===== 深灰暮色（默认深色，低亮不刺眼） ===== */
-[theme-mode='dark'] {
+[theme-mode='dark'][theme-id='slate'] {
   --color-white: #ffffff;
   --color-white-soft: #2f343b;
   --color-white-mute: #33383f;
@@ -328,6 +328,7 @@
 
 /* ===== 深蓝夜色（深色覆写） ===== */
 [theme-mode='dark'][theme-id='deepblue'] {
+  --color-white: #ffffff;
   --color-white-soft: #293343;
   --color-white-mute: #2e3a4a;
 
@@ -347,11 +348,13 @@
   --color-background-soft: #252e3b;
   --color-background-mute: #2d3846;
   --color-background-opacity: rgba(30, 37, 48, 0.72);
+  --inner-glow-opacity: 0.3;
 
   --color-primary: #6fa8dc;
   --color-primary-soft: #6fa8dc99;
   --color-primary-mute: #6fa8dc33;
 
+  --color-text: var(--color-text-1);
   --color-text-secondary: rgba(220, 227, 236, 0.75);
   --color-icon: #a4b1c3;
   --color-icon-white: #dce3ec;
@@ -363,6 +366,8 @@
   --color-code-background: #293343;
   --color-inline-code-background: rgba(111, 168, 220, 0.12);
   --color-inline-code-text: #e08a8a;
+  --color-hover: var(--color-white-mute);
+  --color-active: var(--color-white-soft);
   --color-frame-border: #36445c;
   --color-group-background: #252e3b;
 
@@ -375,13 +380,22 @@
 
   --modal-background: rgba(37, 46, 59, 0.9);
 
+  --color-highlight: initial;
+  --color-background-highlight: rgba(255, 255, 0, 0.5);
+  --color-background-highlight-accent: rgba(255, 150, 50, 0.5);
+
   --navbar-background-mac: rgba(30, 37, 48, 0.55);
   --navbar-background: rgba(30, 37, 48, 0.6);
 
+  --chat-background: transparent;
   --chat-background-user: rgba(111, 168, 220, 0.12);
+  --chat-background-assistant: transparent;
+  --chat-text-user: var(--color-text);
 
   --glass-bg: rgba(37, 46, 59, 0.55);
   --glass-bg-strong: rgba(37, 46, 59, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 
   --acrylic-1: #243649;
   --acrylic-2: #232d3d;

@@ -29,6 +29,10 @@ export const oauthWithSiliconFlow = async (setKey) => {
   )
 
   const messageHandler = (event) => {
+    // 只接受硅基流动官方域名的回传，防止任意网页注入伪造 secretKey
+    if (event.origin !== 'https://account.siliconflow.cn') {
+      return
+    }
     if (event.data.length > 0 && event.data[0]['secretKey'] !== undefined) {
       setKey(event.data[0]['secretKey'])
       popup?.close()
@@ -50,6 +54,10 @@ export const oauthWithAihubmix = async (setKey) => {
   )
 
   const messageHandler = async (event) => {
+    // 只接受 aihubmix 官方域名的回传，防止任意网页注入伪造数据
+    if (event.origin !== 'https://console.inferera.com') {
+      return
+    }
     const data = event.data
 
     if (data && data.key === 'cherry_studio_oauth_callback') {
@@ -176,6 +184,10 @@ export const oauthWith302AI = async (setKey) => {
   )
 
   const messageHandler = (event) => {
+    // 只接受 302.ai 官方域名的回传，防止任意网页注入伪造 apikey
+    if (event.origin !== 'https://dash.302.ai') {
+      return
+    }
     if (event.data && event.data.data.apikey !== undefined) {
       setKey(event.data.data.apikey)
       popup?.close()
@@ -197,6 +209,10 @@ export const oauthWithAiOnly = async (setKey) => {
   )
 
   const messageHandler = (event) => {
+    // 只接受 AiOnly 官方域名的回传，防止任意网页注入伪造 secretKey
+    if (event.origin !== 'https://maas.aiionly.com') {
+      return
+    }
     if (event.data.length > 0 && event.data[0]['secretKey'] !== undefined) {
       setKey(event.data[0]['secretKey'])
       popup?.close()

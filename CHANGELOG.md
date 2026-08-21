@@ -5,6 +5,53 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.5.5] - 2026-08-21
+
+### 核心主题：修复主题颜色切换失效 + 安全与隐私全面加固
+
+**1. 修复「部分主题颜色无法切换」的严重 BUG**
+- **根因**：`color.css` 中浅色变体选择器 `[theme-id='sky']`（特异性 0,1,0）与深色默认
+  `[theme-mode='dark']`（特异性 0,1,0，源码顺序靠后）特异性相同。当 `theme-mode` 属性在切换
+  时序中短暂残留为 `dark` 时，深色规则把 sky/pink/butter 全部覆盖成深灰绿 slate —— 表现为
+  「粉色/蓝色/黄色无法切换，而绿色/灰色/深蓝正常」的不对称现象（deepblue 因 0,2,0 特异性幸免）。
+- **修复（选择器对称化）**：
+  - 浅色变体统一加 `[theme-mode='light']` 限定：`[theme-mode='light'][theme-id='sky'|'pink'|'butter']`
+  - 深色默认补 `theme-id` 限定：`[theme-mode='dark'][theme-id='slate']`，与 deepblue 对称
+  - deepblue 分支补全 11 个自包含变量（`--color-white`、`--color-text`、`--color-hover`、
+    `--color-active`、`--glass-border`、`--glass-shadow`、`--chat-*`、`--color-highlight*` 等），
+    避免改选择器后从 `:root` 继承浅色值导致深蓝背景下文字不可读
+- **修复（JS 层时序加固）**：`ThemeProvider` 新增 `themeRef`（useRef 保存最新 mode/themeId），
+  `ThemeUpdated` IPC 回调与主题 token 推送改从 ref 读取最新值，彻底消除闭包捕获过期值导致的属性残留。
+- 验证：新增 5 个组件级测试（首次挂载、原子切换、深→浅回切无残留、事件重放用最新值）；Playwright
+  真实 CSS 矩阵实验确认 6 主题切换全部正确、残留 dark 时兜底为 oasis 默认绿、deepblue 深色文本可读。
+
+**2. 高危安全漏洞修复：`useBridge` 全量 API 暴露**
+- **漏洞**：小程序桥 `useBridge` 原实现允许**任意 `file://` 页面**通过 postMessage 动态调用
+  **整个 `window.api`**（含 `file.delete`、`fs.read`、`automation.sysFileWrite` 等敏感能力），
+  且未校验 `event.source`。攻击者只需将自定义小程序指向本地恶意 HTML，即可读取/删除/篡改用户任意文件。
+- **修复**：
+  - 方法**白名单**：仅放行只读方法（getAppInfo/getDiskInfo/getSystemFonts/resolvePath/isPathInside 等）
+    与受协议校验的 openWebsite；绝不放行 file 写删、fs、automation、backup、config.set、shell
+  - **来源校验**：`event.source` 必须是当前文档内某个 `<webview>` 的 contentWindow，
+    杜绝普通 iframe / 独立窗口 / 注入页面伪造调用
+  - **结构校验**：type === 'api-call'、method 为字符串、args 为数组，任一不满足即静默忽略
+- 验证：新增 9 个测试覆盖全部拒绝路径（敏感方法、非 webview 来源、非 file:// origin、非法结构、退订）。
+
+**3. 中危修复：OAuth 回传缺少 origin 校验**
+- **漏洞**：`oauth.ts` 中 4 个 `message` 监听（siliconflow / aihubmix / 302ai / aiionly）
+  未校验 `event.origin`，任意网页可注入伪造的 API key。
+- **修复**：各自加上官方域名 origin 校验，仅接受对应服务商域名回传。
+- 验证：新增 4 个测试覆盖合法/非法 origin 双路径。
+
+**4. 其他优化**
+- `ThemeProvider` 主题 token 推送统一从 `themeRef` 读取最新 mode，消除挂件配色极端时序下的旧值推送。
+
+### 测试与验证
+- 新增 18 个单测（主题 5 + useBridge 9 + oauth 4）；renderer 全量测试 164 文件 / 2817 用例全部通过。
+- `pnpm typecheck`（node / web）与 eslint 零错误。
+- 隐私审查确认：无遥测/分析 SDK，日志本地存储无网络上报；已记录待后续评估项：
+  主窗口 `webSecurity:false`、CSP `script-src *`、WebDAV/S3 密钥明文存储、IP 地区检测单次外传。
+
 ## [1.5.4] - 2026-08-21
 
 ### 核心主题：桌面随手便签与音乐播放双独立挂件 + 播放器架构全局化升级
