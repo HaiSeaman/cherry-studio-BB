@@ -1,21 +1,64 @@
-import { ExternalLink, Lock, Minus, Music2, Pin, PinOff, Radio, Unlock, X } from 'lucide-react'
+import {
+  ExternalLink,
+  Lock,
+  Minus,
+  Music2,
+  Pin,
+  PinOff,
+  Radio,
+  SquareCheckBig,
+  StickyNote,
+  Unlock,
+  X
+} from 'lucide-react'
 import { type FC, useEffect, useRef, useState } from 'react'
 
 import type { RadioStation } from '../../pages/music/types'
 import FmRadioView from './FmRadioView'
 import LocalPlayerView from './LocalPlayerView'
+import NotesView, { flushPendingDraft,TodosView } from './NotesTodosView'
 import type { WidgetPlayerState } from './protocol'
 import { emitPosition, onHostMessage, sendCmd } from './transport'
 
-type View = 'local' | 'fm'
+type View = 'local' | 'fm' | 'notes' | 'todos'
 
 const VIEW_STORAGE_KEY = 'musicWidgetView'
+const VIEWS: View[] = ['local', 'fm', 'notes', 'todos']
+const isView = (v: unknown): v is View => typeof v === 'string' && (VIEWS as string[]).includes(v)
+
+/** 各视图默认窗口内容尺寸（挂件窗口 useContentSize:true，与 setContentSize 语义一致） */
+const VIEW_DEFAULT_SIZE: Record<View, { w: number; h: number }> = {
+  local: { w: 380, h: 220 },
+  fm: { w: 380, h: 220 },
+  notes: { w: 320, h: 480 },
+  todos: { w: 320, h: 440 }
+}
+const VIEW_META: Record<View, { icon: React.ReactNode; title: string }> = {
+  local: { icon: <Music2 size={13} />, title: '本地音乐' },
+  fm: { icon: <Radio size={13} />, title: 'FM 电台' },
+  notes: { icon: <StickyNote size={13} />, title: '便签' },
+  todos: { icon: <SquareCheckBig size={13} />, title: '待办' }
+}
+
+const sizeKey = (v: View) => `musicWidgetViewSize:${v}`
+
+function readViewSize(v: View): { w: number; h: number } {
+  try {
+    const s = JSON.parse(localStorage.getItem(sizeKey(v)) ?? '')
+    if (s && Number.isFinite(s.w) && Number.isFinite(s.h) && s.w >= 200 && s.h >= 100) return { w: s.w, h: s.h }
+  } catch {
+    /* 脏数据回落默认 */
+  }
+  return VIEW_DEFAULT_SIZE[v]
+}
 
 /**
- * 桌面音乐播放挂件（轻量独立入口，无 antd/Redux/router）。
- * 纯遥控器：零音频实例，全部播放命令经主进程中转 IPC 发往主窗口 playerStore；
- * 曲库/电台收藏直读 Dexie；进度条 4/s 经 ref 直更 DOM。
- * 已移除贴边吸附/折叠，保留：置顶/锁定/拖拽/拉伸（原生能力）。
+ * 桌面助手挂件（音乐挂件扩展为 4 模块：本地音乐 / FM 电台 / 便签 / 待办）。
+ * 轻量独立入口，无 antd/Redux/router；数据与主程序共享同一 Dexie。
+ * - 本地/FM：纯遥控器，播放命令经主进程中转 IPC 发往主窗口 playerStore
+ * - 便签/待办：Dexie 直读写，useLiveQuery 跨窗口实时双向同步
+ * 4 视图始终挂载（切换仅 CSS 隐藏），保证便签草稿防抖与 pagehide 兜底不被卸载打断。
+ * 切换视图时按 per-view 记忆尺寸自动调整窗口（380×220 音乐 ↔ 320×480 便签）。
  */
 const MusicWidgetApp: FC = () => {
   const [pinned, setPinned] = useState(true)
@@ -23,10 +66,16 @@ const MusicWidgetApp: FC = () => {
   const [state, setState] = useState<WidgetPlayerState | null>(null)
   const [connected, setConnected] = useState(false)
   const [stations, setStations] = useState<RadioStation[]>([])
-  const [view, setView] = useState<View>(() =>
-    localStorage.getItem(VIEW_STORAGE_KEY) === 'fm' ? 'fm' : 'local'
-  )
+  const [view, setView] = useState<View>(() => {
+    const v = localStorage.getItem(VIEW_STORAGE_KEY)
+    return isView(v) ? v : 'local'
+  })
   const snapshotTimer = useRef<number>(0)
+  const viewRef = useRef<View>(view)
+  // 程序化 setSize 时间戳：resize 回存时忽略其引发的事件，避免把默认尺寸回写覆盖用户手动调整
+  const lastAutoResize = useRef(0)
+
+  viewRef.current = view
 
   // 挂载即请求快照；2s 无应答显示"未连接主程序"占位（主窗口渲染进程不可达的边界场景）
   useEffect(() => {
@@ -68,22 +117,60 @@ const MusicWidgetApp: FC = () => {
   const switchView = (v: View) => {
     setView(v)
     localStorage.setItem(VIEW_STORAGE_KEY, v)
+    // 切换视图 → 应用该视图记忆的窗口尺寸
+    const s = readViewSize(v)
+    lastAutoResize.current = Date.now()
+    void window.api.musicWidget.setSize(Math.round(s.w), Math.round(s.h))
+  }
+
+  // 手动调整窗口尺寸 → 防抖回存到当前视图（忽略程序化 setSize 引发的事件）
+  useEffect(() => {
+    let t = 0
+    const onResize = () => {
+      if (Date.now() - lastAutoResize.current < 400) return
+      clearTimeout(t)
+      t = window.setTimeout(() => {
+        try {
+          localStorage.setItem(
+            sizeKey(viewRef.current),
+            JSON.stringify({ w: window.innerWidth, h: window.innerHeight })
+          )
+        } catch {
+          /* 存储不可用时忽略 */
+        }
+      }, 300)
+    }
+    window.addEventListener('resize', onResize)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [])
+
+  const close = () => {
+    // 先落库未保存草稿，确保「速记后立即关闭」不丢字
+    void flushPendingDraft().then(() => window.api.musicWidget.close())
   }
 
   return (
     <div className="app">
       <header className={`header ${locked ? 'locked' : ''}`}>
         <span className="title">
-          <Music2 size={12} className="title-icon" /> 桌面音乐
+          <Music2 size={12} className="title-icon" /> 桌面助手
         </span>
+        <div className="btns view-switch">
+          {VIEWS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              title={VIEW_META[v].title}
+              className={`mode-btn ${view === v ? 'active' : ''}`}
+              onClick={() => switchView(v)}>
+              {VIEW_META[v].icon}
+            </button>
+          ))}
+        </div>
         <div className="btns">
-          <button
-            type="button"
-            title={view === 'local' ? '切换到 FM 电台' : '切换到本地音乐'}
-            className="mode-btn"
-            onClick={() => switchView(view === 'local' ? 'fm' : 'local')}>
-            {view === 'local' ? <Radio size={13} /> : <Music2 size={13} />}
-          </button>
           <button
             type="button"
             title={pinned ? '取消置顶' : '置顶'}
@@ -110,29 +197,39 @@ const MusicWidgetApp: FC = () => {
           <button type="button" title="最小化" onClick={() => void window.api.musicWidget.toggle()}>
             <Minus size={14} />
           </button>
-          <button type="button" title="关闭" className="close" onClick={() => void window.api.musicWidget.close()}>
+          <button type="button" title="关闭" className="close" onClick={close}>
             <X size={14} />
           </button>
         </div>
       </header>
 
       <main className="body">
-        {!connected ? (
-          <div className="disconnected">
-            <Music2 size={22} />
-            <div>未连接主程序</div>
-            <button type="button" className="retry-btn" onClick={() => sendCmd({ t: 'snapshot:req' })}>
-              重试
-            </button>
-          </div>
-        ) : view === 'local' ? (
-          <LocalPlayerView state={state} />
-        ) : (
-          <FmRadioView state={state} stations={stations} />
-        )}
+        <div className={`view-panel ${view === 'local' ? '' : 'hidden'}`}>
+          {!connected ? <Disconnected /> : <LocalPlayerView state={state} />}
+        </div>
+        <div className={`view-panel ${view === 'fm' ? '' : 'hidden'}`}>
+          {!connected ? <Disconnected /> : <FmRadioView state={state} stations={stations} />}
+        </div>
+        <div className={`view-panel ${view === 'notes' ? '' : 'hidden'}`}>
+          <NotesView />
+        </div>
+        <div className={`view-panel ${view === 'todos' ? '' : 'hidden'}`}>
+          <TodosView />
+        </div>
       </main>
     </div>
   )
 }
+
+/** 主窗口渲染进程不可达时的占位（仅本地/FM 视图需要主窗口连接） */
+const Disconnected: FC = () => (
+  <div className="disconnected">
+    <Music2 size={22} />
+    <div>未连接主程序</div>
+    <button type="button" className="retry-btn" onClick={() => sendCmd({ t: 'snapshot:req' })}>
+      重试
+    </button>
+  </div>
+)
 
 export default MusicWidgetApp

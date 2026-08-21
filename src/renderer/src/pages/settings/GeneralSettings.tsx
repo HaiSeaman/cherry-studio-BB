@@ -74,9 +74,7 @@ const GeneralSettings: FC = () => {
   const { enableDeveloperMode, setEnableDeveloperMode } = useEnableDeveloperMode()
   const { setTimeoutTimer } = useTimer()
   const [appVersion, setAppVersion] = useState('')
-  // 桌面便签挂件：当前窗口显示状态（瞬态，实际状态以主进程为准）
-  const [stickyWidgetVisible, setStickyWidgetVisible] = useState(false)
-  // 桌面音乐挂件：同上
+  // 桌面助手挂件：当前窗口显示状态（瞬态，实际状态以主进程为准）
   const [musicWidgetVisible, setMusicWidgetVisible] = useState(false)
 
   useEffect(() => {
@@ -84,7 +82,6 @@ const GeneralSettings: FC = () => {
   }, [])
 
   useEffect(() => {
-    void window.api.stickyWidget.isVisible().then(setStickyWidgetVisible)
     void window.api.musicWidget.isVisible().then(setMusicWidgetVisible)
   }, [])
 
@@ -366,30 +363,7 @@ const GeneralSettings: FC = () => {
         </SettingRow>
       </SettingGroup>
       <SettingGroup theme={theme}>
-        <SettingTitle>{'桌面便签挂件'}</SettingTitle>
-        <SettingDivider />
-        <SettingRow>
-          <SettingRowTitle>{'显示挂件'}</SettingRowTitle>
-          <Switch
-            checked={stickyWidgetVisible}
-            onChange={(checked) => {
-              setStickyWidgetVisible(checked)
-              if (checked) {
-                void window.api.stickyWidget.show()
-              } else {
-                void window.api.stickyWidget.close()
-              }
-            }}
-          />
-        </SettingRow>
-        <SettingDivider />
-        <SettingRow>
-          <SettingRowTitle>{'启动应用时自动显示挂件'}</SettingRowTitle>
-          <Switch checked={stickyWidgetLaunchOnBoot} onChange={setStickyWidgetLaunchOnBoot} />
-        </SettingRow>
-      </SettingGroup>
-      <SettingGroup theme={theme}>
-        <SettingTitle>{'桌面音乐挂件'}</SettingTitle>
+        <SettingTitle>{'桌面助手挂件'}</SettingTitle>
         <SettingDivider />
         <SettingRow>
           <SettingRowTitle>{'显示挂件'}</SettingRowTitle>
@@ -408,7 +382,14 @@ const GeneralSettings: FC = () => {
         <SettingDivider />
         <SettingRow>
           <SettingRowTitle>{'启动应用时自动显示挂件'}</SettingRowTitle>
-          <Switch checked={musicWidgetLaunchOnBoot} onChange={setMusicWidgetLaunchOnBoot} />
+          <Switch
+            checked={stickyWidgetLaunchOnBoot || musicWidgetLaunchOnBoot}
+            onChange={(checked) => {
+              // 两个旧配置键同步写入：任一开启过即视为开启，关闭时一并清除（兼容老用户配置）
+              setStickyWidgetLaunchOnBoot(checked)
+              setMusicWidgetLaunchOnBoot(checked)
+            }}
+          />
         </SettingRow>
       </SettingGroup>
       <SettingGroup theme={theme}>

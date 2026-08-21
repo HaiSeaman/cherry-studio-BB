@@ -1,17 +1,17 @@
 import { db } from '@renderer/databases'
 import type { HubTodo } from '@renderer/pages/notes/types'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ExternalLink, Lock, Minus, Pin, PinOff, Plus, Trash2, Unlock, X } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { type FC, useEffect, useRef, useState } from 'react'
 
 /**
- * 挂件关闭前兜底：待保存草稿（NotesSection 输入时写入；关闭/卸载时据此落库）
+ * 挂件关闭前兜底：待保存草稿（NotesView 输入时写入；卸载/关闭时据此落库）
  * 关闭挂件（✕/托盘/设置开关）时先落库再销毁窗口，避免丢失 500ms 防抖窗口内输入
  */
 const pendingDraft: { id: number; content: string } = { id: 0, content: '' }
 
 /** 立即把最新待保存草稿写入 Dexie（幂等；无待保存内容时直接返回） */
-async function flushPendingDraft(): Promise<void> {
+export async function flushPendingDraft(): Promise<void> {
   if (pendingDraft.id) {
     const { id, content } = pendingDraft
     await db.hub_notes.update(id, { content, updatedAt: Date.now() }).catch(() => {})
@@ -19,83 +19,11 @@ async function flushPendingDraft(): Promise<void> {
 }
 
 /**
- * 桌面便签待办挂件（轻量独立入口，无 antd/Redux/router）
- * 数据层与主程序共享同一 Dexie（IndexedDB），useLiveQuery 跨窗口实时双向同步。
- * 已移除贴边吸附/折叠，保留：置顶/锁定/拖拽/拉伸（原生能力）。
+ * 便签视图（原桌面便签挂件上半区，合并进桌面助手后独占整个 body）。
+ * 数据层与主程序共享同一 Dexie，useLiveQuery 跨窗口实时双向同步。
+ * 挂件内始终挂载（切换视图仅 CSS 隐藏），保证草稿防抖与 pagehide 兜底不被卸载打断。
  */
-const StickyWidgetApp: FC = () => {
-  const [pinned, setPinned] = useState(true)
-  const [locked, setLocked] = useState(false)
-
-  // 页面将被卸载（窗口关闭/隐藏/刷新）：先落库待保存草稿，避免数据丢失
-  useEffect(() => {
-    const flush = () => {
-      if (pendingDraft.id) void flushPendingDraft()
-    }
-    window.addEventListener('pagehide', flush)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') flush()
-    })
-    return () => {
-      window.removeEventListener('pagehide', flush)
-      document.removeEventListener('visibilitychange', flush)
-    }
-  }, [])
-
-  return (
-    <div className="app">
-      <header className={`header ${locked ? 'locked' : ''}`}>
-        <span className="title">便签待办</span>
-        <div className="btns">
-          <button
-            type="button"
-            title={pinned ? '取消置顶' : '置顶'}
-            className={pinned ? 'active' : ''}
-            onClick={() => {
-              setPinned(!pinned)
-              void window.api.stickyWidget.setPin(!pinned)
-            }}>
-            {pinned ? <Pin size={13} /> : <PinOff size={13} />}
-          </button>
-          <button
-            type="button"
-            title={locked ? '解锁' : '锁定'}
-            className={locked ? 'active' : ''}
-            onClick={() => {
-              setLocked(!locked)
-              void window.api.stickyWidget.setLock(!locked)
-            }}>
-            {locked ? <Lock size={13} /> : <Unlock size={13} />}
-          </button>
-          <button type="button" title="打开主程序" onClick={() => void window.api.stickyWidget.openMain()}>
-            <ExternalLink size={13} />
-          </button>
-          <button type="button" title="最小化" onClick={() => void window.api.stickyWidget.toggle()}>
-            <Minus size={14} />
-          </button>
-          <button
-            type="button"
-            title="关闭"
-            className="close"
-            onClick={() => {
-              // 先落库未保存草稿，确保「速记后立即关闭」不丢字
-              void flushPendingDraft().then(() => window.api.stickyWidget.close())
-            }}>
-            <X size={14} />
-          </button>
-        </div>
-      </header>
-
-      <main className="body">
-        <NotesSection />
-        <TodosSection />
-      </main>
-    </div>
-  )
-}
-
-/** 上半区：随手便签（下拉切换 / 新建 / 删除 / 500ms 防抖自动保存） */
-const NotesSection: FC = () => {
+const NotesView: FC = () => {
   const notes = useLiveQuery(async () => (await db.hub_notes.where('status').equals('active').toArray()) ?? [], [], [])
   const sorted = (notes ?? []).slice().sort((a, b) => b.updatedAt - a.updatedAt)
 
@@ -138,6 +66,21 @@ const NotesSection: FC = () => {
     return () => window.clearTimeout(t)
   }, [draft, dirty, current?.id])
 
+  // 页面将被卸载（窗口关闭/隐藏/刷新）：先落库待保存草稿，避免数据丢失
+  useEffect(() => {
+    const flush = () => {
+      if (pendingDraft.id) void flushPendingDraft()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flush()
+    })
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', flush)
+    }
+  }, [])
+
   // 切换/新建前冲刷未保存草稿，避免丢失
   const saveNow = () => {
     if (dirty && current?.id != null) {
@@ -162,7 +105,12 @@ const NotesSection: FC = () => {
     setNoteId(null)
   }
 
-  const preview = (s: string) => s.split('\n').find((l) => l.trim())?.trim().slice(0, 20) ?? ''
+  const preview = (s: string) =>
+    s
+      .split('\n')
+      .find((l) => l.trim())
+      ?.trim()
+      .slice(0, 20) ?? ''
 
   return (
     <section className="notes">
@@ -184,7 +132,12 @@ const NotesSection: FC = () => {
         <button type="button" className="tool-btn" title="新建便签" onClick={() => void addNote()}>
           <Plus size={14} />
         </button>
-        <button type="button" className="tool-btn" title="删除当前便签" disabled={!current} onClick={() => void removeNote()}>
+        <button
+          type="button"
+          className="tool-btn"
+          title="删除当前便签"
+          disabled={!current}
+          onClick={() => void removeNote()}>
           <Trash2 size={13} />
         </button>
         <span className="save-hint">{dirty ? '保存中…' : '已保存'}</span>
@@ -202,15 +155,15 @@ const NotesSection: FC = () => {
   )
 }
 
-/** 下半区：待办清单（筛选 / 勾选 / 回车新增） */
-const TodosSection: FC = () => {
+/** 待办视图（原桌面便签挂件下半区，合并进桌面助手后独占整个 body） */
+const TodosView: FC = () => {
   const todos = useLiveQuery(async () => (await db.hub_todos.where('status').equals('active').toArray()) ?? [], [], [])
   const [filter, setFilter] = useState<'all' | 'active' | 'done'>('all')
   const [input, setInput] = useState('')
 
-  const sorted = (todos ?? []).slice().sort((a, b) =>
-    a.done !== b.done ? (a.done ? 1 : -1) : b.createdAt - a.createdAt
-  )
+  const sorted = (todos ?? [])
+    .slice()
+    .sort((a, b) => (a.done !== b.done ? (a.done ? 1 : -1) : b.createdAt - a.createdAt))
   const list = sorted.filter((t) => (filter === 'all' ? true : filter === 'active' ? !t.done : t.done))
   const undone = sorted.filter((t) => !t.done).length
 
@@ -292,4 +245,5 @@ const TodosSection: FC = () => {
   )
 }
 
-export default StickyWidgetApp
+export default NotesView
+export { NotesView, TodosView }

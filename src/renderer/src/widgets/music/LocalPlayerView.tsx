@@ -1,4 +1,16 @@
-import { ListMusic, Pause, Play, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react'
+import {
+  ListMusic,
+  Pause,
+  Play,
+  Repeat1,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Star,
+  Volume1,
+  Volume2,
+  VolumeX
+} from 'lucide-react'
 import { type FC, useEffect, useRef, useState } from 'react'
 
 import { formatTime } from '../../pages/music/services/playLogic'
@@ -48,13 +60,25 @@ const LocalPlayerView: FC<LocalPlayerViewProps> = ({ state }) => {
 
   const playing = state?.localPlaying ?? false
   const track = state?.track ?? null
+  const isFav = track?.favorite === 1
   const volume = state?.volume ?? 80
   const VolIcon = volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2
 
   return (
     <div className="local-view">
       <div className="track-info">
-        <div className="track-title">{track?.title ?? '未播放'}</div>
+        <div className="track-title-row">
+          <div className="track-title">{track?.title ?? '未播放'}</div>
+          {track && (
+            <button
+              type="button"
+              className={`fav-btn ${isFav ? 'on' : ''}`}
+              title={isFav ? '取消收藏' : '收藏'}
+              onClick={() => sendCmd({ t: 'cmd', a: 'toggleFavorite', id: track.id })}>
+              <Star size={13} fill={isFav ? 'currentColor' : 'none'} />
+            </button>
+          )}
+        </div>
         <div className="track-artist">{track ? track.artist || '未知艺术家' : '打开歌单挑一首吧'}</div>
       </div>
 
@@ -111,7 +135,11 @@ const LocalPlayerView: FC<LocalPlayerViewProps> = ({ state }) => {
         <button type="button" className="ctl" title="上一首" onClick={() => sendCmd({ t: 'cmd', a: 'prev' })}>
           <SkipBack size={15} />
         </button>
-        <button type="button" className="ctl main" title={playing ? '暂停' : '播放'} onClick={() => sendCmd({ t: 'cmd', a: 'togglePlay' })}>
+        <button
+          type="button"
+          className="ctl main"
+          title={playing ? '暂停' : '播放'}
+          onClick={() => sendCmd({ t: 'cmd', a: 'togglePlay' })}>
           {playing ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: 2 }} />}
         </button>
         <button type="button" className="ctl" title="下一首" onClick={() => sendCmd({ t: 'cmd', a: 'next' })}>

@@ -80,11 +80,7 @@ export class TrayService {
         click: () => windowService.showMiniWindow()
       },
       {
-        label: '便签挂件',
-        click: () => windowService.toggleStickyWidget()
-      },
-      {
-        label: '音乐挂件',
+        label: '桌面助手',
         click: () => windowService.toggleMusicWidget()
       },
       (isWin || isMac) && {

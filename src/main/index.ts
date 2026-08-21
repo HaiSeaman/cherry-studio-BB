@@ -151,13 +151,8 @@ if (!app.requestSingleInstanceLock()) {
 
     const mainWindow = windowService.createMainWindow()
 
-    // 桌面便签挂件开机自启（懒创建：仅开关开启时才建窗口）
-    if (configManager.getStickyWidgetLaunchOnBoot()) {
-      windowService.showStickyWidget()
-    }
-
-    // 桌面音乐挂件开机自启（同上；音频宿主在主窗口，挂件仅是遥控器）
-    if (configManager.getMusicWidgetLaunchOnBoot()) {
+    // 桌面助手挂件开机自启（懒创建：仅开关开启时才建窗口；兼容老版本便签/音乐自启任一开启的配置）
+    if (configManager.getMusicWidgetLaunchOnBoot() || configManager.getStickyWidgetLaunchOnBoot()) {
       windowService.showMusicWidget()
     }
 

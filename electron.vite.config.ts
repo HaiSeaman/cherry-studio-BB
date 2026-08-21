@@ -97,7 +97,6 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
           miniWindow: resolve(__dirname, 'src/renderer/miniWindow.html'),
-          stickyWidget: resolve(__dirname, 'src/renderer/stickyWidget.html'),
           musicWidget: resolve(__dirname, 'src/renderer/musicWidget.html'),
           selectionToolbar: resolve(__dirname, 'src/renderer/selectionToolbar.html'),
           selectionAction: resolve(__dirname, 'src/renderer/selectionAction.html')
@@ -112,9 +111,12 @@ export default defineConfig({
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined
             // React 核心独立成块（先于 antd/react 规则匹配）：
-            // 挂件轻量入口（stickyWidget/musicWidget）只依赖 react+dexie+lucide，
+            // 挂件轻量入口（musicWidget）只依赖 react+dexie+lucide，
             // 若 react 核心混入 antd/主应用生态大块，挂件会整块执行数 MB 依赖（回归：挂件内存超标）
-            if (/node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id) || id.includes('use-sync-external-store')) {
+            if (
+              /node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id) ||
+              id.includes('use-sync-external-store')
+            ) {
               return 'reactcore'
             }
             // lucide（含核心工厂 createLucideIcon）独立成块且唯一命名：

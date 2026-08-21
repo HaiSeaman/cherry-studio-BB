@@ -250,21 +250,15 @@ const api = {
     consumeScreenshot: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ConsumeScreenshot),
     readClipboardImage: () => ipcRenderer.invoke(IpcChannel.MiniWindow_ReadClipboardImage)
   },
-  stickyWidget: {
-    show: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_Show),
-    close: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_Close),
-    toggle: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_Toggle),
-    setPin: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_SetPin, pinned),
-    setLock: (locked: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_SetLock, locked),
-    isVisible: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.StickyWidget_IsVisible),
-    openMain: (): Promise<void> => ipcRenderer.invoke(IpcChannel.StickyWidget_OpenMain)
-  },
   musicWidget: {
     show: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_Show),
     close: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_Close),
     toggle: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_Toggle),
     setPin: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_SetPin, pinned),
     setLock: (locked: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_SetLock, locked),
+    /** 切换视图时按 per-view 记忆尺寸调整窗口内容区 */
+    setSize: (width: number, height: number): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.MusicWidget_SetSize, width, height),
     isVisible: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.MusicWidget_IsVisible),
     openMain: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_OpenMain),
     // ---- 播放状态/命令消息桥（主进程中转） ----

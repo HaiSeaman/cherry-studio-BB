@@ -12,7 +12,7 @@ import type { SidebarIcon } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { IpcChannel } from '@shared/IpcChannel'
 import { Avatar, Tooltip } from 'antd'
-import { LayoutGrid, MessageSquare, Minus, Music2, Settings, Square, StickyNote, X } from 'lucide-react'
+import { LayoutGrid, MessageSquare, Minus, Settings, Square, StickyNote, X } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -51,13 +51,11 @@ const Sidebar: FC = () => {
 
   const isFullscreen = useFullscreen()
 
-  // 挂件「主程序」按钮：唤醒主窗口并导航到效率中控台（便签页 = 效率中控台，音乐模块同页）
+  // 挂件「打开主程序」按钮：唤醒主窗口并导航到效率中控台（便签页 = 效率中控台，音乐模块同页）
   useEffect(() => {
     const listener = () => to('/notes')
-    window.electron?.ipcRenderer.on(IpcChannel.StickyWidget_OpenMain, listener)
     window.electron?.ipcRenderer.on(IpcChannel.MusicWidget_OpenMain, listener)
     return () => {
-      window.electron?.ipcRenderer.removeListener(IpcChannel.StickyWidget_OpenMain, listener)
       window.electron?.ipcRenderer.removeListener(IpcChannel.MusicWidget_OpenMain, listener)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,17 +75,10 @@ const Sidebar: FC = () => {
             </Icon>
           </StyledLink>
         </Tooltip>
-        <Tooltip title={'便签挂件'} mouseEnterDelay={0.8} placement="right">
-          <StyledLink onClick={() => void window.api.stickyWidget.toggle()}>
-            <Icon>
-              <StickyNote size={20} className="icon" />
-            </Icon>
-          </StyledLink>
-        </Tooltip>
-        <Tooltip title={'音乐挂件'} mouseEnterDelay={0.8} placement="right">
+        <Tooltip title={'桌面助手'} mouseEnterDelay={0.8} placement="right">
           <StyledLink onClick={() => void window.api.musicWidget.toggle()}>
             <Icon>
-              <Music2 size={20} className="icon" />
+              <LayoutGrid size={20} className="icon" />
             </Icon>
           </StyledLink>
         </Tooltip>

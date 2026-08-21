@@ -21,7 +21,14 @@ function buildState(): WidgetPlayerState {
     playing: source === 'fm' ? fm.status === 'playing' : local.isPlaying,
     localPlaying: local.isPlaying,
     track: track
-      ? { id: track.id!, title: track.title, artist: track.artist, album: track.album, duration: track.duration }
+      ? {
+          id: track.id!,
+          title: track.title,
+          artist: track.artist,
+          album: track.album,
+          duration: track.duration,
+          favorite: track.favorite
+        }
       : null,
     position: audioEngine.currentTime,
     duration: audioEngine.duration,
@@ -52,6 +59,29 @@ function pushUpdate(): void {
   const s = buildState()
   send({ t: 'update', s })
   ensureTicker(s.playing)
+}
+
+/**
+ * 挂件收藏/取消收藏当前曲（与主窗口 LocalMusicPlayer.onToggleFavorite 同语义）：
+ * 写 Dexie → 收藏夹模式联动 → 重载曲库同步 playerStore，setTracks 触发状态广播回推挂件星标。
+ * 挂件窗口与主窗口共享同一 IndexedDB，此处作为单一写入方，避免两端直接写库出现竞态。
+ */
+async function toggleFavoriteFromWidget(id: number): Promise<void> {
+  const track = await db.music_tracks.get(id)
+  if (!track) return
+  const favorite: 0 | 1 = track.favorite === 1 ? 0 : 1
+  await db.music_tracks.update(id, { favorite })
+  // 收藏夹模式激活时取消当前曲收藏：播完落回收藏池（与主窗口行为一致）
+  if (
+    favorite === 0 &&
+    store.getState().musicSettings.favoritesActive &&
+    id === playerStore.getLocalSnapshot().currentId
+  ) {
+    playerStore.markPendingReturn()
+  }
+  // 重载曲库：主窗口从未打开音乐页（LiveQuery 未挂载）时 playerStore 也能同步收藏变化
+  const tracks = await db.music_tracks.orderBy('order').toArray()
+  playerStore.setTracks(tracks)
 }
 
 /** 处理挂件消息（preload onMessage 监听回调，仅收挂件方向） */
@@ -95,6 +125,9 @@ export function handleWidgetMessage(msg: WidgetMsg): void {
           break
         case 'playFm':
           playerStore.fmPlay(msg.url)
+          break
+        case 'toggleFavorite':
+          void toggleFavoriteFromWidget(msg.id)
           break
         default:
           break

@@ -5,6 +5,49 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.5.6] - 2026-08-21
+
+### 核心主题：桌面挂件四合一（桌面助手）+ 本地音乐收藏按钮
+
+**1. 桌面便签挂件并入音乐挂件，合并为四模块「桌面助手」小窗口**
+- **合并方式**：以原音乐挂件窗口为宿主（沿用 `musicWidget.html` 入口、`MusicWidget_*` IPC 通道与
+  `music-widget-state.json` 状态文件），便签/待办视图从 `widgets/sticky/` 原样迁入
+  `widgets/music/NotesTodosView.tsx`（数据层仍为 Dexie 直读写，零新增 IPC、零新增依赖），
+  删除便签挂件窗口及其全部外围代码（WindowService 控制器、`StickyWidget_*` IPC 通道、preload 命名空间、
+  `stickyWidget.html` 构建入口、托盘/侧边栏/设置页双入口、开机自启双分支）。
+- **四视图切换**：头部 `mode-btn` 单按钮替换为 4 图标切换组（本地音乐 / FM 电台 / 便签 / 待办），
+  当前视图高亮；视图选择持久化（`localStorage['musicWidgetView']`，旧值兼容）。
+- **关键防丢字设计**：4 视图**始终挂载、CSS 隐藏切换**（`.view-panel.hidden`），而非切换时卸载——
+  便签 500ms 防抖草稿、`pagehide`/`visibilitychange` 落库兜底、关闭按钮「先冲刷草稿再关窗」全部保持原语义，
+  杜绝「切视图/关窗丢字」回归；代价仅是常驻两个轻量 LiveQuery，可忽略。
+- **窗口尺寸按视图自适应**：`WidgetWindowController` 新增 `setSize`（`setContentSize`，窗口本就
+  `useContentSize:true`），新增 `MusicWidget_SetSize` IPC 与 preload `musicWidget.setSize`；
+  切换视图时应用 per-view 记忆尺寸（默认 local/fm 380×220、notes 320×480、todos 320×440），
+  手动拉伸按视图防抖回存（程序化 setSize 用 400ms 时间戳守卫，避免把默认值回写覆盖用户调整）。
+- 托盘/侧边栏/设置页入口统一为「桌面助手」；开机自启兼容迁移（`music || sticky`，老用户配置不丢）。
+
+**2. 本地音乐视图新增收藏按钮（歌曲名右侧 ☆/★）**
+- **协议扩展**：`WidgetTrack` 增加 `favorite: 0|1`；`WidgetCmd` 增加 `{ a: 'toggleFavorite', id }`。
+- **单一写入方**：收藏命令由主窗口侧 `widgetBridge.toggleFavoriteFromWidget` 统一处理——
+  写 Dexie `music_tracks` → 收藏夹模式联动（取消当前曲收藏触发 `playerStore.markPendingReturn`，
+  播完落回收藏池，与主窗口 `LocalMusicPlayer.onToggleFavorite` 完全同语义）→ 重载曲库 `setTracks`
+  同步 `playerStore`（覆盖主窗口未开音乐页、LiveQuery 未挂载的场景）→ 状态广播回推挂件星标校准。
+  挂件与主窗口共享同一 IndexedDB，收敛为单一写入方避免两端直接写库竞态；星标不做乐观更新，靠
+  update 消息回推，杜绝 UI 与数据源不一致。
+- **双向一致性链路**：挂件收藏 ⇄ 主窗口收藏均收敛到 `playerStore` 单一数据源，两端星标实时同步。
+
+**3. 其他清理与优化**
+- `electron.vite.config.ts` 移除 stickyWidget 构建入口，`manualChunks` 注释同步更新；
+- `IpcChannel.ts` 删除全部 `StickyWidget_*` 通道（Theme 广播只发合并挂件）；
+- 设置页「桌面便签挂件」「桌面音乐挂件」两个区块合并为「桌面助手挂件」；两个开机自启配置键
+  （`stickyWidgetLaunchOnBoot` / `musicWidgetLaunchOnBoot`）保留读写兼容，UI 切换时同步写入两者。
+
+### 测试与验证
+- `pnpm typecheck`（node / web / aiCore）零错误；oxlint / eslint 零错误。
+- 渲染层全量测试 **164 文件 / 2817 用例全部通过**；主进程 309 用例、共享层 96 用例全部通过。
+- `electron-vite build` 完整构建成功：`musicWidget` 入口 bundle 32.6KB（四模块代码均在），
+  无 antd 混入（`manualChunks` reactcore/lucide/vendor-dexie 隔离生效，挂件内存不回归）。
+
 ## [1.5.5] - 2026-08-21
 
 ### 核心主题：修复主题颜色切换失效 + 安全与隐私全面加固

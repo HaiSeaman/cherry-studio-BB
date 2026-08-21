@@ -12,6 +12,8 @@ export type WidgetTrack = {
   artist: string
   album: string
   duration: number
+  /** 是否已收藏（挂件收藏按钮状态与主窗口共享同一 Dexie 数据源） */
+  favorite: 0 | 1
 }
 
 export type WidgetFmState = {
@@ -43,6 +45,7 @@ export type WidgetCmd =
   | { t: 'cmd'; a: 'volume'; v: number }
   | { t: 'cmd'; a: 'playTrack'; id: number; filePath: string }
   | { t: 'cmd'; a: 'playFm'; url: string }
+  | { t: 'cmd'; a: 'toggleFavorite'; id: number }
 
 export type WidgetMsg =
   | { t: 'snapshot:req' }

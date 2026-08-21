@@ -92,6 +92,12 @@ class WidgetWindowController {
     this.get()?.setResizable(!locked)
   }
 
+  /** 切换视图时按 per-view 记忆尺寸调整窗口内容区（useContentSize:true，语义一致） */
+  setSize(width: number, height: number): void {
+    const win = this.get()
+    if (win) win.setContentSize(width, height)
+  }
+
   private create(): BrowserWindow {
     const state = windowStateKeeper({
       defaultWidth: this.cfg.defaultWidth,
@@ -784,17 +790,7 @@ export class WindowService {
     this.isPinnedMiniWindow = isPinned
   }
 
-  // ---------------- 桌面挂件（Sticky / Music Widget） ----------------
-  private stickyWidget = new WidgetWindowController({
-    stateFile: 'sticky-widget-state.json',
-    defaultWidth: 320,
-    defaultHeight: 480,
-    minWidth: 260,
-    minHeight: 320,
-    htmlFile: 'stickyWidget.html',
-    setupWebContents: (win) => this.setupWebContentsHandlers(win)
-  })
-
+  // ---------------- 桌面挂件（桌面助手：音乐/电台/便签/待办四合一） ----------------
   private musicWidget = new WidgetWindowController({
     stateFile: 'music-widget-state.json',
     defaultWidth: 380,
@@ -804,30 +800,6 @@ export class WindowService {
     htmlFile: 'musicWidget.html',
     setupWebContents: (win) => this.setupWebContentsHandlers(win)
   })
-
-  public getStickyWidget(): BrowserWindow | null {
-    return this.stickyWidget.get()
-  }
-
-  public showStickyWidget(): void {
-    this.stickyWidget.show()
-  }
-
-  public toggleStickyWidget(): void {
-    this.stickyWidget.toggle()
-  }
-
-  public closeStickyWidget(): void {
-    this.stickyWidget.close()
-  }
-
-  public setStickyWidgetPin(pinned: boolean): void {
-    this.stickyWidget.setPin(pinned)
-  }
-
-  public setStickyWidgetLock(locked: boolean): void {
-    this.stickyWidget.setLock(locked)
-  }
 
   public getMusicWidget(): BrowserWindow | null {
     return this.musicWidget.get()
@@ -851,6 +823,10 @@ export class WindowService {
 
   public setMusicWidgetLock(locked: boolean): void {
     this.musicWidget.setLock(locked)
+  }
+
+  public setMusicWidgetSize(width: number, height: number): void {
+    this.musicWidget.setSize(width, height)
   }
 
   /**
