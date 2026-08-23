@@ -34,6 +34,7 @@ function buildState(): WidgetPlayerState {
     duration: audioEngine.duration,
     volume: ms.volume,
     playMode: ms.playMode,
+    favoritesActive: ms.favoritesActive,
     fm: fm.url ? { url: fm.url, status: fm.status, kbps: fm.kbps, errorMsg: fm.errorMsg } : null
   }
 }
@@ -110,6 +111,9 @@ export function handleWidgetMessage(msg: WidgetMsg): void {
         case 'togglePlayMode':
           playerStore.togglePlayMode()
           break
+        case 'toggleFavoritesActive':
+          playerStore.toggleFavoritesMode()
+          break
         case 'fmToggle':
           playerStore.fmToggle()
           break
@@ -167,16 +171,18 @@ export function initWidgetBridge(): void {
   playerStore.subscribeLocal(pushUpdate)
   playerStore.subscribeFm(pushUpdate)
 
-  // Redux 变化（音量/播放模式/自定义电台）→ 选择性广播（避免聊天等无关 dispatch 刷屏）
+  // Redux 变化（音量/播放模式/收藏夹模式/自定义电台）→ 选择性广播（避免聊天等无关 dispatch 刷屏）
   let lastVolume = store.getState().musicSettings.volume
   let lastPlayMode = store.getState().musicSettings.playMode
+  let lastFavoritesActive = store.getState().musicSettings.favoritesActive
   let lastCustomStations = store.getState().musicSettings.customStations
 
   store.subscribe(() => {
     const ms = store.getState().musicSettings
-    if (ms.volume !== lastVolume || ms.playMode !== lastPlayMode) {
+    if (ms.volume !== lastVolume || ms.playMode !== lastPlayMode || ms.favoritesActive !== lastFavoritesActive) {
       lastVolume = ms.volume
       lastPlayMode = ms.playMode
+      lastFavoritesActive = ms.favoritesActive
       pushUpdate()
     }
     if (ms.customStations !== lastCustomStations) {

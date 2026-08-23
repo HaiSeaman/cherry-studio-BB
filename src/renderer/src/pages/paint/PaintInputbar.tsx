@@ -16,6 +16,8 @@ import {
   PAINT_RESOLUTION_TIERS,
   resolvePaintPixelSize
 } from '@renderer/config/paint'
+import { useShortcut, useShortcutDisplay } from '@renderer/hooks/useShortcuts'
+import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
@@ -23,7 +25,7 @@ import { isSystemProvider, type Model, type Topic } from '@renderer/types'
 import { getErrorMessage, isAbortError } from '@renderer/utils/error'
 import { convertToBase64 } from '@renderer/utils/image'
 import { Button, Input, Modal, Select, Tooltip, Upload } from 'antd'
-import { ImagePlus, Loader2, RefreshCw, Sparkles, Square, Wand2 } from 'lucide-react'
+import { ImagePlus, Loader2, MessageSquareDiff, RefreshCw, Sparkles, Square, Wand2 } from 'lucide-react'
 import { type FC, useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
@@ -47,6 +49,24 @@ const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
   const selectedModel = useAppSelector((s) => s.paint.selectedModel)
   const lastGeneration = useAppSelector((s) => s.paint.lastGeneration)
   const storeProviders = useAppSelector((s) => s.llm.providers)
+
+  const newTopicShortcut = useShortcutDisplay('new_topic')
+
+  const handleCreateNewTopic = useCallback(() => {
+    // 切换到全新默认生图话题并重置输入状态
+    if (onTopicChange && assistantId) {
+      onTopicChange(getDefaultTopic(assistantId))
+    }
+    setPrompt('')
+    setUploadedImages([])
+    dispatch(setLastGeneration(null))
+  }, [assistantId, dispatch, onTopicChange])
+
+  // 快捷键支持：新建话题
+  useShortcut('new_topic', handleCreateNewTopic, {
+    preventDefault: true,
+    enableOnFormTags: true
+  })
 
   // 与参数层（fetchPaintGeneration/AiProvider）一致：按 provider.type 判定 Gemini 官方接口
   const isGemini = selectedModel
@@ -393,6 +413,16 @@ const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
         )}
         {/* 第三行：操作按钮 */}
         <ButtonRow>
+          <Tooltip
+            title={newTopicShortcut ? `新建话题 (${newTopicShortcut})` : '新建话题'}
+            mouseEnterDelay={0.5}>
+            <Button
+              icon={<MessageSquareDiff size={16} />}
+              onClick={handleCreateNewTopic}
+              disabled={isGenerating}>
+              {'新话题'}
+            </Button>
+          </Tooltip>
           <Upload
             accept="image/*"
             multiple

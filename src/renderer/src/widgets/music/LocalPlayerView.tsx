@@ -61,6 +61,7 @@ const LocalPlayerView: FC<LocalPlayerViewProps> = ({ state }) => {
   const playing = state?.localPlaying ?? false
   const track = state?.track ?? null
   const isFav = track?.favorite === 1
+  const favoritesActive = state?.favoritesActive ?? false
   const volume = state?.volume ?? 80
   const VolIcon = volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2
 
@@ -132,6 +133,13 @@ const LocalPlayerView: FC<LocalPlayerViewProps> = ({ state }) => {
           onClick={() => sendCmd({ t: 'cmd', a: 'togglePlayMode' })}>
           {state ? MODE_META[state.playMode].icon : <ListMusic size={13} />}
         </button>
+        <button
+          type="button"
+          className={`ctl small ${favoritesActive ? 'active' : ''}`}
+          title={favoritesActive ? '当前只播放收藏夹曲目（点击切换全部）' : '仅播放收藏夹曲目'}
+          onClick={() => sendCmd({ t: 'cmd', a: 'toggleFavoritesActive' })}>
+          <Star size={13} fill={favoritesActive ? 'currentColor' : 'none'} />
+        </button>
         <button type="button" className="ctl" title="上一首" onClick={() => sendCmd({ t: 'cmd', a: 'prev' })}>
           <SkipBack size={15} />
         </button>
@@ -169,7 +177,13 @@ const LocalPlayerView: FC<LocalPlayerViewProps> = ({ state }) => {
         </button>
       </div>
 
-      {drawerOpen && <PlaylistDrawer currentId={track?.id ?? null} onClose={() => setDrawerOpen(false)} />}
+      {drawerOpen && (
+        <PlaylistDrawer
+          currentId={track?.id ?? null}
+          favoritesActive={favoritesActive}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </div>
   )
 }

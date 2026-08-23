@@ -35,12 +35,14 @@ export type WidgetPlayerState = {
   duration: number
   volume: number
   playMode: PlayMode
+  /** 收藏夹模式：是否仅播放收藏夹曲目 */
+  favoritesActive: boolean
   fm: WidgetFmState | null
 }
 
 /** 挂件 → 主窗口的命令载荷 */
 export type WidgetCmd =
-  | { t: 'cmd'; a: 'togglePlay' | 'next' | 'prev' | 'togglePlayMode' | 'fmToggle' }
+  | { t: 'cmd'; a: 'togglePlay' | 'next' | 'prev' | 'togglePlayMode' | 'toggleFavoritesActive' | 'fmToggle' }
   | { t: 'cmd'; a: 'seek'; v: number }
   | { t: 'cmd'; a: 'volume'; v: number }
   | { t: 'cmd'; a: 'playTrack'; id: number; filePath: string }

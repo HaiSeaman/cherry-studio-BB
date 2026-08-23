@@ -1,4 +1,5 @@
 import { db } from '@renderer/databases'
+import { useShortcutDisplay } from '@renderer/hooks/useShortcuts'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { useAppSelector } from '@renderer/store'
@@ -6,8 +7,9 @@ import { removeTopic } from '@renderer/store/assistants'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
 import { MessageBlockType } from '@renderer/types/newMessage'
+import { Tooltip } from 'antd'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { History, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { History, Image as ImageIcon, Plus, Trash2 } from 'lucide-react'
 import { type FC, useCallback } from 'react'
 import { useDispatch } from 'react-redux'
 import styled from 'styled-components'
@@ -76,6 +78,14 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
     })
   }, [liveAssistant])
 
+  const newTopicShortcut = useShortcutDisplay('new_topic')
+
+  const handleCreateNewTopic = useCallback(() => {
+    // 切换到全新默认生图话题（无需等待网络）
+    onSelect(getDefaultTopic(assistant.id))
+    dispatch(setLastGeneration(null))
+  }, [assistant.id, dispatch, onSelect])
+
   const handleDelete = useCallback(
     async (topic: Topic) => {
       // 1. 从 Dexie 数据库中物理删除该 topic 的所有 message 与 messageBlock，以及 topic 记录
@@ -100,8 +110,13 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
     <Sidebar data-no-dnd>
       <Header>
         <History size={14} />
-        生成历史
+        <span>生成历史</span>
         <CountChip>{sorted.length}</CountChip>
+        <Tooltip title={newTopicShortcut ? `新建话题 (${newTopicShortcut})` : '新建话题'} placement="bottom">
+          <NewTopicBtn onClick={handleCreateNewTopic} aria-label="新建话题">
+            <Plus size={15} />
+          </NewTopicBtn>
+        </Tooltip>
       </Header>
       <List>
         {sorted.length === 0 ? (
@@ -173,6 +188,26 @@ const CountChip = styled.span`
   background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   border-radius: 999px;
   padding: 1px 7px;
+`
+
+const NewTopicBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-2);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  &:hover {
+    color: var(--color-text-1);
+    background: var(--color-background-soft);
+  }
 `
 
 const List = styled.div`
