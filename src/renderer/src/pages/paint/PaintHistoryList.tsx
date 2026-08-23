@@ -15,6 +15,7 @@ import { useDispatch } from 'react-redux'
 import styled from 'styled-components'
 
 import { setLastGeneration } from './store/paintSlice'
+import { createPaintTopic } from './services/paintService'
 
 interface Props {
   assistant: Assistant
@@ -80,9 +81,10 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
 
   const newTopicShortcut = useShortcutDisplay('new_topic')
 
-  const handleCreateNewTopic = useCallback(() => {
-    // 切换到全新默认生图话题（无需等待网络）
-    onSelect(getDefaultTopic(assistant.id))
+  const handleCreateNewTopic = useCallback(async () => {
+    // 立即新建空白话题并挂载，旧话题保留在历史中
+    const newTopic = await createPaintTopic(assistant.id)
+    onSelect(newTopic)
     dispatch(setLastGeneration(null))
   }, [assistant.id, dispatch, onSelect])
 

@@ -143,10 +143,11 @@ export async function reassociatePaintTopics(): Promise<void> {
   store.dispatch(updateTopics({ assistantId: targetId, topics: [...latestTopics, ...additions] }))
 }
 
-/** 创建新的绘画会话，返回话题 id */
-export async function createPaintTopic(): Promise<string> {
+/** 创建新的绘画会话，返回话题对象并同步到数据库与助手 topics 列表 */
+export async function createPaintTopic(assistantId?: string): Promise<Topic> {
   const id = uuid()
   const now = new Date().toISOString()
+  const targetAssistantId = assistantId || 'paint'
   await db.topics.add({
     id,
     messages: [],
@@ -154,7 +155,19 @@ export async function createPaintTopic(): Promise<string> {
     name: '新的绘画会话',
     updatedAt: now
   })
-  return id
+  const topic: Topic = {
+    id,
+    assistantId: targetAssistantId,
+    name: '新的绘画会话',
+    createdAt: now,
+    updatedAt: now,
+    messages: [],
+    isNameManuallyEdited: false
+  }
+  if (targetAssistantId && targetAssistantId !== 'paint') {
+    store.dispatch(addTopic({ assistantId: targetAssistantId, topic }))
+  }
+  return topic
 }
 
 /** 获取当前设置的图片保存路径（空 = 使用默认目录 用户图片目录/CherryStudio） */
@@ -304,27 +317,13 @@ export async function generatePaintImage(params: GeneratePaintImageParams): Prom
 
   let targetTopicId = topicId ?? null
   let createdTopic: Topic | undefined
-  if (!targetTopicId) {
-    targetTopicId = await createPaintTopic()
-  }
-  const currentTopicId = targetTopicId
   const messageAssistantId = assistantId ?? 'paint'
 
-  // 自动新建的会话同步挂到助手名下（历史列表/话题列表读 Redux assistant.topics）。
-  // addTopic reducer 按 id 去重且置顶，天然防并发重复挂载。
-  if (!topicId && messageAssistantId !== 'paint') {
-    const row = await db.topics.get(currentTopicId)
-    const nowIso = row?.updatedAt ?? new Date().toISOString()
-    createdTopic = {
-      id: currentTopicId,
-      assistantId: messageAssistantId,
-      name: row?.name || '绘画会话',
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      messages: []
-    } as Topic
-    store.dispatch(addTopic({ assistantId: messageAssistantId, topic: createdTopic }))
+  if (!targetTopicId) {
+    createdTopic = await createPaintTopic(messageAssistantId)
+    targetTopicId = createdTopic.id
   }
+  const currentTopicId = targetTopicId
 
   // 用户提示词消息
   const userMessage = createMessage('user', currentTopicId, messageAssistantId)

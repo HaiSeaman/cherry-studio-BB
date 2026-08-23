@@ -17,7 +17,6 @@ import {
   resolvePaintPixelSize
 } from '@renderer/config/paint'
 import { useShortcut, useShortcutDisplay } from '@renderer/hooks/useShortcuts'
-import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
@@ -29,7 +28,7 @@ import { ImagePlus, Loader2, MessageSquareDiff, RefreshCw, Sparkles, Square, Wan
 import { type FC, useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
-import { abortCurrentGeneration, enhancePrompt, findModelByUniqId, generatePaintImage } from './services/paintService'
+import { abortCurrentGeneration, createPaintTopic, enhancePrompt, findModelByUniqId, generatePaintImage } from './services/paintService'
 import { setIsGenerating, setLastGeneration, setSelectedModel } from './store/paintSlice'
 
 const logger = loggerService.withContext('PaintInputbar')
@@ -52,10 +51,11 @@ const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
 
   const newTopicShortcut = useShortcutDisplay('new_topic')
 
-  const handleCreateNewTopic = useCallback(() => {
-    // 切换到全新默认生图话题并重置输入状态
+  const handleCreateNewTopic = useCallback(async () => {
+    // 立即新建空白话题并挂载，旧话题安全保留在历史中
     if (onTopicChange && assistantId) {
-      onTopicChange(getDefaultTopic(assistantId))
+      const newTopic = await createPaintTopic(assistantId)
+      onTopicChange(newTopic)
     }
     setPrompt('')
     setUploadedImages([])
