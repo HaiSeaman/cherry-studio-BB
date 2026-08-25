@@ -15,11 +15,10 @@ import { TopicType } from '@renderer/types'
 import { getAssistantType } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
-import type { SerializedError } from '@renderer/types/error'
 import type { ResponseError } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
 import { uuid } from '@renderer/utils'
-import { getErrorMessage, isAbortError } from '@renderer/utils/error'
+import { isAbortError, toSerializedError } from '@renderer/utils/error'
 import {
   createAssistantMessage,
   createImageBlock,
@@ -464,13 +463,4 @@ export function findModelByUniqId(value: string): Model | null {
     }
   }
   return null
-}
-
-/** 将任意错误转换为可存储的 SerializedError */
-export function toSerializedError(error: unknown): SerializedError {
-  return {
-    name: error instanceof Error ? error.name : 'Error',
-    message: getErrorMessage(error),
-    stack: error instanceof Error ? (error.stack ?? null) : null
-  }
 }

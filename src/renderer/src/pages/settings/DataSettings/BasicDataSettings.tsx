@@ -431,7 +431,7 @@ const BasicDataSettings: React.FC = () => {
   const handleSelectImageSavePath = async () => {
     const newPath = await window.api.select({
       properties: ['openDirectory', 'createDirectory'],
-      title: '选择图片保存路径'
+      title: '选择生成图片/视频保存路径'
     })
 
     if (!newPath) {
@@ -511,10 +511,10 @@ const BasicDataSettings: React.FC = () => {
         </SettingRow>
         <SettingDivider />
         <SettingRow>
-          <SettingRowTitle>{'图片保存路径'}</SettingRowTitle>
+          <SettingRowTitle>{'生成图片/视频保存路径'}</SettingRowTitle>
           <PathRow>
             <PathText style={{ color: 'var(--color-text-3)' }} onClick={handleOpenImageSavePath}>
-              {imageSavePath || '未设置（默认保存到 用户图片目录/CherryStudio）'}
+              {imageSavePath || '未设置（默认保存在应用缓存数据文件夹）'}
             </PathText>
             <HStack gap="5px" style={{ marginLeft: '8px' }}>
               <Button onClick={handleSelectImageSavePath}>{'选择目录'}</Button>
@@ -524,7 +524,9 @@ const BasicDataSettings: React.FC = () => {
           </PathRow>
         </SettingRow>
         <SettingRow>
-          <SettingHelpText>{'图片生成 TAB 生成的图片会自动保存到该目录，同时保留在应用内历史记录中'}</SettingHelpText>
+          <SettingHelpText>
+            {'灵感生图与动感视频助手生成的图片/视频会自动保存到该目录；未设置时仅保留在应用内部存储中'}
+          </SettingHelpText>
         </SettingRow>
         <SettingDivider />
         <SettingRow>

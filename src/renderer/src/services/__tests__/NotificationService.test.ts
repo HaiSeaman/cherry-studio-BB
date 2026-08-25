@@ -27,7 +27,8 @@ describe('NotificationService 按新 { enabled } 结构拦截', () => {
         backup: { enabled: false, sound: 'default' },
         update: { enabled: false, sound: 'default' },
         automation: { enabled: true, sound: 'default' },
-        paint: { enabled: false, sound: 'default' }
+        paint: { enabled: false, sound: 'default' },
+        video: { enabled: false, sound: 'default' }
       })
     )
   })
@@ -51,7 +52,8 @@ describe('NotificationService 按新 { enabled } 结构拦截', () => {
         backup: { enabled: false, sound: 'default' },
         update: { enabled: false, sound: 'default' },
         automation: { enabled: true, sound: 'default' },
-        paint: { enabled: true, sound: 'custom:C:\\a.mp3' }
+        paint: { enabled: true, sound: 'custom:C:\\a.mp3' },
+        video: { enabled: false, sound: 'default' }
       })
     )
     const svc = NotificationService.getInstance()

@@ -36,6 +36,13 @@ const ASSISTANT_TEMPLATES: { type: AssistantType; emoji: string; title: string; 
     desc: '文字生成图片：参数胶囊、参考图、提示词优化'
   },
   {
+    type: 'video_gen',
+    emoji: '🎬',
+    title: '动感视频助手',
+    name: '动感视频',
+    desc: '文字/图片生成视频：时长、分辨率、首帧参考图'
+  },
+  {
     type: 'automation',
     emoji: '⚡',
     title: '自动化任务助手',

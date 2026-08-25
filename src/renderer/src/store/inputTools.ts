@@ -53,6 +53,11 @@ export const DEFAULT_TOOL_ORDER_BY_SCOPE: Record<InputbarScope, ToolOrder> = {
     visible: [],
     hidden: []
   },
+  // 视频生成页使用自建输入区，不注册输入栏工具
+  [TopicType.Video]: {
+    visible: [],
+    hidden: []
+  },
   'mini-window': {
     visible: ['attachment', 'mention_models', 'quick_phrases'],
     hidden: []

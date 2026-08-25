@@ -353,3 +353,15 @@ export function serializeHealthCheckError(error: unknown): SerializedError {
     stack: null
   }
 }
+
+/**
+ * 将任意错误转换为可存储的 SerializedError（绘画/视频等生成服务共用）。
+ * 非 Error 输入由 getErrorMessage 兜底，name 归一为 'Error'。
+ */
+export function toSerializedError(error: unknown): SerializedError {
+  return {
+    name: error instanceof Error ? error.name : 'Error',
+    message: getErrorMessage(error),
+    stack: error instanceof Error ? (error.stack ?? null) : null
+  }
+}

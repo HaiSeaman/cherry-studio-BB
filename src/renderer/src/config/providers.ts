@@ -35,6 +35,8 @@ export type SystemProviderConfigIds =
   | 'dashscope'
   | 'moonshot'
   | 'mistral'
+  | 'doubao'
+  | 'hunyuan'
 
 export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderConfigIds, SystemProvider> = {
   zhipu: {
@@ -146,6 +148,26 @@ export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderConfigIds, SystemProv
     models: SYSTEM_MODELS.mistral!,
     isSystem: true,
     enabled: false
+  },
+  doubao: {
+    id: 'doubao',
+    name: '火山引擎（豆包）',
+    type: 'openai',
+    apiKey: '',
+    apiHost: 'https://ark.cn-beijing.volces.com/api/v3/',
+    models: SYSTEM_MODELS.doubao!,
+    isSystem: true,
+    enabled: false
+  },
+  hunyuan: {
+    id: 'hunyuan',
+    name: '腾讯混元',
+    type: 'openai',
+    apiKey: '',
+    apiHost: 'https://hunyuan.tencentcloudapi.com/',
+    models: SYSTEM_MODELS.hunyuan!,
+    isSystem: true,
+    enabled: false
   }
 } as const
 
@@ -164,6 +186,9 @@ export const PROVIDER_LOGO_MAP: AtLeast<SystemProviderConfigIds, string> = {
   anthropic: AnthropicProviderLogo,
   gemini: GoogleProviderLogo,
   mistral: MistralProviderLogo,
+  // 无现成图标资产：留空走 ProviderAvatar 首字符兜底头像
+  doubao: '',
+  hunyuan: '',
   poe: 'poe' // use svg icon component
 } as const
 
@@ -248,6 +273,26 @@ export const PROVIDER_URLS: Record<SystemProviderConfigIds, ProviderUrls> = {
       apiKey: 'https://bailian.console.aliyun.com/?tab=model#/api-key',
       docs: 'https://help.aliyun.com/zh/model-studio/getting-started/',
       models: 'https://bailian.console.aliyun.com/?tab=model#/model-market'
+    }
+  },
+  doubao: {
+    api: {
+      url: 'https://ark.cn-beijing.volces.com/api/v3/'
+    },
+    websites: {
+      official: 'https://www.volcengine.com/product/doubao',
+      apiKey: 'https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey',
+      docs: 'https://www.volcengine.com/docs/82379',
+      models: 'https://www.volcengine.com/docs/82379/1330310'
+    }
+  },
+  hunyuan: {
+    api: {
+      url: 'https://hunyuan.tencentcloudapi.com/'
+    },
+    websites: {
+      official: 'https://cloud.tencent.com/product/hunyuan',
+      docs: 'https://cloud.tencent.com/document/product/1729'
     }
   },
   openrouter: {

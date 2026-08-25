@@ -23,8 +23,8 @@ export * from './serialize'
 
 export type McpMode = 'disabled' | 'auto' | 'manual'
 
-/** 助手形态：对话 / 生图 / 自动化（老数据兜底见 getAssistantType） */
-export type AssistantType = 'chat' | 'image_gen' | 'automation'
+/** 助手形态：对话 / 生图 / 视频 / 自动化（老数据兜底见 getAssistantType） */
+export type AssistantType = 'chat' | 'image_gen' | 'video_gen' | 'automation'
 
 /**
  * 读取助手形态，老数据兜底：type 缺失或为历史遗留值（如 'assistant'）时一律按对话助手处理。
@@ -32,7 +32,7 @@ export type AssistantType = 'chat' | 'image_gen' | 'automation'
  */
 export function getAssistantType(a: Pick<Assistant, 'type'> | undefined): AssistantType {
   const t = a?.type
-  return t === 'image_gen' || t === 'automation' ? t : 'chat'
+  return t === 'image_gen' || t === 'video_gen' || t === 'automation' ? t : 'chat'
 }
 
 export type Assistant = {
@@ -260,7 +260,8 @@ export type Metrics = {
 export enum TopicType {
   Chat = 'chat',
   Session = 'session',
-  Paint = 'paint'
+  Paint = 'paint',
+  Video = 'video'
 }
 
 export type Topic = {

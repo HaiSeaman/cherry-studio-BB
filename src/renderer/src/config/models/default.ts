@@ -291,8 +291,33 @@ export const SYSTEM_MODELS: Partial<Record<SystemProviderId | 'defaultModel', Mo
     { id: 'kimi-k2.5', name: 'Kimi K2.5', provider: 'dashscope', group: 'Kimi' },
     { id: 'glm-5', name: 'GLM-5', provider: 'dashscope', group: 'GLM' },
     { id: 'MiniMax/MiniMax-M2.5', name: 'MiniMax M2.5', provider: 'dashscope', group: 'MiniMax' },
-    { id: 'deepseek-v3.2', name: 'DeepSeek V3.2', provider: 'dashscope', group: 'DeepSeek' }
+    { id: 'deepseek-v3.2', name: 'DeepSeek V3.2', provider: 'dashscope', group: 'DeepSeek' },
+    { id: 'wan2.6-t2v-plus', name: 'Wan2.6 T2V Plus', provider: 'dashscope', group: 'Video' },
+    { id: 'wan2.6-t2v-flash', name: 'Wan2.6 T2V Flash', provider: 'dashscope', group: 'Video' },
+    { id: 'wan2.6-i2v-plus', name: 'Wan2.6 I2V Plus', provider: 'dashscope', group: 'Video' },
+    { id: 'wan2.6-i2v-flash', name: 'Wan2.6 I2V Flash', provider: 'dashscope', group: 'Video' }
   ],
+  doubao: [
+    {
+      id: 'doubao-seedance-1-0-lite-t2v-250428',
+      name: 'Seedance 1.0 Lite T2V',
+      provider: 'doubao',
+      group: 'Seedance'
+    },
+    {
+      id: 'doubao-seedance-1-0-pro-t2v-250804',
+      name: 'Seedance 1.0 Pro T2V',
+      provider: 'doubao',
+      group: 'Seedance'
+    },
+    {
+      id: 'doubao-seedance-1-0-lite-i2v-250428',
+      name: 'Seedance 1.0 Lite I2V',
+      provider: 'doubao',
+      group: 'Seedance'
+    }
+  ],
+  hunyuan: [{ id: 'hunyuan-video', name: 'Hunyuan Video', provider: 'hunyuan', group: 'Video' }],
   mistral: [
     {
       id: 'pixtral-12b-2409',

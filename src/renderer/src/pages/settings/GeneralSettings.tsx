@@ -155,7 +155,7 @@ const GeneralSettings: FC = () => {
 
   // 把所有来源规范化为新结构（避免老布尔数据与新增结构混写）
   const normalizeNotification = () => {
-    const sources: NotificationSource[] = ['assistant', 'backup', 'update', 'automation', 'paint']
+    const sources: NotificationSource[] = ['assistant', 'backup', 'update', 'automation', 'paint', 'video']
     return Object.fromEntries(sources.map((s) => [s, getNotificationItem(s)])) as typeof notificationSettings
   }
 
@@ -345,6 +345,21 @@ const GeneralSettings: FC = () => {
             <Switch
               checked={getNotificationItem('paint').enabled}
               onChange={(v) => handleNotificationChange('paint', v)}
+            />
+          </RightGroup>
+        </SettingRow>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{'动感视频助手'}</SettingRowTitle>
+          <RightGroup>
+            <NotificationSoundRow
+              source="video"
+              sound={getNotificationItem('video').sound}
+              onSoundChange={(s) => handleNotificationSoundChange('video', s)}
+            />
+            <Switch
+              checked={getNotificationItem('video').enabled}
+              onChange={(v) => handleNotificationChange('video', v)}
             />
           </RightGroup>
         </SettingRow>

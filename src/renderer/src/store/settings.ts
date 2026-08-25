@@ -418,7 +418,8 @@ export const initialState: SettingsState = {
     backup: { enabled: false, sound: 'default' },
     update: { enabled: false, sound: 'default' },
     automation: { enabled: true, sound: 'default' },
-    paint: { enabled: false, sound: 'default' }
+    paint: { enabled: false, sound: 'default' },
+    video: { enabled: false, sound: 'default' }
   },
   // Local backup settings
   localBackupDir: '',

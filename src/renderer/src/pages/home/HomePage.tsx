@@ -24,6 +24,7 @@ import HomeTabs from './Tabs'
 
 // 助手形态工作区懒加载：不进聊天首屏 chunk
 const PaintWorkspace = lazy(() => import('./PaintWorkspace'))
+const VideoWorkspace = lazy(() => import('./VideoWorkspace'))
 const AutomationWorkspace = lazy(() => import('./AutomationWorkspace'))
 
 let _activeAssistant: Assistant
@@ -161,6 +162,10 @@ const HomePage: FC = () => {
           {getAssistantType(activeAssistant) === 'image_gen' ? (
             <Suspense fallback={null}>
               <PaintWorkspace assistant={activeAssistant} activeTopic={activeTopic} setActiveTopic={setActiveTopic} />
+            </Suspense>
+          ) : getAssistantType(activeAssistant) === 'video_gen' ? (
+            <Suspense fallback={null}>
+              <VideoWorkspace assistant={activeAssistant} activeTopic={activeTopic} setActiveTopic={setActiveTopic} />
             </Suspense>
           ) : getAssistantType(activeAssistant) === 'automation' ? (
             <Suspense fallback={null}>

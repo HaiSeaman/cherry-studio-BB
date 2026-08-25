@@ -755,6 +755,38 @@ class FileStorage {
     }
   }
 
+  /**
+   * 静默保存任意文件（含视频）到指定目录：不弹对话框、保留原始文件名、目录不存在则创建。
+   * 与 saveImageToDirectory 的区别：不强制图片扩展名，直接使用调用方提供的文件名。
+   */
+  public saveFileToDirectory = async (
+    _: Electron.IpcMainInvokeEvent,
+    fileName: string,
+    base64Data: string,
+    dirPath: string
+  ): Promise<string> => {
+    try {
+      if (!fileName || !base64Data || !dirPath) {
+        throw new Error('fileName, base64Data and dirPath are required')
+      }
+
+      const parseResult = parseDataUrl(base64Data)
+      const base64String = parseResult?.data ?? base64Data
+      const buffer = Buffer.from(base64String, 'base64')
+      // 目录与文件名拼接统一走 path.join，避免混合分隔符
+      const destPath = path.join(dirPath, path.basename(fileName))
+
+      logger.debug('Saving file to custom directory:', { dirPath, destPath, bufferSize: buffer.length })
+
+      await fs.promises.mkdir(dirPath, { recursive: true })
+      await fs.promises.writeFile(destPath, buffer)
+      return destPath
+    } catch (error) {
+      logger.error('Failed to save file to directory:', error as Error)
+      throw error
+    }
+  }
+
   public base64File = async (_: Electron.IpcMainInvokeEvent, id: string): Promise<{ data: string; mime: string }> => {
     const filePath = this.resolveStoragePath(id)
     const buffer = await fs.promises.readFile(filePath)

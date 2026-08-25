@@ -172,6 +172,8 @@ const api = {
     saveBase64Image: (data: string) => ipcRenderer.invoke(IpcChannel.File_SaveBase64Image, data),
     saveImageToDirectory: (data: string, dirPath: string) =>
       ipcRenderer.invoke(IpcChannel.File_SaveImageToDirectory, data, dirPath),
+    saveFileToDirectory: (fileName: string, base64Data: string, dirPath: string): Promise<string> =>
+      ipcRenderer.invoke(IpcChannel.File_SaveFileToDirectory, fileName, base64Data, dirPath),
     download: (url: string, isUseContentType?: boolean) =>
       ipcRenderer.invoke(IpcChannel.File_Download, url, isUseContentType),
     base64File: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_Base64File, fileId),

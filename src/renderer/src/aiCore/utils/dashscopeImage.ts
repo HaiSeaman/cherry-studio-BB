@@ -336,8 +336,8 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary)
 }
 
-/** 可被 AbortSignal 提前中断的延时 */
-function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+/** 可被 AbortSignal 提前中断的延时（视频等异步任务轮询共用） */
+export function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(signal.reason ?? new Error('aborted'))
