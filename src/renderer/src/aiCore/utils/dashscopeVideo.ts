@@ -3,7 +3,11 @@
  *
  * 百炼视频生成为异步任务协议（与 dashscopeImage 的异步生图同模式）：
  * 1. 提交：POST {base}/api/v1/services/aigc/video-generation/video-synthesis，header X-DashScope-Async: enable
- *    返回 output.task_id；适用 wan*-t2v / wan*-i2v 系列
+ *    返回 output.task_id
+ *    - 老协议（wan*-t2v/-i2v、wanx 系列）：input.img_url 传首帧图
+ *    - 全能参考协议（wan3.x 等）：素材走 input.media 数组（首帧图为 { type: 'first_frame', url }），
+ *      且服务端要求必须携带 media（纯文生请用 wan2.x-t2v 系列）
+ *    - resolution 档位为大写 P（'1080P'/'720P'/'480P'），对话框小写值在此归一化
  * 2. 轮询：GET {base}/api/v1/tasks/{task_id} → output.task_status: PENDING/RUNNING/SUCCEEDED/FAILED/CANCELED/UNKNOWN
  *    SUCCEEDED 后从 output.video_url 取结果（URL 有效期约 24 小时，调用方需下载持久化）
  * 3. 停止轮询时尽力取消远端任务：POST {base}/api/v1/tasks/{task_id}/cancel（失败静默）
@@ -54,6 +58,20 @@ function isOptionalParamError(error: unknown): boolean {
 }
 
 /**
+ * 新版「全能参考」协议（wan3.x 等）素材走 input.media 数组；
+ * 老协议（wan2.x-t2v/-i2v、wanx 系列）首帧走 input.img_url。
+ * 这是协议路由（不同代际接口格式不同），不是模型白名单过滤。
+ */
+export function usesMediaProtocol(model: string): boolean {
+  return !/^wan\d[\w.]*-(?:t2v|i2v)(?:-[\w-]+)?$/i.test(model) && !/^wanx/i.test(model)
+}
+
+/** 服务端要求 input.media 素材但请求未携带（wan3.x 等参考生视频模型在无图时的典型报错） */
+function isMissingMediaError(error: unknown): boolean {
+  return error instanceof Error && /input\.media|field required: media/i.test(error.message)
+}
+
+/**
  * 使用百炼原生协议生成视频，返回 videoUrl（短期有效，调用方负责持久化）
  */
 export async function generateDashScopeVideo(
@@ -61,7 +79,7 @@ export async function generateDashScopeVideo(
   onStatus?: VideoStatusCallback,
   options?: PollOptions
 ): Promise<string> {
-  const { provider, model, prompt, inputImage, duration, resolution, signal } = params
+  const { provider, model, prompt, inputImage, duration, resolution, aspectRatio, signal } = params
 
   const apiKey = getFirstApiKey(provider)
   if (!apiKey) {
@@ -69,16 +87,26 @@ export async function generateDashScopeVideo(
   }
   const baseUrl = getNativeBaseUrl(provider.apiHost)
   const submitUrl = `${baseUrl}/api/v1/services/aigc/video-generation/video-synthesis`
+  // 百炼 resolution 档位为大写 P（'1080P'/'720P'/'480P'），对话框传小写时归一化
+  const normalizedResolution = resolution?.trim().toUpperCase()
+  const useMedia = usesMediaProtocol(model)
 
   const buildBody = (withOptionalParams: boolean) => ({
     model,
-    input: {
-      prompt: prompt || '',
-      ...(inputImage ? { img_url: inputImage } : {})
-    },
+    input: useMedia
+      ? {
+          // 全能参考协议：素材为 media 数组（首帧图用 first_frame 类型）
+          ...(prompt ? { prompt } : {}),
+          ...(inputImage ? { media: [{ type: 'first_frame', url: inputImage }] } : {})
+        }
+      : {
+          prompt: prompt || '',
+          ...(inputImage ? { img_url: inputImage } : {})
+        },
     parameters: {
-      ...(withOptionalParams && resolution ? { resolution } : {}),
-      ...(withOptionalParams && duration ? { duration: Number(duration) } : {})
+      ...(withOptionalParams && normalizedResolution ? { resolution: normalizedResolution } : {}),
+      ...(withOptionalParams && duration ? { duration: Number(duration) } : {}),
+      ...(withOptionalParams && aspectRatio ? { ratio: aspectRatio } : {})
     }
   })
 
@@ -101,13 +129,20 @@ export async function generateDashScopeVideo(
     return taskId as string
   }
 
-  logger.debug('提交百炼视频任务:', { model, hasImage: Boolean(inputImage), duration, resolution })
+  logger.debug('提交百炼视频任务:', { model, hasImage: Boolean(inputImage), duration, resolution, useMedia })
   let taskId: string
   try {
     taskId = await submit(true)
   } catch (error) {
+    if (isMissingMediaError(error)) {
+      throw new Error(
+        `阿里云百炼视频生成失败: ${error instanceof Error ? error.message : String(error)}。` +
+          '该模型为「参考生视频」模型，必须在输入框上传首帧/参考图后再生成；' +
+          '若要纯文字生视频，请改用 wan2.x 文生系列模型（如 wan2.2-t2v-plus）'
+      )
+    }
     if (isOptionalParamError(error)) {
-      logger.warn('可选参数不被接受，去掉 resolution/duration 重试:', { model, error: error as Error })
+      logger.warn('可选参数不被接受，去掉 resolution/duration/ratio 重试:', { model, error: error as Error })
       taskId = await submit(false)
     } else {
       throw error

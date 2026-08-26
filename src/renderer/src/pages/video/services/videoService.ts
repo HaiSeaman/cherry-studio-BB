@@ -79,7 +79,7 @@ async function persistRemoteVideo(videoUrl: string): Promise<{ displayUrl: strin
 
 /**
  * 自动保存生成的视频到用户设置的目录（复用图片保存路径设置）。
- * 内部存储文件 → base64 → 静默写入目标目录（不弹对话框）；失败静默降级（不影响历史记录）。
+ * 内部存储文件 → base64 → 静默写入目标目录（不弹对话框）；结果以 toast 告知用户。
  */
 export async function saveGeneratedVideo(file: FileMetadata | undefined): Promise<void> {
   if (!file) {
@@ -92,8 +92,10 @@ export async function saveGeneratedVideo(file: FileMetadata | undefined): Promis
   try {
     const { data: base64 } = await window.api.file.base64File(file.id)
     await window.api.file.saveFileToDirectory(file.name, base64, savePath)
+    window.toast.success(`视频已自动保存到: ${savePath}`)
   } catch (error) {
-    logger.warn('自动保存视频失败（不影响历史记录）:', { fileId: file.id, error: error as Error })
+    logger.warn('自动保存视频失败:', { fileId: file.id, error: error as Error })
+    window.toast.error('视频自动保存失败，可在历史记录中手动另存')
   }
 }
 
@@ -221,7 +223,13 @@ export async function generateVideo(params: GenerateVideoParams): Promise<Genera
     const { displayUrl, file } = await persistRemoteVideo(videoUrl)
     await db.message_blocks.update(videoBlock.id, {
       status: MessageBlockStatus.SUCCESS,
-      metadata: { remoteUrl: videoUrl, localUrl: displayUrl, fileId: file?.id }
+      metadata: {
+        remoteUrl: videoUrl,
+        localUrl: displayUrl,
+        fileId: file?.id,
+        fileName: file?.name,
+        filePath: file?.path
+      }
     })
     await dbService.updateMessage(currentTopicId, assistantMessage.id, { status: AssistantMessageStatus.SUCCESS })
 

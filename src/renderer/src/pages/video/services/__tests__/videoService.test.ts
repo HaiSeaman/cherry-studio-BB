@@ -109,6 +109,11 @@ beforeEach(() => {
       }
     }
   })
+  // 自动保存结果提示（saveGeneratedVideo 内部调用）
+  Object.defineProperty(window, 'toast', {
+    configurable: true,
+    value: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }
+  })
   // 失焦分支不触发通知断言干扰
   vi.spyOn(document, 'hasFocus').mockReturnValue(true)
 })

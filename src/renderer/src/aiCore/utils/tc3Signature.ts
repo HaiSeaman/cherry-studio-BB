@@ -1,7 +1,7 @@
 /**
  * 腾讯云 TC3-HMAC-SHA256 签名（TC3 签名 v3）
  *
- * 腾讯混元视频生成走腾讯云 API（hunyuan.tencentcloudapi.com），鉴权不是简单 API Key，
+ * 腾讯云混元生视频走腾讯云 API（vclm.tencentcloudapi.com），鉴权不是简单 API Key，
  * 而是 SecretId + SecretKey 双密钥的 TC3 请求签名。签名流程：
  *   CanonicalRequest = POST\n/\n\n<canonical headers>\n<signed headers>\n<sha256(payload)>
  *   StringToSign     = TC3-HMAC-SHA256\n<timestamp>\n<date>/<service>/tc3_request\n<sha256(CanonicalRequest)>
@@ -18,14 +18,16 @@ export type Tc3SignInput = {
   service: string
   /** 接口域名，如 'hunyuan.tencentcloudapi.com' */
   host: string
-  /** 接口 Action，如 'SubmitHunyuanVideoJob' */
+  /** 接口 Action，如 'SubmitHunyuanToVideoJob' */
   action: string
-  /** 接口版本，如 '2023-09-01' */
+  /** 接口版本，如 '2024-05-23' */
   version: string
   /** 请求体 JSON 字符串 */
   payload: string
   /** Unix 时间戳（秒） */
   timestamp: number
+  /** 地域（如 'ap-guangzhou'）。vclm 等产品为必选公共参数；不传则不附加 X-TC-Region 头 */
+  region?: string
 }
 
 /** 解析 apiKey 字段中约定的 SecretId:SecretKey（半角冒号分隔） */
@@ -69,7 +71,7 @@ function toHex(bytes: Uint8Array): string {
  * CanonicalHeaders 固定为 content-type + host（与腾讯云官方示例一致）。
  */
 export async function signTc3(input: Tc3SignInput): Promise<Record<string, string>> {
-  const { secretId, secretKey, service, host, action, version, payload, timestamp } = input
+  const { secretId, secretKey, service, host, action, version, payload, timestamp, region } = input
 
   const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${host}\n`
   const signedHeaders = 'content-type;host'
@@ -97,6 +99,7 @@ export async function signTc3(input: Tc3SignInput): Promise<Record<string, strin
     'X-TC-Action': action,
     'X-TC-Version': version,
     'X-TC-Timestamp': String(timestamp),
+    ...(region ? { 'X-TC-Region': region } : {}),
     Authorization:
       `TC3-HMAC-SHA256 Credential=${secretId}/${date}/${service}/tc3_request, ` +
       `SignedHeaders=${signedHeaders}, Signature=${signature}`

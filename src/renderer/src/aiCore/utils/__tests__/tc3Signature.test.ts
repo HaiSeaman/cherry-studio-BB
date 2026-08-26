@@ -37,9 +37,18 @@ describe('signTc3', () => {
   })
 
   it('同输入签名确定（可重放校验）', async () => {
-    const a = await signTc3(VECTOR)
-    const b = await signTc3(VECTOR)
+    const [a, b] = await Promise.all([signTc3(VECTOR), signTc3(VECTOR)])
     expect(a.Authorization).toBe(b.Authorization)
+  })
+
+  it('region 仅附加 X-TC-Region 头，不影响签名值（region 不参与 TC3 签名）', async () => {
+    const withoutRegion = await signTc3(VECTOR)
+    expect(withoutRegion['X-TC-Region']).toBeUndefined()
+
+    const withRegion = await signTc3({ ...VECTOR, region: 'ap-guangzhou' })
+    expect(withRegion['X-TC-Region']).toBe('ap-guangzhou')
+    // 签名本身与不带 region 时完全一致
+    expect(withRegion.Authorization).toBe(withoutRegion.Authorization)
   })
 
   it('payload 变化导致签名变化', async () => {

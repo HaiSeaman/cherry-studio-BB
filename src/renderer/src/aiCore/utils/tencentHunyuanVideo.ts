@@ -1,15 +1,14 @@
 /**
- * 腾讯云混元视频生成适配
+ * 腾讯云混元生视频适配
  *
- * 混元视频走腾讯云 API（非 OpenAI 风格），异步任务协议 + TC3 签名（见 tc3Signature.ts）：
- * 1. 提交：POST https://hunyuan.tencentcloudapi.com，X-TC-Action=SubmitHunyuanVideoJob
- *    body: { Prompt, ImageBase64?, Resolution? }（图生视频传 base64；分辨率 '480p'/'720p'/'1080p' 原样传递）
- *    返回 Response.TaskId
- * 2. 轮询：X-TC-Action=QueryHunyuanVideoJob，body { TaskId }
- *    Response.Status: Done → VideoUrl；Fail → ErrorMessage；Processing/Waiting 继续等待
- * 3. 无远端取消接口：停止轮询仅本地生效（远端任务自然结束）
- *
- * ⚠️ Action 名与字段以腾讯云官方文档为准；首次接通真实 Key 时需逐项核对。
+ * 混元生视频走腾讯云 vclm 产品（非 OpenAI 风格），异步任务协议 + TC3 签名（见 tc3Signature.ts）。
+ * 已按官方现行文档核对（https://cloud.tencent.com/document/api/1616/126160）：
+ * 1. 提交：POST https://vclm.tencentcloudapi.com，X-TC-Action=SubmitHunyuanToVideoJob，Version=2024-05-23
+ *    body: { Prompt, Image?: { Url | Base64 }, Resolution? }（图生视频传 base64/url；分辨率仅 '720p'）
+ *    返回 Response.JobId
+ * 2. 轮询：X-TC-Action=DescribeHunyuanToVideoJob，body { JobId }
+ *    Response.Status: DONE → ResultVideoUrl；FAIL → ErrorMessage；RUN/WAIT 继续等待
+ * 3. Region 为必选公共参数（默认 ap-guangzhou）；无远端取消接口：停止轮询仅本地生效
  */
 
 import { loggerService } from '@logger'
@@ -27,17 +26,19 @@ const logger = loggerService.withContext('TencentHunyuanVideo')
 
 type PollOptions = { intervalMs?: number; timeoutMs?: number }
 
-const HUNYUAN_HOST = 'hunyuan.tencentcloudapi.com'
-const HUNYUAN_SERVICE = 'hunyuan'
-const HUNYUAN_VERSION = '2023-09-01'
+const HUNYUAN_HOST = 'vclm.tencentcloudapi.com'
+const HUNYUAN_SERVICE = 'vclm'
+const HUNYUAN_VERSION = '2024-05-23'
+/** vclm 混元生视频的必选公共参数；默认广州地域 */
+const HUNYUAN_REGION = 'ap-guangzhou'
 
-/** data URL → 纯 base64（ImageBase64）；http(s) URL 原样返回（ImageUrl） */
-function splitImageData(inputImage: string): { ImageBase64?: string; ImageUrl?: string } {
+/** data URL → 纯 base64；http(s) URL 原样返回。官方 Image 结构为 { Base64 } 或 { Url } */
+function splitImageData(inputImage: string): { Image?: { Base64?: string; Url?: string } } {
   if (inputImage.startsWith('data:')) {
     const commaIndex = inputImage.indexOf(',')
-    return { ImageBase64: commaIndex >= 0 ? inputImage.slice(commaIndex + 1) : inputImage }
+    return { Image: { Base64: commaIndex >= 0 ? inputImage.slice(commaIndex + 1) : inputImage } }
   }
-  return { ImageUrl: inputImage }
+  return { Image: { Url: inputImage } }
 }
 
 /** 签名并发起一次腾讯云 API 调用，返回 Response 体 */
@@ -57,7 +58,8 @@ async function callTencentApi(
     action,
     version: HUNYUAN_VERSION,
     payload,
-    timestamp: Math.floor(Date.now() / 1000)
+    timestamp: Math.floor(Date.now() / 1000),
+    region: HUNYUAN_REGION
   })
   const response = await fetch(`https://${HUNYUAN_HOST}`, {
     method: 'POST',
@@ -98,7 +100,7 @@ export async function generateHunyuanVideo(
   logger.debug('提交混元视频任务:', { hasImage: Boolean(inputImage), resolution })
 
   const submitResp = await callTencentApi(
-    'SubmitHunyuanVideoJob',
+    'SubmitHunyuanToVideoJob',
     {
       Prompt: prompt || '',
       ...imageData,
@@ -108,7 +110,7 @@ export async function generateHunyuanVideo(
     secretKey,
     signal
   )
-  const taskId = submitResp?.TaskId
+  const taskId = submitResp?.JobId
   if (!taskId) {
     throw new Error('腾讯混元未返回任务 ID')
   }
@@ -121,23 +123,23 @@ export async function generateHunyuanVideo(
     await abortableDelay(intervalMs, signal)
     onStatus?.({ state: 'queued', elapsedMs: Date.now() - startedAt })
 
-    const resp = await callTencentApi('QueryHunyuanVideoJob', { TaskId: taskId }, secretId, secretKey, signal)
+    const resp = await callTencentApi('DescribeHunyuanToVideoJob', { JobId: taskId }, secretId, secretKey, signal)
     const status = resp?.Status
 
-    if (status === 'Done') {
-      const videoUrl = resp?.VideoUrl
+    if (status === 'DONE') {
+      const videoUrl = resp?.ResultVideoUrl
       if (!videoUrl) {
         throw new Error(`腾讯混元视频任务成功但未返回视频地址: ${JSON.stringify(resp).slice(0, 300)}`)
       }
       return videoUrl
     }
-    if (status === 'Fail') {
+    if (status === 'FAIL') {
       throw new Error(`腾讯混元视频生成任务失败: ${resp?.ErrorMessage || resp?.Message || status}`)
     }
-    if (status === 'Processing') {
+    if (status === 'RUN') {
       onStatus?.({ state: 'running', elapsedMs: Date.now() - startedAt })
     }
-    // Waiting 继续等待
+    // WAIT 继续等待
   }
   throw new Error('腾讯混元视频生成任务超时（10 分钟），请稍后在历史中查看或重试')
 }

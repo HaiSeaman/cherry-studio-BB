@@ -1,6 +1,5 @@
 import { loggerService } from '@logger'
 import ModelSelector from '@renderer/components/ModelSelector'
-import { isVideoModel } from '@renderer/config/models'
 import { useShortcut, useShortcutDisplay } from '@renderer/hooks/useShortcuts'
 import { enhancePrompt } from '@renderer/pages/paint/services/paintService'
 import { getProviderByModel } from '@renderer/services/AssistantService'
@@ -81,7 +80,9 @@ const VideoInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
 
   // 稳定引用：避免每次渲染都触发 ModelSelector 全量重建选项
   const enabledProviders = useMemo(() => storeProviders.filter((p) => p.enabled), [storeProviders])
-  const modelPredicate = useCallback((model: Model) => isVideoModel(model), [])
+  // 不按模型名过滤：视频模型命名无统一规范（白名单会漏新模型），全部展示由用户自选；
+  // 选到不支持的视频生成的模型时，生成入口会给出明确报错
+  const modelPredicate = useCallback(() => true, [])
 
   const handleSelectModel = (model: Model | null) => {
     const next = model ? { modelId: model.id, providerId: model.provider } : null

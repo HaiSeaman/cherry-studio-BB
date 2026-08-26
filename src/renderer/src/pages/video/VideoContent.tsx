@@ -3,7 +3,7 @@ import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage
 import { Spin, Tooltip } from 'antd'
 import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, Download, FolderOpen } from 'lucide-react'
 import { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 
@@ -63,6 +63,23 @@ const VideoContent: FC<Props> = ({ topicId }) => {
       }, 1500)
     } catch {
       window.toast.error('复制失败')
+    }
+  }, [])
+
+  /** 另存为：弹出系统保存对话框（复用图片保存通道，按字节写入用户选择的位置） */
+  const handleSaveAs = useCallback(async (fileId?: string, fileName?: string) => {
+    if (!fileId) {
+      window.toast.error('该视频没有本地文件，无法另存')
+      return
+    }
+    try {
+      const { data: base64 } = await window.api.file.base64File(fileId)
+      const success = await window.api.file.saveImage(fileName || `video_${Date.now()}.mp4`, base64)
+      if (success) {
+        window.toast.success('视频已保存')
+      }
+    } catch (error) {
+      window.toast.error(`另存失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }, [])
 
@@ -151,10 +168,36 @@ const VideoContent: FC<Props> = ({ topicId }) => {
                 }
                 // SUCCESS：本地持久化地址优先，回退原始远程 URL
                 const src = (block.metadata?.localUrl ?? block.metadata?.remoteUrl) as string | undefined
-                return src ? (
-                  <VideoPlayer key={block.id} src={src} controls preload="metadata" />
-                ) : (
-                  <ErrorCard key={block.id}>{'视频地址缺失'}</ErrorCard>
+                if (!src) {
+                  return <ErrorCard key={block.id}>{'视频地址缺失'}</ErrorCard>
+                }
+                const fileId = block.metadata?.fileId as string | undefined
+                const fileName = block.metadata?.fileName as string | undefined
+                const filePath = block.metadata?.filePath as string | undefined
+                const linkToCopy = (block.metadata?.remoteUrl ?? src) as string
+                return (
+                  <VideoCard key={block.id}>
+                    <VideoPlayer src={src} controls preload="metadata" />
+                    <VideoActions className="video-actions">
+                      <Tooltip title={'复制视频链接'} mouseEnterDelay={0.5}>
+                        <ActionButton onClick={() => void handleCopy(linkToCopy, block.id)}>
+                          {copiedId === block.id ? <Check size={14} /> : <Copy size={14} />}
+                        </ActionButton>
+                      </Tooltip>
+                      <Tooltip title={'另存为…'} mouseEnterDelay={0.5}>
+                        <ActionButton onClick={() => void handleSaveAs(fileId, fileName)}>
+                          <Download size={14} />
+                        </ActionButton>
+                      </Tooltip>
+                      {filePath && (
+                        <Tooltip title={'打开所在文件夹'} mouseEnterDelay={0.5}>
+                          <ActionButton onClick={() => void window.api.file.showInFolder(filePath)}>
+                            <FolderOpen size={14} />
+                          </ActionButton>
+                        </Tooltip>
+                      )}
+                    </VideoActions>
+                  </VideoCard>
                 )
               })}
             </MessageItem>
@@ -312,12 +355,29 @@ const ActionButton = styled.div`
   }
 `
 
+const VideoCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`
+
 const VideoPlayer = styled.video`
   width: 100%;
   max-width: 640px;
   border-radius: 10px;
   background-color: #000;
   border: 0.5px solid var(--color-border);
+`
+
+const VideoActions = styled.div`
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+
+  ${VideoCard}:hover & {
+    opacity: 1;
+  }
 `
 
 const ProgressCard = styled.div`

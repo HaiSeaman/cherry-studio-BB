@@ -116,7 +116,50 @@ describe('generateDashScopeVideo', () => {
 
     const parameters = (bodies[0] as { parameters: Record<string, unknown> }).parameters
     expect(parameters.duration).toBe(5)
-    expect(parameters.resolution).toBe('720p')
+    // 百炼要求大写 P（'1080P'/'720P'/'480P'），对话框小写值归一化
+    expect(parameters.resolution).toBe('720P')
+  })
+
+  it('全能参考模型（wan3.x）走 input.media 协议并携带 ratio', async () => {
+    const { bodies } = mockFetchSequence([
+      () => jsonResponse({ output: { task_id: 't', task_status: 'SUCCEEDED' } }),
+      () => jsonResponse({ output: { task_status: 'SUCCEEDED', video_url: 'u' } })
+    ])
+
+    await generateDashScopeVideo(
+      {
+        ...baseParams,
+        model: 'wan3.0-video',
+        inputImage: 'data:image/png;base64,AAA',
+        aspectRatio: '16:9',
+        resolution: '1080p'
+      },
+      undefined,
+      fastPoll
+    )
+
+    const input = (bodies[0] as { input: { media?: Array<{ type: string; url: string }>; img_url?: string } }).input
+    expect(input.media).toEqual([{ type: 'first_frame', url: 'data:image/png;base64,AAA' }])
+    expect(input.img_url).toBeUndefined()
+    const parameters = (bodies[0] as { parameters: Record<string, unknown> }).parameters
+    expect(parameters.ratio).toBe('16:9')
+    expect(parameters.resolution).toBe('1080P')
+  })
+
+  it('服务端要求 input.media 时给出可操作提示且不去参重试', async () => {
+    const { fetchMock } = mockFetchSequence([
+      () =>
+        jsonResponse(
+          { code: 'InvalidParameter', message: 'Field required: input.media & Input should be a valid string' },
+          400
+        )
+    ])
+
+    await expect(generateDashScopeVideo({ ...baseParams, model: 'wan3.0-video' }, undefined, fastPoll)).rejects.toThrow(
+      /参考生视频|上传首帧/
+    )
+    // 未触发去参重试：只发了一次提交请求
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('FAILED 任务透出 code 与 message', async () => {

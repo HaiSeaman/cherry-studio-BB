@@ -160,7 +160,7 @@ const ProviderList: FC<ProviderListProps> = ({ isOnboarding = false }) => {
   }, [searchParams])
 
   const onAddProvider = async () => {
-    const { name: providerName, type, logo } = await AddProviderPopup.show()
+    const { name: providerName, type, apiHost, logo } = await AddProviderPopup.show()
 
     if (!providerName.trim()) {
       return
@@ -171,7 +171,7 @@ const ProviderList: FC<ProviderListProps> = ({ isOnboarding = false }) => {
       name: providerName.trim(),
       type,
       apiKey: '',
-      apiHost: '',
+      apiHost: apiHost || '',
       models: [],
       enabled: true,
       isSystem: false

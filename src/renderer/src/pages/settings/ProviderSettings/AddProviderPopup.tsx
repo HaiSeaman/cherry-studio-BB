@@ -16,8 +16,43 @@ const logger = loggerService.withContext('AddProviderPopup')
 
 interface Props {
   provider?: Provider
-  resolve: (result: { name: string; type: ProviderType; logo?: string; logoFile?: File }) => void
+  resolve: (result: { name: string; type: ProviderType; apiHost?: string; logo?: string; logoFile?: File }) => void
 }
+
+/** 视频生成商家模板：作为「提供商类型」选项展示，选中后自动预填名称与官方 API 地址（创建后仍可在服务商设置里修改地址）。
+ *  内部存储统一走 openai 类型（视频适配器按 apiHost 域名路由），不新增 ProviderType。 */
+const VIDEO_TYPE_TEMPLATES: Record<string, { name: string; apiHost: string; hint: string }> = {
+  'dashscope-video': {
+    name: '百炼视频',
+    apiHost: 'https://dashscope.aliyuncs.com',
+    hint: 'API 地址已预填官方通用域名；若你有业务空间专属接入点，可改为 https://你的空间ID.cn-beijing.maas.aliyuncs.com（只填根域名，路径由程序拼接）。密钥填百炼 API Key。'
+  },
+  'ark-video': {
+    name: '火山视频',
+    apiHost: 'https://ark.cn-beijing.volces.com/api/v3',
+    hint: 'API 地址已预填火山方舟官方接入点。密钥填方舟 API Key，模型名如 doubao-seedance-1-0-pro-250528。'
+  },
+  'hunyuan-video': {
+    name: '混元视频',
+    apiHost: 'https://vclm.tencentcloudapi.com',
+    hint: 'API 密钥请按「SecretId:SecretKey」格式填写（半角冒号分隔），在腾讯云控制台 API 密钥管理中获取。模型走混元生视频 vclm 接口。'
+  }
+}
+
+const PROVIDER_TYPE_OPTIONS = [
+  { label: 'OpenAI', value: 'openai' },
+  { label: 'OpenAI-Response', value: 'openai-response' },
+  { label: 'Gemini', value: 'gemini' },
+  { label: 'Anthropic', value: 'anthropic' },
+  { label: 'Azure OpenAI', value: 'azure-openai' },
+  { label: 'New API', value: 'new-api' },
+  { label: 'CherryIN', value: 'cherryin-type' },
+  { label: 'Ollama', value: 'ollama' },
+  ...Object.keys(VIDEO_TYPE_TEMPLATES).map((key) => ({
+    label: { 'dashscope-video': '阿里云百炼 · 视频生成', 'ark-video': '火山豆包 · 视频生成', 'hunyuan-video': '腾讯混元 · 视频生成' }[key],
+    value: key
+  }))
+]
 
 const PopupContainer: React.FC<Props> = ({ provider, resolve }) => {
   const [open, setOpen] = useState(true)
@@ -28,6 +63,8 @@ const PopupContainer: React.FC<Props> = ({ provider, resolve }) => {
   const [logoPickerOpen, setLogoPickerOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const uploadRef = useRef<HTMLDivElement>(null)
+
+  const videoTemplate = VIDEO_TYPE_TEMPLATES[displayType]
 
   useEffect(() => {
     if (provider?.id) {
@@ -52,6 +89,7 @@ const PopupContainer: React.FC<Props> = ({ provider, resolve }) => {
     const result = {
       name: name.trim(),
       type,
+      apiHost: videoTemplate?.apiHost,
       logo: logo || undefined
     }
     resolve(result)
@@ -63,7 +101,12 @@ const PopupContainer: React.FC<Props> = ({ provider, resolve }) => {
   }
 
   const onClose = () => {
-    resolve({ name: name.trim(), type, logo: logo || undefined })
+    resolve({
+      name: name.trim(),
+      type,
+      apiHost: videoTemplate?.apiHost,
+      logo: logo || undefined
+    })
   }
 
   const buttonDisabled = name.trim().length === 0
@@ -247,21 +290,25 @@ const PopupContainer: React.FC<Props> = ({ provider, resolve }) => {
             value={displayType}
             onChange={(value: string) => {
               setDisplayType(value)
-              // special case for cherryin-type, map to new-api internally
-              setType(value === 'cherryin-type' ? 'new-api' : (value as ProviderType))
+              // 视频商家模板内部统一存为 openai 类型；cherryin-type 映射到 new-api
+              const videoTemplate = VIDEO_TYPE_TEMPLATES[value]
+              if (videoTemplate) {
+                setType('openai')
+                if (!name.trim()) {
+                  setName(videoTemplate.name)
+                }
+              } else {
+                setType(value === 'cherryin-type' ? 'new-api' : (value as ProviderType))
+              }
             }}
-            options={[
-              { label: 'OpenAI', value: 'openai' },
-              { label: 'OpenAI-Response', value: 'openai-response' },
-              { label: 'Gemini', value: 'gemini' },
-              { label: 'Anthropic', value: 'anthropic' },
-              { label: 'Azure OpenAI', value: 'azure-openai' },
-              { label: 'New API', value: 'new-api' },
-              { label: 'CherryIN', value: 'cherryin-type' },
-              { label: 'Ollama', value: 'ollama' }
-            ]}
+            options={PROVIDER_TYPE_OPTIONS}
           />
         </Form.Item>
+        {videoTemplate && (
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.6 }}>
+            {videoTemplate.hint}
+          </div>
+        )}
       </Form>
     </Modal>
   )
@@ -315,6 +362,7 @@ export default class AddProviderPopup {
     return new Promise<{
       name: string
       type: ProviderType
+      apiHost?: string
       logo?: string
       logoFile?: File
     }>((resolve) => {

@@ -5,6 +5,45 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.6.3] - 2026-08-26
+
+### 核心主题：动感视频助手全面打通三家厂商 + 视频结果可复制/可下载/自动保存
+
+**1. 新功能：添加提供商内置「视频生成」商家模板**
+- 「添加提供商 → 提供商类型」下拉新增三项：`阿里云百炼 · 视频生成`、`火山豆包 · 视频生成`、`腾讯混元 · 视频生成`
+  （内部统一以 openai 类型存储，不新增 ProviderType，零迁移成本）。
+- 选中即自动预填服务商名称与官方 API 接入点（百炼 `dashscope.aliyuncs.com` / 火山
+  `ark.cn-beijing.volces.com/api/v3` / 腾讯 `vclm.tencentcloudapi.com`），创建后仍可在设置页自行修改地址；
+  表单下方实时显示该家的密钥格式提示（如腾讯的 `SecretId:SecretKey` 冒号格式）。
+
+**2. 修复：腾讯混元视频接口参数全面过期（此前必然调用失败）**
+- 按官方现行文档逐项核对并修正：域名 `hunyuan.tencentcloudapi.com` → `vclm.tencentcloudapi.com`；
+  Action `SubmitHunyuanVideoJob/QueryHunyuanVideoJob` → `SubmitHunyuanToVideoJob/DescribeHunyuanToVideoJob`；
+  Version `2023-09-01` → `2024-05-23`；补必填公共参数 `X-TC-Region`（默认 `ap-guangzhou`）。
+- 提交/轮询字段对齐：返回 `TaskId` → `JobId`，状态 `Done/Fail/Processing` → `DONE/FAIL/RUN/WAIT`，
+  结果 `VideoUrl` → `ResultVideoUrl`；图生视频图片字段改为官方 `Image: { Url | Base64 }` 结构。
+- TC3 签名模块支持可选 region：仅附加 `X-TC-Region` 头，不参与签名计算（固定向量测试保持不变）。
+
+**3. 修复：阿里云百炼视频生成的分辨率大小写与万相 3.x 双协议适配**
+- resolution 档位自动归一化为大写 P（对话框 `720p` → 百炼要求的 `720P`），消除 `Input should be '1080P'...` 报错。
+- 按模型代际路由请求协议：wan2.x-t2v/-i2v、wanx 系列沿用 `input.img_url`；wan3.x 全能参考系列改用
+  `input.media` 数组（上传首帧图自动转为 `{ type: 'first_frame', url }`），并接入 `parameters.ratio` 宽高比。
+- 服务端要求素材（`Field required: input.media`）时不再盲目去参重试，直接给出中文操作提示：
+  「wan3.x 为参考生视频模型需上传图；纯文生请用 wan2.x-t2v 系列」。
+
+**4. 改进：视频页模型选择移除命名白名单**
+- 删除按模型名正则过滤的白名单（`config/models/video.ts` 及其 `isVideoModel`）：视频模型命名无统一规范，
+  白名单会漏掉新模型（如 `wan3.0-video`）。现在用户添加的全部模型均可在视频页选择，选错模型时生成入口报错提示。
+
+**5. 新功能：视频结果操作栏（复制 / 另存为 / 定位文件）+ 自动保存可见化**
+- 生成成功的视频卡悬浮显示三个操作：复制视频链接、另存为…（系统保存对话框）、打开所在文件夹。
+- 消息 metadata 补充记录 `fileName/filePath`，支撑另存与定位。
+- 自动保存到「设置 → 图片保存路径」目录的结果改为 toast 明示（成功含目标路径，失败提示手动另存），
+  不再静默吞掉失败。
+
+### 测试与验证
+- 相关测试 23 个文件 1064 用例全部通过；改动文件 TypeScript 类型检查零错误。
+
 ## [1.6.0] - 2026-08-22
 
 ### 核心主题：桌面助手快捷键 + 全仓死代码清理与启动/内存性能优化
