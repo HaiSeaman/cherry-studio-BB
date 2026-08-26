@@ -1399,6 +1399,32 @@ class FileStorage {
     return false
   }
 
+  /**
+   * 通用「另存为」：不限定文件类型（如视频、音频），按调用方提供的完整文件名弹系统保存框。
+   * 与 saveImage 的区别：defaultPath 不追加 .png，过滤器含具体类型 + All Files 兜底。
+   */
+  public saveFileAs = async (_: Electron.IpcMainInvokeEvent, name: string, base64Data: string): Promise<boolean> => {
+    try {
+      const ext = path.extname(name).replace('.', '') || '*'
+      const filePath = dialog.showSaveDialogSync({
+        defaultPath: name,
+        filters: [
+          { name: ext.toUpperCase(), extensions: [ext] },
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      })
+
+      if (filePath) {
+        const parseResult = parseDataUrl(base64Data)
+        fs.writeFileSync(filePath, parseResult?.data ?? base64Data, 'base64')
+        return true
+      }
+    } catch (error) {
+      logger.error('[IPC - Error] An error occurred saving the file:', error as Error)
+    }
+    return false
+  }
+
   public selectFolder = async (_: Electron.IpcMainInvokeEvent, options: OpenDialogOptions): Promise<string | null> => {
     try {
       const result: OpenDialogReturnValue = await dialog.showOpenDialog({
@@ -1542,11 +1568,24 @@ class FileStorage {
       'image/bmp': '.bmp',
       'application/pdf': '.pdf',
       'text/plain': '.txt',
+      'text/html': '.html',
+      'text/markdown': '.md',
+      'application/json': '.json',
       'application/msword': '.doc',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
       'application/zip': '.zip',
       'application/x-zip-compressed': '.zip',
-      'application/octet-stream': '.bin'
+      // 音视频（对象存储对媒体文件常返回 application/octet-stream 之外的这些类型）
+      'video/mp4': '.mp4',
+      'video/webm': '.webm',
+      'video/quicktime': '.mov',
+      'video/x-msvideo': '.avi',
+      'video/x-matroska': '.mkv',
+      'audio/mpeg': '.mp3',
+      'audio/wav': '.wav',
+      'audio/x-wav': '.wav',
+      'audio/mp4': '.m4a',
+      'audio/aac': '.aac'
     }
 
     return mimeToExtension[mimeType] || '.bin'

@@ -103,7 +103,7 @@ beforeEach(() => {
     configurable: true,
     value: {
       file: {
-        download: vi.fn().mockResolvedValue({ id: 'f1', name: 'video.mp4', path: '/storage/video.mp4' }),
+        download: vi.fn().mockResolvedValue({ id: 'f1', name: 'video.mp4', path: '/storage/video.mp4', ext: '.mp4' }),
         base64File: vi.fn().mockResolvedValue({ data: 'AAAA', mime: 'video/mp4' }),
         saveFileToDirectory: vi.fn().mockResolvedValue('D:/saves/video.mp4')
       }
@@ -214,6 +214,8 @@ describe('generateVideo', () => {
 
     await generateVideo(baseParams)
 
+    // base64File 必须用完整文件键（id+扩展名），否则主进程 ENOENT
+    expect(window.api.file.base64File).toHaveBeenCalledWith('f1.mp4')
     expect(window.api.file.saveFileToDirectory).toHaveBeenCalledWith('video.mp4', 'AAAA', 'D:/saves')
   })
 

@@ -66,20 +66,40 @@ const VideoContent: FC<Props> = ({ topicId }) => {
     }
   }, [])
 
-  /** 另存为：弹出系统保存对话框（复用图片保存通道，按字节写入用户选择的位置） */
-  const handleSaveAs = useCallback(async (fileId?: string, fileName?: string) => {
-    if (!fileId) {
-      window.toast.error('该视频没有本地文件，无法另存')
-      return
-    }
+  /** 另存为：弹出系统保存对话框（复用图片保存通道，按字节写入用户选择的位置）。
+   *  主进程按「目录 + id + 扩展名」定位文件：优先用 metadata.fileName（即 uuid+ext），
+   *  旧消息没有该字段时从播放地址提取扩展名拼在 fileId 后；
+   *  本地文件缺失（被清理/历史遗留）时，用远程链接经主进程重新下载兜底。 */
+  const handleSaveAs = useCallback(async (fileKey?: string, fileName?: string, remoteUrl?: string) => {
     try {
-      const { data: base64 } = await window.api.file.base64File(fileId)
-      const success = await window.api.file.saveImage(fileName || `video_${Date.now()}.mp4`, base64)
+      let data: string | undefined
+      if (fileKey) {
+        try {
+          data = (await window.api.file.base64File(fileKey)).data
+        } catch {
+          // 本地文件不存在，走远程兜底
+        }
+      }
+      if (!data && remoteUrl) {
+        const file = await window.api.file.download(remoteUrl, true)
+        data = (await window.api.file.base64File(file.id + file.ext)).data
+        if (!fileName) {
+          fileName = file.origin_name || file.name || `video_${Date.now()}.mp4`
+        }
+      }
+      if (!data) {
+        window.toast.error('该视频没有可用文件（本地文件缺失且远程链接不可用），无法另存')
+        return
+      }
+      const success = await window.api.file.saveFileAs(fileName || `video_${Date.now()}.mp4`, data)
       if (success) {
         window.toast.success('视频已保存')
       }
     } catch (error) {
-      window.toast.error(`另存失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      const msg = error instanceof Error ? error.message : '未知错误'
+      window.toast.error(
+        /ENOENT|403|404|Expired/i.test(msg) ? '另存失败: 远程链接可能已过期（约 24 小时），请重新生成或使用自动保存' : `另存失败: ${msg}`
+      )
     }
   }, [])
 
@@ -175,6 +195,9 @@ const VideoContent: FC<Props> = ({ topicId }) => {
                 const fileName = block.metadata?.fileName as string | undefined
                 const filePath = block.metadata?.filePath as string | undefined
                 const linkToCopy = (block.metadata?.remoteUrl ?? src) as string
+                // base64File 需要完整文件键（id+扩展名）：新消息直接用 fileName；旧消息从播放地址补扩展名
+                const extFromSrc = src.match(/(\.[A-Za-z0-9]+)(?:\?|$)/)?.[1] ?? ''
+                const fileKey = fileName ?? (fileId ? fileId + extFromSrc : undefined)
                 return (
                   <VideoCard key={block.id}>
                     <VideoPlayer src={src} controls preload="metadata" />
@@ -185,7 +208,7 @@ const VideoContent: FC<Props> = ({ topicId }) => {
                         </ActionButton>
                       </Tooltip>
                       <Tooltip title={'另存为…'} mouseEnterDelay={0.5}>
-                        <ActionButton onClick={() => void handleSaveAs(fileId, fileName)}>
+                        <ActionButton onClick={() => void handleSaveAs(fileKey, fileName, linkToCopy)}>
                           <Download size={14} />
                         </ActionButton>
                       </Tooltip>

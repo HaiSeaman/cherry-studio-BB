@@ -73,6 +73,8 @@ async function persistRemoteVideo(videoUrl: string): Promise<{ displayUrl: strin
       videoUrl: videoUrl.slice(0, 60),
       error: error as Error
     })
+    // 静默回退会让用户误以为已持久化；明确提醒尽快手动保存
+    window.toast.warning('视频本地持久化失败，链接约 24 小时后失效，请在生成后及时「另存为」')
     return { displayUrl: videoUrl }
   }
 }
@@ -90,7 +92,8 @@ export async function saveGeneratedVideo(file: FileMetadata | undefined): Promis
     return
   }
   try {
-    const { data: base64 } = await window.api.file.base64File(file.id)
+    // 主进程按「目录 + id + 扩展名」定位文件（与 FileManager 用法一致），只传 id 会 ENOENT
+    const { data: base64 } = await window.api.file.base64File(file.id + file.ext)
     await window.api.file.saveFileToDirectory(file.name, base64, savePath)
     window.toast.success(`视频已自动保存到: ${savePath}`)
   } catch (error) {

@@ -166,6 +166,8 @@ const api = {
       ipcRenderer.invoke(IpcChannel.File_SelectFolder, options),
     saveImage: (name: string, data: string): Promise<boolean> =>
       ipcRenderer.invoke(IpcChannel.File_SaveImage, name, data),
+    saveFileAs: (name: string, base64Data: string): Promise<boolean> =>
+      ipcRenderer.invoke(IpcChannel.File_SaveFileAs, name, base64Data),
     binaryImage: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_BinaryImage, fileId),
     base64Image: (fileId: string): Promise<{ mime: string; base64: string; data: string }> =>
       ipcRenderer.invoke(IpcChannel.File_Base64Image, fileId),
