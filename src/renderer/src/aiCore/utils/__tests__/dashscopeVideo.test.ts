@@ -139,7 +139,7 @@ describe('generateDashScopeVideo', () => {
     )
 
     const input = (bodies[0] as { input: { media?: Array<{ type: string; url: string }>; img_url?: string } }).input
-    expect(input.media).toEqual([{ type: 'first_frame', url: 'data:image/png;base64,AAA' }])
+    expect(input.media).toEqual([{ type: 'reference_image', url: 'data:image/png;base64,AAA' }])
     expect(input.img_url).toBeUndefined()
     const parameters = (bodies[0] as { parameters: Record<string, unknown> }).parameters
     expect(parameters.ratio).toBe('16:9')

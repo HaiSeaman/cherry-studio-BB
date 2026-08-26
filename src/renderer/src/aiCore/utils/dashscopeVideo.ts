@@ -17,14 +17,13 @@
 
 import { loggerService } from '@logger'
 
-import { getNativeBaseUrl, abortableDelay } from './dashscopeImage'
+import { abortableDelay,getNativeBaseUrl } from './dashscopeImage'
 import {
+  getFirstApiKey,
   VIDEO_POLL_INTERVAL_MS,
   VIDEO_POLL_TIMEOUT_MS,
   type VideoGenParams,
-  type VideoStatusCallback,
-  getFirstApiKey
-} from './videoGenerationTypes'
+  type VideoStatusCallback} from './videoGenerationTypes'
 
 const logger = loggerService.withContext('DashScopeVideo')
 
@@ -95,9 +94,11 @@ export async function generateDashScopeVideo(
     model,
     input: useMedia
       ? {
-          // 全能参考协议：素材为 media 数组（首帧图用 first_frame 类型）
+          // 全能参考/参考生视频协议（wan3.x、happyhorse-r2v 等）：素材为 media 数组。
+          // 统一用 reference_image（参考图）而非 first_frame——happyhorse 系列仅认 reference_image，
+          // wan3.x 两者皆支持（单张时二者互斥不冲突）。
           ...(prompt ? { prompt } : {}),
-          ...(inputImage ? { media: [{ type: 'first_frame', url: inputImage }] } : {})
+          ...(inputImage ? { media: [{ type: 'reference_image', url: inputImage }] } : {})
         }
       : {
           prompt: prompt || '',

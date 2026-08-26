@@ -3,9 +3,8 @@
  * 视频生成服务层：成功流转 / 用户中止 / 失败 三种结局的块状态落库
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
 import { toSerializedError } from '@renderer/utils/error'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchVideoGeneration } from '../fetchVideoGeneration'
 import { buildProgressText, generateVideo, saveGeneratedVideo } from '../videoService'
