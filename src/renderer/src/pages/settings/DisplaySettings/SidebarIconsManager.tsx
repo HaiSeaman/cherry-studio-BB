@@ -6,7 +6,7 @@ import { useAppDispatch } from '@renderer/store'
 import { setSidebarIcons } from '@renderer/store/settings'
 import type { SidebarIcon } from '@renderer/types'
 import { message } from 'antd'
-import { LayoutGrid, MessageSquareQuote, StickyNote } from 'lucide-react'
+import { CalendarCheck2, LayoutGrid, MessageSquareQuote, StickyNote } from 'lucide-react'
 import type { FC, ReactNode } from 'react'
 import { useCallback, useMemo } from 'react'
 import styled from 'styled-components'
@@ -104,7 +104,8 @@ const SidebarIconsManager: FC<SidebarIconsManagerProps> = ({
       ({
         assistants: <MessageSquareQuote size={16} />,
         minapp: <LayoutGrid size={16} />,
-        notes: <StickyNote size={16} />
+        notes: <StickyNote size={16} />,
+        habits: <CalendarCheck2 size={16} />
       }) satisfies Record<SidebarIcon, ReactNode>,
     []
   )

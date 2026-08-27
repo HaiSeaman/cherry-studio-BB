@@ -18,11 +18,12 @@ import type { FileMetadata, QuickPhrase } from '@renderer/types'
 import type { TopicType } from '@renderer/types'
 // Import necessary types for blocks and new message structure
 import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMessage'
-import { Dexie, type EntityTable } from 'dexie'
+import { Dexie, type EntityTable, type Table } from 'dexie'
 
+import type { Habit, HabitRecord } from '../pages/habits/types'
 import type { MusicTrack, RadioStation } from '../pages/music/types'
 import type { HubActivity, HubAlarm, HubDayNote, HubNote, HubNoteSnapshot, HubTodo } from '../pages/notes/types'
-import { upgradeToV5, upgradeToV7, upgradeToV8 } from './upgrades'
+import { upgradeToV5, upgradeToV7, upgradeToV8,upgradeToV13 } from './upgrades'
 
 // Database declaration (move this to its own module also)
 export const db = new Dexie('CherryStudio', {
@@ -45,6 +46,9 @@ export const db = new Dexie('CherryStudio', {
   hub_day_notes: EntityTable<HubDayNote, 'id'>
   hub_activity: EntityTable<HubActivity, 'date'>
   hub_note_history: EntityTable<HubNoteSnapshot, 'id'>
+  // 打卡 TAB（习惯定义/打卡记录，复合主键 [habitId+date]）
+  habits: EntityTable<Habit, 'id'>
+  habit_records: Table<HabitRecord, [string, string]>
 }
 
 db.version(1).stores({
@@ -167,5 +171,27 @@ db.version(12).stores({
   hub_activity: '&date',
   hub_note_history: '++id, noteId'
 })
+
+// --- NEW VERSION 13：打卡 TAB 两张表（习惯定义/打卡记录） ---
+db.version(13)
+  .stores({
+    files: 'id, name, origin_name, path, size, ext, type, created_at, count',
+    topics: '&id',
+    settings: '&id, value',
+    quick_phrases: 'id',
+    message_blocks: 'id, messageId, file.id',
+    music_tracks: '++id, &filePath, order, favorite',
+    music_folders: '&path',
+    radio_favorites: '&url',
+    hub_notes: '++id, status',
+    hub_todos: '++id, status',
+    hub_alarms: '++id',
+    hub_day_notes: '++id, date',
+    hub_activity: '&date',
+    hub_note_history: '++id, noteId',
+    habits: 'id, order, archived',
+    habit_records: '[habitId+date], date'
+  })
+  .upgrade((tx) => upgradeToV13(tx))
 
 export default db

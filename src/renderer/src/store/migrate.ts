@@ -15,6 +15,10 @@ export const migrate = async (state: any) => {
   if (icons) {
     if (Array.isArray(icons.visible)) {
       icons.visible = icons.visible.filter((i: string) => !DEPRECATED_SIDEBAR_ICONS.includes(i))
+      // 新增打卡入口默认补入（老用户持久化 settings 的 visible 里没有 habits）
+      if (!icons.visible.includes('habits')) {
+        icons.visible.push('habits')
+      }
     }
     if (Array.isArray(icons.disabled)) {
       icons.disabled = icons.disabled.filter((i: string) => !DEPRECATED_SIDEBAR_ICONS.includes(i))

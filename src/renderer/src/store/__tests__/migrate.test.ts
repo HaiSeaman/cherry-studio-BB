@@ -12,16 +12,16 @@ function stateWith(visible: string[] | undefined, disabled?: string[]) {
 }
 
 describe('persist migrate — 侧边栏图标（v0~v3 → v4 各历史升级路径）', () => {
-  it('v1 老数据（含 music/paint/automation）：过滤后 notes 保留', async () => {
+  it('v1 老数据（含 music/paint/automation）：过滤后 notes 保留，并默认补入 habits', async () => {
     const s = stateWith(['assistants', 'minapp', 'paint', 'music', 'notes', 'automation'])
     const out: any = await migrate(s)
-    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes'])
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits'])
   })
 
-  it('v0 极老数据（无 paint/automation，仅 music）：notes 保留', async () => {
+  it('v0 极老数据（无 paint/automation，仅 music）：notes 保留，并默认补入 habits', async () => {
     const s = stateWith(['assistants', 'minapp', 'music', 'notes'])
     const out: any = await migrate(s)
-    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes'])
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits'])
   })
 
   it('disabled 列表中的死图标同样被清除', async () => {
@@ -30,10 +30,10 @@ describe('persist migrate — 侧边栏图标（v0~v3 → v4 各历史升级路�
     expect(out.settings.sidebarIcons.disabled).toEqual([])
   })
 
-  it('已是最新格式（3 图标）：原样放行，notes 不丢', async () => {
+  it('已是最新格式（3 图标）：原样放行 + 默认补入 habits，notes 不丢', async () => {
     const s = stateWith(['assistants', 'minapp', 'notes'])
     const out: any = await migrate(s)
-    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes'])
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits'])
   })
 
   it('settings 无 sidebarIcons 字段（更老的数据）：不崩溃、原样返回', async () => {

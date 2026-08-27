@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- ⚠️ **用户指令：禁止主动使用 git**——所有「Commit」步骤一律跳过，只改文件；用户手动上传 GitHub
 - 环境：Windows，shell 命令用 npm（pnpm 不在 PATH，避开 `pnpm --filter` 的脚本）
 - 类型检查：`npm run typecheck:web`（不动 node/aicore 部分）
 - 测试：`npm run test:renderer`（vitest，基线 170 文件 / 2863 测试全绿，85s）

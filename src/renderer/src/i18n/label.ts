@@ -129,7 +129,8 @@ const sidebarIconKeyMap = {
   assistants: 'AI 助手',
   store: '助手库',
   minapp: '小程序',
-  notes: '效率助手'
+  notes: '效率助手',
+  habits: '打卡'
 } as const
 
 export const getSidebarIconLabel = (key: string): string => {
