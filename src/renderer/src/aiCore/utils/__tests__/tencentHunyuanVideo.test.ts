@@ -106,11 +106,7 @@ describe('generateHunyuanVideo', () => {
       () => jsonResponse({ Response: { JobId: 't' } }),
       () => jsonResponse({ Response: { Status: 'DONE', ResultVideoUrl: 'u2' } })
     ])
-    await generateHunyuanVideo(
-      { ...baseParams, inputImage: 'https://example.com/first.png' },
-      undefined,
-      fastPoll
-    )
+    await generateHunyuanVideo({ ...baseParams, inputImage: 'https://example.com/first.png' }, undefined, fastPoll)
     const secondBody = JSON.parse(String(second.inits[0].body))
     expect(secondBody.Image).toEqual({ Url: 'https://example.com/first.png' })
   })

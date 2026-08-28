@@ -420,15 +420,4 @@ export class DexieMessageDataSource implements MessageDataSource {
       throw error
     }
   }
-
-  async updateFileCounts(files: Array<{ id: string; delta: number; deleteIfZero?: boolean }>): Promise<void> {
-    try {
-      for (const file of files) {
-        await this.updateFileCount(file.id, file.delta, file.deleteIfZero || false)
-      }
-    } catch (error) {
-      logger.error('Failed to update file counts:', error as Error)
-      throw error
-    }
-  }
 }

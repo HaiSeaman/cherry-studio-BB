@@ -20,7 +20,7 @@ import store from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import { setGenerating } from '@renderer/store/runtime'
 import type { Assistant, Topic } from '@renderer/types'
-import { classNames, removeSpecialCharactersForFileName } from '@renderer/utils'
+import { removeSpecialCharactersForFileName } from '@renderer/utils'
 import { copyTopicAsMarkdown, copyTopicAsPlainText } from '@renderer/utils/copy'
 import {
   exportMarkdownToJoplin,
@@ -33,6 +33,7 @@ import {
 import type { MenuProps } from 'antd'
 import { Dropdown, Tooltip } from 'antd'
 import type { ItemType, MenuItemType } from 'antd/es/menu/interface'
+import { clsx } from 'clsx'
 import dayjs from 'dayjs'
 import { findIndex } from 'lodash'
 import {
@@ -572,7 +573,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
             <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']} disabled={isManageMode}>
               <TopicListItem
                 onContextMenu={() => setTargetTopic(topic)}
-                className={classNames(
+                className={clsx(
                   isActive && !isManageMode ? 'active' : '',
                   singlealone ? 'singlealone' : '',
                   isManageMode && isSelected ? 'selected' : '',

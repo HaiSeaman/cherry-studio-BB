@@ -4,7 +4,6 @@ import { upgradeToV7, upgradeToV8 } from '@renderer/databases/upgrades'
 import store from '@renderer/store'
 import { setLocalBackupSyncState, setS3SyncState, setWebDAVSyncState } from '@renderer/store/backup'
 import type { S3Config, WebDavConfig } from '@renderer/types'
-import { uuid } from '@renderer/utils'
 import dayjs from 'dayjs'
 
 import { NotificationService } from './NotificationService'
@@ -89,7 +88,7 @@ export async function restore() {
         } else {
           // Direct backup was restored, app will relaunch
           void notificationService.send({
-            id: uuid(),
+            id: crypto.randomUUID(),
             type: 'success',
             title: '成功',
             message: '恢复成功',
@@ -108,7 +107,7 @@ export async function restore() {
       }
 
       void notificationService.send({
-        id: uuid(),
+        id: crypto.randomUUID(),
         type: 'success',
         title: '成功',
         message: '恢复成功',
@@ -224,7 +223,7 @@ export async function backupToWebdav({
         })
       )
       void notificationService.send({
-        id: uuid(),
+        id: crypto.randomUUID(),
         type: 'success',
         title: '成功',
         message: '备份成功',
@@ -294,7 +293,7 @@ export async function backupToWebdav({
       throw error
     }
     void notificationService.send({
-      id: uuid(),
+      id: crypto.randomUUID(),
       type: 'error',
       title: '备份失败',
       message: error.message,
@@ -403,7 +402,7 @@ export async function backupToS3({
         })
       )
       void notificationService.send({
-        id: uuid(),
+        id: crypto.randomUUID(),
         type: 'success',
         title: '成功',
         message: '备份成功',
@@ -457,7 +456,7 @@ export async function backupToS3({
       throw error
     }
     void notificationService.send({
-      id: uuid(),
+      id: crypto.randomUUID(),
       type: 'error',
       title: '备份失败',
       message: error.message,
@@ -999,7 +998,7 @@ export async function backupToLocal({
 
       if (showMessage) {
         void notificationService.send({
-          id: uuid(),
+          id: crypto.randomUUID(),
           type: 'success',
           title: '成功',
           message: '备份成功',

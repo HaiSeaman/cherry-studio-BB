@@ -135,9 +135,9 @@ export default class S3Storage {
 
   async getFileContents(key: string): Promise<Buffer> {
     try {
-      const res = await (
-        await this.getClient()
-      ).send(new (await loadS3Sdk()).GetObjectCommand({ Bucket: this.bucket, Key: this.buildKey(key) }))
+      const res = await (await this.getClient()).send(
+        new (await loadS3Sdk()).GetObjectCommand({ Bucket: this.bucket, Key: this.buildKey(key) })
+      )
       if (!res.Body || !(res.Body instanceof Readable)) {
         throw new Error('Empty body received from S3')
       }
@@ -154,9 +154,9 @@ export default class S3Storage {
       const variations = new Set([keyWithRoot, key.replace(/^\//, '')])
       for (const k of variations) {
         try {
-          await (
-            await this.getClient()
-          ).send(new (await loadS3Sdk()).DeleteObjectCommand({ Bucket: this.bucket, Key: k }))
+          await (await this.getClient()).send(
+            new (await loadS3Sdk()).DeleteObjectCommand({ Bucket: this.bucket, Key: k })
+          )
         } catch {
           // 忽略删除失败
         }
@@ -177,9 +177,7 @@ export default class S3Storage {
 
     try {
       do {
-        const res = await (
-          await this.getClient()
-        ).send(
+        const res = await (await this.getClient()).send(
           new (await loadS3Sdk()).ListObjectsV2Command({
             Bucket: this.bucket,
             Prefix: fullPrefix === '' ? undefined : fullPrefix,

@@ -15,11 +15,11 @@ import { loggerService } from '@logger'
 
 import { abortableDelay } from './dashscopeImage'
 import {
+  getFirstApiKey,
   VIDEO_POLL_INTERVAL_MS,
   VIDEO_POLL_TIMEOUT_MS,
   type VideoGenParams,
-  type VideoStatusCallback,
-  getFirstApiKey
+  type VideoStatusCallback
 } from './videoGenerationTypes'
 
 const logger = loggerService.withContext('ArkVideo')
@@ -36,12 +36,7 @@ export function getArkBaseUrl(apiHost: string): string {
 }
 
 /** Seedance 参数以内嵌文本指令传递 */
-function buildInstructionText(
-  prompt: string,
-  duration?: string,
-  resolution?: string,
-  aspectRatio?: string
-): string {
+function buildInstructionText(prompt: string, duration?: string, resolution?: string, aspectRatio?: string): string {
   return [
     prompt || '',
     resolution ? `--resolution ${resolution}` : '',

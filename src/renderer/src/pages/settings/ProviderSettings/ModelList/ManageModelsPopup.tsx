@@ -367,7 +367,6 @@ const ModelHeaderTitle = styled.div`
 const TopViewKey = 'ManageModelsPopup'
 
 export default class ManageModelsPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

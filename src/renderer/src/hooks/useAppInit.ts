@@ -1,5 +1,5 @@
 import PrivacyPolicyUpdateNotice from '@renderer/components/app/PrivacyPolicyUpdateNotice'
-import { isMac, LATEST_PRIVACY_POLICY_VERSION } from '@renderer/config/constant'
+import { isMac, isWin, LATEST_PRIVACY_POLICY_VERSION } from '@renderer/config/constant'
 import { isLocalAi } from '@renderer/config/env'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import db from '@renderer/databases'
@@ -11,7 +11,6 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect } from 'react'
 
 import { useDefaultModel } from './useAssistant'
-import useFullScreenNotice from './useFullScreenNotice'
 import { useRuntime } from './useRuntime'
 import { useNavbarPosition, useSettings } from './useSettings'
 
@@ -44,7 +43,19 @@ export function useAppInit() {
     })
   }, [])
 
-  useFullScreenNotice()
+  useEffect(() => {
+    const cleanup = window.electron.ipcRenderer.on(IpcChannel.FullscreenStatusChanged, (_, isFullscreen) => {
+      if (isWin && isFullscreen) {
+        window.toast.info({
+          title: '已进入全屏模式，按 F11 退出',
+          timeout: 3000
+        })
+      }
+    })
+    return () => {
+      cleanup()
+    }
+  }, [])
 
   useEffect(() => {
     if (privacyPolicyVersion === LATEST_PRIVACY_POLICY_VERSION) {

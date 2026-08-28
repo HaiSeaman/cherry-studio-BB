@@ -1,76 +1,7 @@
-import { Modal } from 'antd'
-import { useState } from 'react'
 import styled from 'styled-components'
 
 import CodeEditor from '../CodeEditor'
-import { TopView } from '../TopView'
-
-interface Props {
-  text: string
-  title: string
-  extension?: string
-  resolve: (data: any) => void
-}
-
-const PopupContainer: React.FC<Props> = ({ text, title, extension, resolve }) => {
-  const [open, setOpen] = useState(true)
-
-  const onOk = () => {
-    setOpen(false)
-  }
-
-  const onCancel = () => {
-    setOpen(false)
-  }
-
-  const onClose = () => {
-    resolve({})
-  }
-
-  TextFilePreviewPopup.hide = onCancel
-
-  return (
-    <Modal
-      open={open}
-      onOk={onOk}
-      onCancel={onCancel}
-      afterClose={onClose}
-      title={title}
-      width={700}
-      transitionName="animation-move-down"
-      styles={{
-        content: {
-          borderRadius: 20,
-          padding: 0,
-          overflow: 'hidden'
-        },
-        body: {
-          height: '80vh',
-          maxHeight: 'inherit',
-          padding: 0
-        }
-      }}
-      centered
-      closable={true}
-      footer={null}>
-      {extension !== undefined ? (
-        <Editor
-          readOnly={true}
-          expanded={false}
-          height="100%"
-          style={{ height: '100%' }}
-          value={text}
-          language={extension}
-          options={{
-            keymap: true
-          }}
-        />
-      ) : (
-        <Text>{text}</Text>
-      )}
-    </Modal>
-  )
-}
+import GeneralPopup from './GeneralPopup'
 
 const Text = styled.div`
   padding: 16px;
@@ -84,25 +15,45 @@ const Editor = styled(CodeEditor)`
   }
 `
 
+/** 文本/代码文件预览弹窗：GeneralPopup 展示只读 CodeEditor 的特例 */
 export default class TextFilePreviewPopup {
-  static topviewId = 0
   static hide() {
-    TopView.hide('TextFilePreviewPopup')
+    GeneralPopup.hide()
   }
   static show(text: string, title: string, extension?: string) {
-    return new Promise<any>((resolve) => {
-      TopView.show(
-        <PopupContainer
-          text={text}
-          title={title}
-          extension={extension}
-          resolve={(v) => {
-            resolve(v)
-            TopView.hide('TextFilePreviewPopup')
-          }}
-        />,
-        'TextFilePreviewPopup'
-      )
+    return GeneralPopup.show({
+      title,
+      width: 700,
+      closable: true,
+      footer: null,
+      styles: {
+        content: {
+          borderRadius: 20,
+          padding: 0,
+          overflow: 'hidden'
+        },
+        body: {
+          height: '80vh',
+          maxHeight: 'inherit',
+          padding: 0
+        }
+      },
+      content:
+        extension !== undefined ? (
+          <Editor
+            readOnly={true}
+            expanded={false}
+            height="100%"
+            style={{ height: '100%' }}
+            value={text}
+            language={extension}
+            options={{
+              keymap: true
+            }}
+          />
+        ) : (
+          <Text>{text}</Text>
+        )
     })
   }
 }

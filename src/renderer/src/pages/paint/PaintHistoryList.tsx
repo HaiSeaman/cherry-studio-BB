@@ -14,8 +14,8 @@ import { type FC, useCallback } from 'react'
 import { useDispatch } from 'react-redux'
 import styled from 'styled-components'
 
-import { setLastGeneration } from './store/paintSlice'
 import { createPaintTopic } from './services/paintService'
+import { setLastGeneration } from './store/paintSlice'
 
 interface Props {
   assistant: Assistant

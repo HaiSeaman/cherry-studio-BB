@@ -9,7 +9,6 @@ import type {
   WebSearchProviderResult,
   WebSearchStatus
 } from '@renderer/types'
-import { hasObjectKey } from '@renderer/utils'
 import { addAbortController } from '@renderer/utils/abortController'
 import type { ExtractResults } from '@renderer/utils/extract'
 import { fetchWebContents } from '@renderer/utils/fetch'
@@ -98,11 +97,11 @@ class WebSearchService {
       return true
     }
 
-    if (hasObjectKey(provider, 'apiKey')) {
+    if (Object.hasOwn(provider, 'apiKey')) {
       return provider.apiKey !== ''
     }
 
-    if (hasObjectKey(provider, 'apiHost')) {
+    if (Object.hasOwn(provider, 'apiHost')) {
       return provider.apiHost !== ''
     }
 

@@ -89,11 +89,6 @@ export const createCallbacks = (deps: CallbacksDependencies) => {
     ...imageCallbacks,
     ...citationCallbacks,
     ...videoCallbacks,
-    ...compactCallbacks,
-    // 清理资源的方法
-    cleanup: () => {
-      // 清理由 messageThunk 中的节流函数管理，这里不需要特别处理
-      // 如果需要，可以调用 blockManager 的相关清理方法
-    }
+    ...compactCallbacks
   }
 }

@@ -16,7 +16,7 @@ import { type FC, useEffect, useRef, useState } from 'react'
 import type { RadioStation } from '../../pages/music/types'
 import FmRadioView from './FmRadioView'
 import LocalPlayerView from './LocalPlayerView'
-import NotesView, { flushPendingDraft,TodosView } from './NotesTodosView'
+import NotesView, { flushPendingDraft, TodosView } from './NotesTodosView'
 import type { WidgetPlayerState } from './protocol'
 import { emitPosition, onHostMessage, sendCmd } from './transport'
 

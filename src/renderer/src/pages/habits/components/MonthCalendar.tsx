@@ -421,7 +421,8 @@ const Swatch = styled.span<{ $done?: boolean; $skip?: boolean; $missed?: boolean
     if (p.$done) return `background: color-mix(in srgb, ${mx.accent} 30%, transparent);`
     if (p.$skip) return `background: ${mx.soft2}; font-weight: 700;`
     if (p.$missed) return `border: 1.5px dashed color-mix(in srgb, ${mx.danger} 55%, transparent);`
-    if (p.$today) return `background: color-mix(in srgb, ${mx.accent} 8%, transparent); border: 1px solid color-mix(in srgb, ${mx.accent} 45%, transparent);`
+    if (p.$today)
+      return `background: color-mix(in srgb, ${mx.accent} 8%, transparent); border: 1px solid color-mix(in srgb, ${mx.accent} 45%, transparent);`
     return ''
   }}
 `

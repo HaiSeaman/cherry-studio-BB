@@ -5,7 +5,8 @@ import { addHabit, updateHabit } from '../services/habitService'
 import type { Habit } from '../types'
 import { DialogField, DialogInput, DialogLabel, mx, MXDialog } from './mx'
 
-const HABIT_COLORS: string[] = [  '#D85A30',
+const HABIT_COLORS: string[] = [
+  '#D85A30',
   '#2F7ED8',
   '#2E9E5B',
   '#B8860B',
@@ -17,7 +18,24 @@ const HABIT_COLORS: string[] = [  '#D85A30',
   '#3CB371'
 ]
 
-const HABIT_EMOJIS: string[] = ['🚭', '💧', '🏃', '😴', '📚', '🧘', '🥗', '💪', '✍️', '🎸', '🧹', '💊', '🦷', '☀️', '🚶', '🛏️']
+const HABIT_EMOJIS: string[] = [
+  '🚭',
+  '💧',
+  '🏃',
+  '😴',
+  '📚',
+  '🧘',
+  '🥗',
+  '💪',
+  '✍️',
+  '🎸',
+  '🧹',
+  '💊',
+  '🦷',
+  '☀️',
+  '🚶',
+  '🛏️'
+]
 
 export interface HabitFormProps {
   open: boolean
@@ -66,7 +84,13 @@ const HabitForm: FC<HabitFormProps> = ({ open, editing, onClose }) => {
   }
 
   return (
-    <MXDialog open={open} title={editing ? '编辑习惯' : '添加习惯'} okText="保存" okDisabled={!canSubmit} onOk={handleOk} onCancel={onClose}>
+    <MXDialog
+      open={open}
+      title={editing ? '编辑习惯' : '添加习惯'}
+      okText="保存"
+      okDisabled={!canSubmit}
+      onOk={handleOk}
+      onCancel={onClose}>
       <DialogField>
         <DialogLabel>名称</DialogLabel>
         <DialogInput

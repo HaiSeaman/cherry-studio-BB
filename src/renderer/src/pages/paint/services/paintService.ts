@@ -17,7 +17,6 @@ import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
 import type { ResponseError } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
-import { uuid } from '@renderer/utils'
 import { isAbortError, toSerializedError } from '@renderer/utils/error'
 import {
   createAssistantMessage,
@@ -121,7 +120,14 @@ export async function reassociatePaintTopics(): Promise<void> {
 
   let target = assistants.find((a) => getAssistantType(a) === 'image_gen')
   if (!target) {
-    target = { ...getDefaultAssistant(), id: uuid(), name: '灵感生图', emoji: '🎨', type: 'image_gen', topics: [] }
+    target = {
+      ...getDefaultAssistant(),
+      id: crypto.randomUUID(),
+      name: '灵感生图',
+      emoji: '🎨',
+      type: 'image_gen',
+      topics: []
+    }
     store.dispatch(addAssistant(target))
   }
   const targetId = target.id
@@ -144,7 +150,7 @@ export async function reassociatePaintTopics(): Promise<void> {
 
 /** 创建新的绘画会话，返回话题对象并同步到数据库与助手 topics 列表 */
 export async function createPaintTopic(assistantId?: string): Promise<Topic> {
-  const id = uuid()
+  const id = crypto.randomUUID()
   const now = new Date().toISOString()
   const targetAssistantId = assistantId || 'paint'
   await db.topics.add({

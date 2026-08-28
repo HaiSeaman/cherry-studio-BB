@@ -14,7 +14,6 @@ import type { FileMetadata } from '@renderer/types'
 import { FILE_TYPE } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
-import { classNames } from '@renderer/utils'
 import { getFilesFromDropEvent, isSendMessageKeyPressed } from '@renderer/utils/input'
 import { createFileBlock, createImageBlock } from '@renderer/utils/messageUtils/create'
 import { findAllBlocks } from '@renderer/utils/messageUtils/find'
@@ -22,6 +21,7 @@ import { documentExts, imageExts, textExts } from '@shared/config/constant'
 import { Tooltip } from 'antd'
 import type { TextAreaRef } from 'antd/es/input/TextArea'
 import TextArea from 'antd/es/input/TextArea'
+import { clsx } from 'clsx'
 import { Save, Send, X } from 'lucide-react'
 import type { FC } from 'react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -250,7 +250,7 @@ const MessageBlockEditor: FC<Props> = ({ message, topicId, onSave, onResend, onC
 
   return (
     <EditorContainer
-      className={classNames('message-editor', `message-editor-${message.role}`, isFileDragging && 'file-dragging')}
+      className={clsx('message-editor', `message-editor-${message.role}`, isFileDragging && 'file-dragging')}
       onDragEnter={() => setIsFileDragging(true)}
       onDragOver={(e) => {
         e.preventDefault()

@@ -74,7 +74,6 @@ vi.mock('@renderer/utils', () => {
   }
 
   return {
-    classNames: (value: unknown) => flattenClassNames(value).join(' '),
     cn: (...values: unknown[]) => flattenClassNames(values).join(' ')
   }
 })

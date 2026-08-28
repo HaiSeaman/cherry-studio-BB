@@ -17,13 +17,14 @@
 
 import { loggerService } from '@logger'
 
-import { abortableDelay,getNativeBaseUrl } from './dashscopeImage'
+import { abortableDelay, getNativeBaseUrl } from './dashscopeImage'
 import {
   getFirstApiKey,
   VIDEO_POLL_INTERVAL_MS,
   VIDEO_POLL_TIMEOUT_MS,
   type VideoGenParams,
-  type VideoStatusCallback} from './videoGenerationTypes'
+  type VideoStatusCallback
+} from './videoGenerationTypes'
 
 const logger = loggerService.withContext('DashScopeVideo')
 

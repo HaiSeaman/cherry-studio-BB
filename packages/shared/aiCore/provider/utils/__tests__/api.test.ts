@@ -1,19 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatAzureOpenAIApiHost, formatOllamaApiHost } from '../api'
+import { formatOllamaApiHost } from '../api'
 
 describe('provider api utils', () => {
-  describe('formatAzureOpenAIApiHost', () => {
-    it('normalizes trailing segments and disables auto version append', () => {
-      expect(formatAzureOpenAIApiHost('https://example.openai.azure.com/')).toBe(
-        'https://example.openai.azure.com/openai'
-      )
-      expect(formatAzureOpenAIApiHost('https://example.openai.azure.com/openai/')).toBe(
-        'https://example.openai.azure.com/openai'
-      )
-    })
-  })
-
   describe('formatOllamaApiHost', () => {
     it('removes trailing slash and appends /api for basic hosts', () => {
       expect(formatOllamaApiHost('https://api.ollama.com/')).toBe('https://api.ollama.com/api')

@@ -260,8 +260,7 @@ vi.mock('@renderer/utils/error', async (importOriginal) => {
 })
 
 vi.mock('@renderer/utils', () => ({
-  default: {},
-  uuid: vi.fn(() => 'mock-uuid-' + Math.random().toString(36).slice(2, 11))
+  default: {}
 }))
 
 interface MockTopicsState {

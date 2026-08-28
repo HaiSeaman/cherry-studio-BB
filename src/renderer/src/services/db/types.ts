@@ -112,9 +112,4 @@ export interface MessageDataSource {
    * @param deleteIfZero - Whether to delete the file when count reaches 0
    */
   updateFileCount?(fileId: string, delta: number, deleteIfZero?: boolean): Promise<void>
-
-  /**
-   * Update multiple file reference counts
-   */
-  updateFileCounts?(files: Array<{ id: string; delta: number; deleteIfZero?: boolean }>): Promise<void>
 }

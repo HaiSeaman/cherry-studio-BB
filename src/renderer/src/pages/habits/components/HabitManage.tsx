@@ -1,4 +1,4 @@
-import { message,Modal } from 'antd'
+import { message, Modal } from 'antd'
 import { Archive, ArchiveRestore, Download, Pencil, Trash2, Upload } from 'lucide-react'
 import { type FC, useRef, useState } from 'react'
 import styled from 'styled-components'

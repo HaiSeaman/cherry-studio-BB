@@ -113,7 +113,6 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
 const TopViewKey = 'ImportPopup'
 
 export default class ImportPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

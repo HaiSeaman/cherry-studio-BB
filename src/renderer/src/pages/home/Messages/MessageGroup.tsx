@@ -9,9 +9,9 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import type { MultiModelMessageStyle } from '@renderer/store/settings'
 import type { Topic } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
-import { classNames } from '@renderer/utils'
 import { scrollIntoView } from '@renderer/utils/dom'
 import { Popover } from 'antd'
+import { clsx } from 'clsx'
 import type { ComponentProps, WheelEvent as ReactWheelEvent } from 'react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
@@ -236,7 +236,7 @@ const MessageGroup = ({ messages, topic, registerMessageElement }: Props) => {
         <MessageWrapper
           id={`message-${message.id}`}
           key={message.id}
-          className={classNames([
+          className={clsx([
             {
               [multiModelMessageStyle]: message.role === 'assistant' && messages.length > 1,
               selected: message.id === selectedMessageId
@@ -257,7 +257,7 @@ const MessageGroup = ({ messages, topic, registerMessageElement }: Props) => {
             destroyOnHidden
             content={
               <MessageWrapper
-                className={classNames([
+                className={clsx([
                   'in-popover',
                   {
                     [multiModelMessageStyle]: message.role === 'assistant' && messages.length > 1,
@@ -296,11 +296,11 @@ const MessageGroup = ({ messages, topic, registerMessageElement }: Props) => {
     <MessageEditingProvider>
       <GroupContainer
         id={messages[0].askId ? `message-group-${messages[0].askId}` : undefined}
-        className={classNames([multiModelMessageStyle, { 'multi-select-mode': isMultiSelectMode }])}>
+        className={clsx([multiModelMessageStyle, { 'multi-select-mode': isMultiSelectMode }])}>
         <GridContainer
           $count={messageLength}
           $gridColumns={gridColumns}
-          className={classNames([multiModelMessageStyle, { 'multi-select-mode': isMultiSelectMode }])}
+          className={clsx([multiModelMessageStyle, { 'multi-select-mode': isMultiSelectMode }])}
           onWheelCapture={multiModelMessageStyle === 'horizontal' ? handleHorizontalGroupWheel : undefined}>
           {messages.map(renderMessage)}
         </GridContainer>

@@ -192,21 +192,13 @@ export const registerTool = (tool: ToolDefinition<any, any>): void => {
   toolRegistry.set(tool.key, tool)
 }
 
-export const getTool = (key: string): ToolDefinition<any, any> | undefined => {
-  return toolRegistry.get(key)
-}
-
-export const getAllTools = (): ToolDefinition<any, any>[] => {
-  return Array.from(toolRegistry.values())
-}
-
 export const getToolsForScope = (
   scope: InputbarScope,
   context: Omit<ToolContext, 'scope'>
 ): ToolDefinition<any, any>[] => {
   const fullContext: ToolContext = { ...context, scope }
 
-  return getAllTools().filter((tool) => {
+  return Array.from(toolRegistry.values()).filter((tool) => {
     // Check scope visibility
     if (tool.visibleInScopes && !tool.visibleInScopes.includes(scope)) {
       return false

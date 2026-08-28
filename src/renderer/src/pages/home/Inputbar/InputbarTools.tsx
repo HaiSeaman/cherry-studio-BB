@@ -23,9 +23,9 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { selectToolOrderForScope, setIsCollapsed, setToolOrder } from '@renderer/store/inputTools'
 import type { Assistant, Model } from '@renderer/types'
 import type { InputBarToolType } from '@renderer/types/chat'
-import { classNames } from '@renderer/utils'
 import { Divider, Dropdown } from 'antd'
 import type { ItemType } from 'antd/es/menu/interface'
+import { clsx } from 'clsx'
 import { Check, CircleChevronRight } from 'lucide-react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -366,7 +366,7 @@ const InputbarTools = ({ scope, assistant, model, session }: InputbarToolsNewPro
                           <DraggablePortal isDragging={snapshot.isDragging}>
                             <ToolWrapper
                               data-key={toolConfig.key}
-                              className={classNames({ 'is-collapsed': isCollapse })}
+                              className={clsx({ 'is-collapsed': isCollapse })}
                               onContextMenu={() => setTargetTool(toolConfig)}
                               ref={provided.innerRef}
                               {...provided.draggableProps}

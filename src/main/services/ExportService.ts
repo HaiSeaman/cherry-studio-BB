@@ -44,7 +44,10 @@ export class ExportService {
     let tableColumnCount = 0
     let tableRows: InstanceType<typeof TableRow>[] = [] // Store rows temporarily
 
-    const processInlineTokens = (tokens: any[], isHeaderRow: boolean): (InstanceType<typeof TextRun> | InstanceType<typeof ExternalHyperlink>)[] => {
+    const processInlineTokens = (
+      tokens: any[],
+      isHeaderRow: boolean
+    ): (InstanceType<typeof TextRun> | InstanceType<typeof ExternalHyperlink>)[] => {
       const runs: (InstanceType<typeof TextRun> | InstanceType<typeof ExternalHyperlink>)[] = []
       let linkText = ''
       let linkUrl = ''

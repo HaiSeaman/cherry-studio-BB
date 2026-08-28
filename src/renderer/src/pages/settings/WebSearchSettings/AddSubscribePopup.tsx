@@ -97,7 +97,6 @@ const PopupContainer: React.FC<Props> = ({ title, resolve }) => {
 }
 
 export default class AddSubscribePopup {
-  static topviewId = 0
   static hide() {
     TopView.hide('AddSubscribePopup')
   }

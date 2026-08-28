@@ -98,7 +98,9 @@ const VideoContent: FC<Props> = ({ topicId }) => {
     } catch (error) {
       const msg = error instanceof Error ? error.message : '未知错误'
       window.toast.error(
-        /ENOENT|403|404|Expired/i.test(msg) ? '另存失败: 远程链接可能已过期（约 24 小时），请重新生成或使用自动保存' : `另存失败: ${msg}`
+        /ENOENT|403|404|Expired/i.test(msg)
+          ? '另存失败: 远程链接可能已过期（约 24 小时），请重新生成或使用自动保存'
+          : `另存失败: ${msg}`
       )
     }
   }, [])

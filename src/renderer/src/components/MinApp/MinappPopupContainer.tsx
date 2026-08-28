@@ -17,14 +17,12 @@ import { allMinApps } from '@renderer/config/minapps'
 import { useBridge } from '@renderer/hooks/useBridge'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
-import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { useAppDispatch } from '@renderer/store'
 import { setMinappsOpenLinkExternal } from '@renderer/store/settings'
 import type { MinAppType } from '@renderer/types'
-import { delay } from '@renderer/utils'
 import { clearWebviewState, getWebviewLoaded, setWebviewLoaded } from '@renderer/utils/webviewStateManager'
 import { Alert, Avatar, Button, Drawer, Tooltip } from 'antd'
 import type { WebviewTag } from 'electron'
@@ -148,7 +146,8 @@ const MinappPopupContainer: React.FC = () => {
   const { openedKeepAliveMinapps, openedOneOffMinapp, currentMinappId, minappShow } = useRuntime()
   const { closeMinapp, hideMinappPopup } = useMinappPopup()
   const { pinned, updatePinnedMinapps } = useMinapps()
-  const backgroundColor = useNavBackgroundColor()
+  const { windowStyle } = useSettings()
+  const backgroundColor = isMac && windowStyle === 'transparent' ? 'transparent' : 'var(--navbar-background)'
   const { isTopNavbar } = useNavbarPosition()
   const dispatch = useAppDispatch()
 
@@ -330,7 +329,7 @@ const MinappPopupContainer: React.FC = () => {
   /** will close the popup and delete the webview */
   const handlePopupClose = async (appid: string) => {
     setIsPopupShow(false)
-    await delay(0.3)
+    await new Promise((resolve) => setTimeout(resolve, 300))
     clearWebviewState(appid)
     closeMinapp(appid)
   }
@@ -338,7 +337,7 @@ const MinappPopupContainer: React.FC = () => {
   /** will hide the popup and remain the webviews */
   const handlePopupMinimize = async () => {
     setIsPopupShow(false)
-    await delay(0.3)
+    await new Promise((resolve) => setTimeout(resolve, 300))
     hideMinappPopup()
   }
 

@@ -4,7 +4,7 @@ import MessageContent from '@renderer/pages/home/Messages/MessageContent'
 import MessageErrorBoundary from '@renderer/pages/home/Messages/MessageErrorBoundary'
 // import { LegacyMessage } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
-import { classNames } from '@renderer/utils'
+import { clsx } from 'clsx'
 import type { FC } from 'react'
 import { memo, useRef } from 'react'
 import styled from 'styled-components'
@@ -40,7 +40,7 @@ const MessageItem: FC<Props> = ({ message, index, total, route }) => {
     <MessageContainer
       key={message.id}
       ref={messageContainerRef}
-      className={classNames({
+      className={clsx({
         message: true,
         'message-assistant': isAssistantMessage,
         'message-user': !isAssistantMessage

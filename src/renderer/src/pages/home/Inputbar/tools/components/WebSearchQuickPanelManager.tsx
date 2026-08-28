@@ -25,7 +25,6 @@ import type { ToolQuickPanelController, ToolRenderContext } from '@renderer/page
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import WebSearchService from '@renderer/services/WebSearchService'
 import { getEffectiveMcpMode, type WebSearchProvider, type WebSearchProviderId } from '@renderer/types'
-import { hasObjectKey } from '@renderer/utils'
 import { isToolUseModeFunction } from '@renderer/utils/assistant'
 import { isGeminiWebSearchProvider } from '@renderer/utils/provider'
 import { Globe } from 'lucide-react'
@@ -141,7 +140,7 @@ export const useWebSearchPanelController = (assistantId: string, quickPanelContr
         .map((p) => ({
           label: p.name,
           description: WebSearchService.isWebSearchEnabled(p.id)
-            ? hasObjectKey(p, 'apiKey')
+            ? Object.hasOwn(p, 'apiKey')
               ? 'API 密钥'
               : '免费'
             : '需要先在设置中检查网络搜索连通性',

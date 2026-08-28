@@ -73,12 +73,7 @@ export class GeminiService extends BaseFileService {
       return response
     } catch (error) {
       logger.error('Error uploading file to Gemini:', error as Error)
-      return {
-        fileId: '',
-        displayName: file.origin_name,
-        status: 'failed',
-        originalFile: undefined
-      }
+      return this.failedResponse('', file.origin_name)
     }
   }
 
@@ -111,20 +106,10 @@ export class GeminiService extends BaseFileService {
         }
       }
 
-      return {
-        fileId: fileId,
-        displayName: '',
-        status: 'failed',
-        originalFile: undefined
-      }
+      return this.failedResponse(fileId, '')
     } catch (error) {
       logger.error('Error retrieving file from Gemini:', error as Error)
-      return {
-        fileId: fileId,
-        displayName: '',
-        status: 'failed',
-        originalFile: undefined
-      }
+      return this.failedResponse(fileId, '')
     }
   }
 

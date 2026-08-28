@@ -43,7 +43,6 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
 const TopViewKey = 'MinappSettingsPopup'
 
 export default class MinappSettingsPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

@@ -3,10 +3,10 @@ import CodeEditor from '@renderer/components/CodeEditor'
 import { CopyIcon, FilePngIcon } from '@renderer/components/Icons'
 import { isMac } from '@renderer/config/constant'
 import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
-import { classNames } from '@renderer/utils'
 import { extractHtmlTitle, getFileNameFromHtmlTitle } from '@renderer/utils/formats'
 import { captureScrollableIframeAsBlob, captureScrollableIframeAsDataURL } from '@renderer/utils/image'
 import { Button, Dropdown, Modal, Splitter, Tooltip, Typography } from 'antd'
+import { clsx } from 'clsx'
 import { Camera, Check, Code, Eye, Maximize2, Minimize2, SaveIcon, SquareSplitHorizontal, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
@@ -162,7 +162,7 @@ const HtmlArtifactsPopup: React.FC<HtmlArtifactsPopupProps> = ({ open, title, ht
   )
 
   const renderHeader = () => (
-    <ModalHeader onDoubleClick={() => setIsFullscreen(!isFullscreen)} className={classNames({ drag: isFullscreen })}>
+    <ModalHeader onDoubleClick={() => setIsFullscreen(!isFullscreen)} className={clsx({ drag: isFullscreen })}>
       <HeaderLeft $isFullscreen={isFullscreen}>
         <TitleText ellipsis={{ tooltip: true }}>{title}</TitleText>
       </HeaderLeft>

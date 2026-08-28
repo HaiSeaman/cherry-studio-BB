@@ -122,7 +122,6 @@ const PopupContainer: React.FC<Props> = ({ title, provider, resolve }) => {
 }
 
 export default class AddModelPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide('AddModelPopup')
   }

@@ -6,7 +6,7 @@
 import type { Provider } from '@renderer/types'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { fetchVideoGeneration,resolveVideoAdapter } from '../fetchVideoGeneration'
+import { fetchVideoGeneration, resolveVideoAdapter } from '../fetchVideoGeneration'
 
 vi.mock('@logger', () => ({
   loggerService: {
@@ -23,7 +23,9 @@ const dashscopeMock = vi.fn()
 const arkMock = vi.fn()
 const hunyuanMock = vi.fn()
 
-vi.mock('@renderer/aiCore/utils/dashscopeVideo', () => ({ generateDashScopeVideo: (...a: unknown[]) => dashscopeMock(...a) }))
+vi.mock('@renderer/aiCore/utils/dashscopeVideo', () => ({
+  generateDashScopeVideo: (...a: unknown[]) => dashscopeMock(...a)
+}))
 vi.mock('@renderer/aiCore/utils/arkVideo', () => ({ generateArkVideo: (...a: unknown[]) => arkMock(...a) }))
 vi.mock('@renderer/aiCore/utils/tencentHunyuanVideo', () => ({
   generateHunyuanVideo: (...a: unknown[]) => hunyuanMock(...a)
@@ -45,13 +47,15 @@ describe('resolveVideoAdapter', () => {
   })
 
   it('自定义服务商按 API 域名识别', () => {
-    expect(resolveVideoAdapter(makeProvider('my-custom', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/'))?.name).toContain(
-      'DashScope'
-    )
-    expect(resolveVideoAdapter(makeProvider('my-custom', 'https://ark.example.volces.com/api/v3/'))?.name).toContain('Ark')
     expect(
-      resolveVideoAdapter(makeProvider('my-custom', 'https://hunyuan.tencentcloudapi.com/'))?.name
-    ).toContain('Hunyuan')
+      resolveVideoAdapter(makeProvider('my-custom', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/'))?.name
+    ).toContain('DashScope')
+    expect(resolveVideoAdapter(makeProvider('my-custom', 'https://ark.example.volces.com/api/v3/'))?.name).toContain(
+      'Ark'
+    )
+    expect(resolveVideoAdapter(makeProvider('my-custom', 'https://hunyuan.tencentcloudapi.com/'))?.name).toContain(
+      'Hunyuan'
+    )
   })
 
   it('未知服务商返回 null（调用方拦截）', () => {

@@ -14,7 +14,8 @@
  * - v2 Refactor PR   : https://github.com/CherryHQ/cherry-studio/pull/10162
  * --------------------------------------------------------------------------
  */
-import type { Stats } from 'node:fs'
+import * as fs from 'node:fs'
+import * as fsp from 'node:fs/promises'
 
 import { loggerService } from '@logger'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -22,7 +23,6 @@ import type { WebDavConfig } from '@types'
 import type { S3Config } from '@types'
 import archiver from 'archiver'
 import { app } from 'electron'
-import * as fs from 'fs-extra'
 import StreamZip from 'node-stream-zip'
 import * as path from 'path'
 import type { CreateDirectoryOptions, FileStat } from 'webdav'
@@ -36,6 +36,39 @@ import { windowService } from './WindowService'
 
 const logger = loggerService.withContext('BackupManager')
 
+/**
+ * 判断路径是否存在（等价于 fs-extra 的 pathExists）
+ */
+async function pathExists(target: string): Promise<boolean> {
+  try {
+    await fsp.access(target)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 递归创建目录（等价于 fs-extra 的 ensureDir）
+ */
+async function ensureDir(dir: string): Promise<void> {
+  await fsp.mkdir(dir, { recursive: true })
+}
+
+/**
+ * 递归删除文件或目录，路径不存在时不报错（等价于 fs-extra 的 remove）
+ */
+async function removePath(target: string): Promise<void> {
+  await fsp.rm(target, { recursive: true, force: true })
+}
+
+/**
+ * 递归复制文件或目录（等价于 fs-extra 的 copy）
+ */
+async function copyPath(source: string, dest: string, options: fs.CopyOptions = {}): Promise<void> {
+  await fsp.cp(source, dest, { recursive: true, ...options })
+}
+
 interface CopyDirOptions {
   dereferenceSymlinks: boolean
   sourceRootRealPath?: string
@@ -43,7 +76,7 @@ interface CopyDirOptions {
 
 interface EffectiveEntryStats {
   isSymlink: boolean
-  stats: Stats
+  stats: fs.Stats
 }
 
 interface ProgressData {
@@ -96,9 +129,9 @@ class BackupManager {
 
     try {
       // Check if any restore markers exist
-      const hasIndexedDBRestore = await fs.pathExists(indexedDBRestore)
-      const hasLocalStorageRestore = await fs.pathExists(localStorageRestore)
-      const hasDataRestore = await fs.pathExists(dataRestore)
+      const hasIndexedDBRestore = await pathExists(indexedDBRestore)
+      const hasLocalStorageRestore = await pathExists(localStorageRestore)
+      const hasDataRestore = await pathExists(dataRestore)
 
       if (!hasIndexedDBRestore && !hasLocalStorageRestore && !hasDataRestore) {
         return
@@ -107,31 +140,31 @@ class BackupManager {
       // Restore IndexedDB
       if (hasIndexedDBRestore) {
         logger.info('[handleStartupRestore] Found IndexedDB.restore directories, completing restoration...')
-        await fs.remove(indexedDBDest).catch(() => {})
-        await fs.rename(indexedDBRestore, indexedDBDest)
+        await removePath(indexedDBDest).catch(() => {})
+        await fsp.rename(indexedDBRestore, indexedDBDest)
       }
 
       // Restore Local Storage
       if (hasLocalStorageRestore) {
         logger.info('[handleStartupRestore] Found Local Storage.restore directories, completing restoration...')
-        await fs.remove(localStorageDest).catch(() => {})
-        await fs.rename(localStorageRestore, localStorageDest)
+        await removePath(localStorageDest).catch(() => {})
+        await fsp.rename(localStorageRestore, localStorageDest)
       }
 
       // Restore Data
       if (hasDataRestore) {
         logger.info('[handleStartupRestore] Found Local Data.restore directories, completing restoration...')
-        await fs.remove(dataDest).catch(() => {})
-        await fs.rename(dataRestore, dataDest)
+        await removePath(dataDest).catch(() => {})
+        await fsp.rename(dataRestore, dataDest)
       }
 
       logger.info('[handleStartupRestore] Restoration completed successfully')
     } catch (error) {
       logger.error('[handleStartupRestore] Failed to complete restoration:', error as Error)
       // Clean up restore markers to avoid endless retry loop
-      await fs.remove(indexedDBRestore).catch(() => {})
-      await fs.remove(localStorageRestore).catch(() => {})
-      await fs.remove(dataRestore).catch(() => {})
+      await removePath(indexedDBRestore).catch(() => {})
+      await removePath(localStorageRestore).catch(() => {})
+      await removePath(dataRestore).catch(() => {})
     }
   }
 
@@ -174,7 +207,7 @@ class BackupManager {
     const onProgress = this.onProgress(IpcChannel.BackupProgress, true)
 
     try {
-      await fs.ensureDir(this.tempDir)
+      await ensureDir(this.tempDir)
       onProgress({ stage: 'preparing', progress: 0, total: 100 })
 
       const userDataPath = app.getPath('userData')
@@ -186,16 +219,16 @@ class BackupManager {
 
       const indexedDBSource = path.join(userDataPath, 'IndexedDB')
       const indexedDBDest = path.join(this.tempDir, 'IndexedDB')
-      if (await fs.pathExists(indexedDBSource)) {
-        await fs.copy(indexedDBSource, indexedDBDest)
+      if (await pathExists(indexedDBSource)) {
+        await copyPath(indexedDBSource, indexedDBDest)
       } else {
         logger.debug('[backupDirect] IndexedDB directory not found, skipping')
       }
 
       const localStorageSource = path.join(userDataPath, 'Local Storage')
       const localStorageDest = path.join(this.tempDir, 'Local Storage')
-      if (await fs.pathExists(localStorageSource)) {
-        await fs.copy(localStorageSource, localStorageDest)
+      if (await pathExists(localStorageSource)) {
+        await copyPath(localStorageSource, localStorageDest)
       } else {
         logger.debug('[backupDirect] Local Storage directory not found, skipping')
       }
@@ -205,7 +238,7 @@ class BackupManager {
 
       // Step 3: Write metadata.json
       const metadata = this.createDirectBackupMetadata()
-      await fs.writeJson(path.join(this.tempDir, 'metadata.json'), metadata, { spaces: 2 })
+      await fsp.writeFile(path.join(this.tempDir, 'metadata.json'), JSON.stringify(metadata, null, 2))
       onProgress({ stage: 'copying_database', progress: 52, total: 100 })
 
       // Step 4: Copy Data directory (if not skipped)
@@ -213,7 +246,7 @@ class BackupManager {
         const sourcePath = path.join(userDataPath, 'Data')
         const tempDataDir = path.join(this.tempDir, 'Data')
 
-        if (await fs.pathExists(sourcePath)) {
+        if (await pathExists(sourcePath)) {
           const totalSize = await this.getDirSize(sourcePath, { dereferenceSymlinks: true })
 
           await this.copyDirWithProgress(
@@ -225,7 +258,7 @@ class BackupManager {
         }
       } else {
         logger.debug('[backupDirect] Skip the backup of the file')
-        await fs.promises.mkdir(path.join(this.tempDir, 'Data'))
+        await fsp.mkdir(path.join(this.tempDir, 'Data'))
       }
       onProgress({ stage: 'compressing', progress: 80, total: 100 })
 
@@ -254,14 +287,14 @@ class BackupManager {
       })
 
       // Clean up temp directory
-      await fs.remove(this.tempDir)
+      await removePath(this.tempDir)
       onProgress({ stage: 'completed', progress: 100, total: 100 })
 
       logger.info('[backupDirect] Backup completed successfully')
       return backupedFilePath
     } catch (error) {
       logger.error('[backupDirect] Backup failed:', error as Error)
-      await fs.remove(this.tempDir).catch(() => {})
+      await removePath(this.tempDir).catch(() => {})
 
       throw error
     }
@@ -282,7 +315,7 @@ class BackupManager {
   ) {
     try {
       const backupDir = localConfig.localBackupDir || this.backupDir
-      await fs.ensureDir(backupDir)
+      await ensureDir(backupDir)
       return await this.backup(_, fileName, backupDir, localConfig.skipBackupFile)
     } catch (error) {
       logger.error('[backupToLocalDir] Local backup failed:', error as Error)
@@ -304,19 +337,19 @@ class BackupManager {
     try {
       let result
       if (webdavConfig.disableStream) {
-        const fileContent = await fs.readFile(backupedFilePath)
+        const fileContent = await fsp.readFile(backupedFilePath)
         result = await webdavClient.putFileContents(filename, fileContent, { overwrite: true })
       } else {
-        const contentLength = (await fs.stat(backupedFilePath)).size
+        const contentLength = (await fsp.stat(backupedFilePath)).size
         result = await webdavClient.putFileContents(filename, fs.createReadStream(backupedFilePath), {
           overwrite: true,
           contentLength
         })
       }
-      await fs.remove(backupedFilePath)
+      await removePath(backupedFilePath)
       return result
     } catch (error) {
-      await fs.remove(backupedFilePath).catch(() => {})
+      await removePath(backupedFilePath).catch(() => {})
       throw error
     }
   }
@@ -342,14 +375,14 @@ class BackupManager {
     const backupedFilePath = await this.backup(_, filename, undefined, s3Config.skipBackupFile)
     const s3Client = this.getS3Storage(s3Config)
     try {
-      const fileBuffer = await fs.promises.readFile(backupedFilePath)
+      const fileBuffer = await fsp.readFile(backupedFilePath)
       const result = await s3Client.putFileContents(filename, fileBuffer)
-      await fs.remove(backupedFilePath)
+      await removePath(backupedFilePath)
       logger.info(`S3 backup completed: ${filename}`)
       return result
     } catch (error) {
       logger.error('[backupToS3] S3 backup failed:', error as Error)
-      await fs.remove(backupedFilePath)
+      await removePath(backupedFilePath)
       throw error
     }
   }
@@ -368,7 +401,7 @@ class BackupManager {
 
     try {
       // Create temp directory
-      await fs.ensureDir(this.tempDir)
+      await ensureDir(this.tempDir)
       onProgress({ stage: 'preparing', progress: 0, total: 100 })
 
       logger.debug(`step 1: unzip backup file: ${this.tempDir}`)
@@ -387,7 +420,7 @@ class BackupManager {
 
       // Check for backup type: direct (version 6+) or legacy (version <= 5)
       const metadataPath = path.join(this.tempDir, 'metadata.json')
-      const isDirectBackup = await fs.pathExists(metadataPath)
+      const isDirectBackup = await pathExists(metadataPath)
 
       if (isDirectBackup) {
         // Direct backup format (version 6+)
@@ -406,7 +439,7 @@ class BackupManager {
       return data
     } catch (error) {
       logger.error('Restore failed:', error as Error)
-      await fs.remove(this.tempDir).catch(() => {})
+      await removePath(this.tempDir).catch(() => {})
       throw error
     }
   }
@@ -428,7 +461,7 @@ class BackupManager {
     try {
       // Read and validate metadata
       const metadataPath = path.join(this.tempDir, 'metadata.json')
-      const metadata = await fs.readJson(metadataPath)
+      const metadata = JSON.parse(await fsp.readFile(metadataPath, 'utf-8'))
 
       // Validate appName to ensure backup is from Cherry Studio（兼容旧版备份名）
       if (metadata.appName !== 'Cherry Studio' && metadata.appName !== 'Cherry-Studio-BB') {
@@ -452,29 +485,29 @@ class BackupManager {
 
       logger.debug('[restoreDirect] Staging database directories...')
 
-      if (await fs.pathExists(indexedDBSource)) {
-        await fs.remove(indexedDBDest).catch(() => {})
-        await fs.copy(indexedDBSource, indexedDBDest)
+      if (await pathExists(indexedDBSource)) {
+        await removePath(indexedDBDest).catch(() => {})
+        await copyPath(indexedDBSource, indexedDBDest)
       }
 
-      if (await fs.pathExists(localStorageSource)) {
-        await fs.remove(localStorageDest).catch(() => {})
-        await fs.copy(localStorageSource, localStorageDest)
+      if (await pathExists(localStorageSource)) {
+        await removePath(localStorageDest).catch(() => {})
+        await copyPath(localStorageSource, localStorageDest)
       }
 
       onProgress({ stage: 'restoring_database', progress: 65, total: 100 })
 
       //  Restore Data directory
       const dataSource = path.join(this.tempDir, 'Data')
-      const dataExists = await fs.pathExists(dataSource)
-      const dataFiles = dataExists ? await fs.readdir(dataSource) : []
+      const dataExists = await pathExists(dataSource)
+      const dataFiles = dataExists ? await fsp.readdir(dataSource) : []
 
       if (dataExists && dataFiles.length > 0) {
         logger.debug('[restoreDirect] Staging Data directory...')
 
         const totalSize = await this.getDirSize(dataSource, { dereferenceSymlinks: false })
 
-        await fs.remove(dataDest).catch(() => {})
+        await removePath(dataDest).catch(() => {})
 
         await this.copyDirWithProgress(
           dataSource,
@@ -487,7 +520,7 @@ class BackupManager {
       }
 
       // Clean up
-      await fs.remove(this.tempDir)
+      await removePath(this.tempDir)
       onProgress({ stage: 'completed', progress: 100, total: 100 })
 
       logger.info('[restoreDirect] Restore staged successfully, relaunching app to apply...')
@@ -498,10 +531,10 @@ class BackupManager {
     } catch (error) {
       logger.error('[restoreDirect] Restore failed:', error as Error)
       await Promise.all([
-        fs.remove(this.tempDir).catch(() => {}),
-        fs.remove(indexedDBDest).catch(() => {}),
-        fs.remove(localStorageDest).catch(() => {}),
-        fs.remove(dataDest).catch(() => {})
+        removePath(this.tempDir).catch(() => {}),
+        removePath(indexedDBDest).catch(() => {}),
+        removePath(localStorageDest).catch(() => {}),
+        removePath(dataDest).catch(() => {})
       ])
       throw error
     }
@@ -521,7 +554,7 @@ class BackupManager {
 
       // Read data.json
       const dataPath = path.join(this.tempDir, 'data.json')
-      const data = await fs.readFile(dataPath, 'utf-8')
+      const data = await fsp.readFile(dataPath, 'utf-8')
       onProgress({ stage: 'reading_data', progress: 35, total: 100 })
 
       logger.debug('[restoreLegacy] restore Data directory')
@@ -530,14 +563,14 @@ class BackupManager {
       const dataSourcePath = path.join(this.tempDir, 'Data')
       const dataDestPath = path.join(userDataPath, 'Data.restore')
 
-      const dataExists = await fs.pathExists(dataSourcePath)
-      const dataFiles = dataExists ? await fs.readdir(dataSourcePath) : []
+      const dataExists = await pathExists(dataSourcePath)
+      const dataFiles = dataExists ? await fsp.readdir(dataSourcePath) : []
 
       if (dataExists && dataFiles.length > 0) {
         // Get total size of source directory
         const dataTotalSize = await this.getDirSize(dataSourcePath, { dereferenceSymlinks: false })
 
-        await fs.remove(dataDestPath).catch(() => {})
+        await removePath(dataDestPath).catch(() => {})
 
         // Use streaming copy
         await this.copyDirWithProgress(
@@ -552,7 +585,7 @@ class BackupManager {
 
       // Clean up temp directory
       logger.debug('[restoreLegacy] clean up temp directory')
-      await fs.remove(this.tempDir)
+      await removePath(this.tempDir)
 
       onProgress({ stage: 'completed', progress: 100, total: 100 })
 
@@ -561,7 +594,7 @@ class BackupManager {
       return data
     } catch (error) {
       logger.error('[restoreLegacy] Restore failed:', error as Error)
-      await fs.remove(this.tempDir).catch(() => {})
+      await removePath(this.tempDir).catch(() => {})
       throw error
     }
   }
@@ -713,7 +746,7 @@ class BackupManager {
   ): Promise<number> {
     const copyOptions = {
       ...options,
-      sourceRootRealPath: options.sourceRootRealPath ?? (await fs.realpath(dirPath))
+      sourceRootRealPath: options.sourceRootRealPath ?? (await fsp.realpath(dirPath))
     }
     const directoryRealPath = await this.enterDirectory(dirPath, activeDirectoryRealPaths)
 
@@ -724,7 +757,7 @@ class BackupManager {
     let size = 0
 
     try {
-      const items = await fs.readdir(dirPath, { withFileTypes: true })
+      const items = await fsp.readdir(dirPath, { withFileTypes: true })
 
       for (const item of items) {
         const fullPath = path.join(dirPath, item.name)
@@ -762,8 +795,8 @@ class BackupManager {
    */
   public async resetData() {
     const dataRestorePath = getDataPath() + '.restore'
-    await fs.remove(dataRestorePath).catch(() => {})
-    await fs.ensureDir(dataRestorePath)
+    await removePath(dataRestorePath).catch(() => {})
+    await ensureDir(dataRestorePath)
   }
 
   /**
@@ -855,7 +888,7 @@ class BackupManager {
   ): Promise<void> {
     const copyOptions = {
       ...options,
-      sourceRootRealPath: options.sourceRootRealPath ?? (await fs.realpath(source))
+      sourceRootRealPath: options.sourceRootRealPath ?? (await fsp.realpath(source))
     }
     const activeDirectoryRealPaths = new Set<string>()
 
@@ -867,9 +900,9 @@ class BackupManager {
       }
 
       try {
-        await fs.ensureDir(dest)
+        await ensureDir(dest)
 
-        const items = await fs.readdir(src, { withFileTypes: true })
+        const items = await fsp.readdir(src, { withFileTypes: true })
 
         for (const item of items) {
           const sourcePath = path.join(src, item.name)
@@ -887,14 +920,14 @@ class BackupManager {
               if (!entry.isSymlink) {
                 throw error
               }
-              await fs.remove(destPath).catch(() => {})
+              await removePath(destPath).catch(() => {})
               this.logSkippedSymlink(sourcePath, error)
             }
           } else if (entry.stats.isFile()) {
             if (entry.isSymlink) {
-              await fs.copy(sourcePath, destPath, { dereference: true })
+              await copyPath(sourcePath, destPath, { dereference: true })
             } else {
-              await fs.copy(sourcePath, destPath)
+              await copyPath(sourcePath, destPath)
             }
             onProgress(entry.stats.size)
           } else if (entry.isSymlink) {
@@ -910,7 +943,7 @@ class BackupManager {
   }
 
   private async enterDirectory(dirPath: string, activeDirectoryRealPaths: Set<string>): Promise<string | null> {
-    const realPath = await fs.realpath(dirPath)
+    const realPath = await fsp.realpath(dirPath)
 
     if (activeDirectoryRealPaths.has(realPath)) {
       logger.warn('[BackupManager] Skipping circular symlink directory', { path: dirPath, realPath })
@@ -925,7 +958,7 @@ class BackupManager {
     sourcePath: string,
     options: CopyDirOptions
   ): Promise<EffectiveEntryStats | null> {
-    const stats = await fs.lstat(sourcePath)
+    const stats = await fsp.lstat(sourcePath)
 
     if (!stats.isSymbolicLink()) {
       return { isSymlink: false, stats }
@@ -935,14 +968,14 @@ class BackupManager {
     return targetStats ? { isSymlink: true, stats: targetStats } : null
   }
 
-  private async getSymlinkTargetStats(sourcePath: string, options: CopyDirOptions): Promise<Stats | null> {
+  private async getSymlinkTargetStats(sourcePath: string, options: CopyDirOptions): Promise<fs.Stats | null> {
     if (!options.dereferenceSymlinks) {
       logger.warn('[BackupManager] Skipping symlink (dereferenceSymlinks=false)', { path: sourcePath })
       return null
     }
 
     try {
-      const [targetStats, targetRealPath] = await Promise.all([fs.stat(sourcePath), fs.realpath(sourcePath)])
+      const [targetStats, targetRealPath] = await Promise.all([fsp.stat(sourcePath), fsp.realpath(sourcePath)])
       const context = {
         path: sourcePath,
         sourceRootRealPath: options.sourceRootRealPath,
@@ -1022,12 +1055,12 @@ class BackupManager {
    */
   async listLocalBackupFiles(_: Electron.IpcMainInvokeEvent, localBackupDir: string) {
     try {
-      const files = await fs.readdir(localBackupDir)
+      const files = await fsp.readdir(localBackupDir)
       const result: Array<{ fileName: string; modifiedTime: string; size: number }> = []
 
       for (const file of files) {
         const filePath = path.join(localBackupDir, file)
-        const stat = await fs.stat(filePath)
+        const stat = await fsp.stat(filePath)
 
         if (stat.isFile() && file.endsWith('.zip')) {
           result.push({
@@ -1061,7 +1094,7 @@ class BackupManager {
         throw new Error(`Backup file not found: ${filePath}`)
       }
 
-      await fs.remove(filePath)
+      await removePath(filePath)
       return true
     } catch (error) {
       logger.error('[BackupManager] Delete local backup file failed:', error as Error)

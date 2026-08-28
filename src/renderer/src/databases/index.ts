@@ -23,7 +23,7 @@ import { Dexie, type EntityTable, type Table } from 'dexie'
 import type { Habit, HabitRecord } from '../pages/habits/types'
 import type { MusicTrack, RadioStation } from '../pages/music/types'
 import type { HubActivity, HubAlarm, HubDayNote, HubNote, HubNoteSnapshot, HubTodo } from '../pages/notes/types'
-import { upgradeToV5, upgradeToV7, upgradeToV8,upgradeToV13 } from './upgrades'
+import { upgradeToV5, upgradeToV7, upgradeToV8, upgradeToV13 } from './upgrades'
 
 // Database declaration (move this to its own module also)
 export const db = new Dexie('CherryStudio', {

@@ -1,5 +1,5 @@
 import { ResetIcon } from '@renderer/components/Icons'
-import { classNames } from '@renderer/utils'
+import { clsx } from 'clsx'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Scan, ZoomIn, ZoomOut } from 'lucide-react'
 import { memo, useCallback } from 'react'
 import styled from 'styled-components'
@@ -26,7 +26,7 @@ const ImageToolbar = ({ pan, zoom, dialog, className }: ImageToolbarProps) => {
   }, [pan, zoom])
 
   return (
-    <ToolbarWrapper className={classNames('preview-toolbar', className)} role="toolbar" aria-label={'预览'}>
+    <ToolbarWrapper className={clsx('preview-toolbar', className)} role="toolbar" aria-label={'预览'}>
       {/* Up */}
       <ActionButtonRow>
         <Spacer />

@@ -25,7 +25,10 @@ export function applyThemeTokens(tokens: WidgetThemeTokens): void {
   css('--accent', tokens.primary)
   css('--accent-strong', tokens.primary ? shade(tokens.primary, -0.08) : undefined)
   css('--accent-soft', tokens.primary ? hexToRgba(tokens.primary, 0.12) : undefined)
-  css('--gradient', tokens.primary ? `linear-gradient(135deg, ${shade(tokens.primary, 0.15)}, ${tokens.primary})` : undefined)
+  css(
+    '--gradient',
+    tokens.primary ? `linear-gradient(135deg, ${shade(tokens.primary, 0.15)}, ${tokens.primary})` : undefined
+  )
   // 背景 / 卡片 / 文本
   css('--bg', tokens.background)
   css('--card-solid', tokens.background)
@@ -46,7 +49,7 @@ function shade(hex: string, delta: number): string {
   const r = Math.round(clamp(((num >> 16) & 255) * (1 + delta)))
   const g = Math.round(clamp(((num >> 8) & 255) * (1 + delta)))
   const b = Math.round(clamp((num & 255) * (1 + delta)))
-  return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, '0')}`
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }
 
 function hexToRgba(hex: string, alpha: number): string {

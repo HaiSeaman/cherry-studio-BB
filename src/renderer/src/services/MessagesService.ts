@@ -10,7 +10,6 @@ import type { Assistant, FileMetadata, Model, Topic, Usage } from '@renderer/typ
 import { FILE_TYPE } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
-import { uuid } from '@renderer/utils'
 import { getTitleFromString } from '@renderer/utils/export'
 import {
   createAssistantMessage,
@@ -114,7 +113,7 @@ export function getUserMessage({
 }): { message: Message; blocks: MessageBlock[] } {
   const defaultModel = getDefaultModel()
   const model = assistant.model || defaultModel
-  const messageId = uuid() // Generate ID here
+  const messageId = crypto.randomUUID() // Generate ID here
   const blocks: MessageBlock[] = []
   const blockIds: string[] = []
 

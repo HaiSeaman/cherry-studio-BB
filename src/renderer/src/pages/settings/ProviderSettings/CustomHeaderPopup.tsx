@@ -86,7 +86,6 @@ const PopupContainer: React.FC<Props> = ({ provider, resolve }) => {
 const TopViewKey = 'CustomHeaderPopup'
 
 export default class CustomHeaderPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

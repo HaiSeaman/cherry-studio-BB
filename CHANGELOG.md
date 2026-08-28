@@ -5,6 +5,41 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.7.1] - 2026-08-28
+
+### 核心主题：全仓深度过度设计审查与瘦身重构（Ponytail Review & Audit）+ 原生化升级
+
+**1. 手写包装原生化与标准库对齐**
+- **UUID 生成原生化**：移除冗余的 `uuid()` 工具包装，全仓统一直接调用现代 Web/Node.js 原生标准 `crypto.randomUUID()`，调用链减少一层间接，执行效率更高。
+- **对象属性判断原生化**：移除手写 `hasObjectKey()` 包装函数，全面迁移至 ECMAScript 原生 `Object.hasOwn()`。
+- **延迟函数内联简化**：移除 `delay()` 手写封装，直接使用内联 `new Promise(resolve => setTimeout(resolve, ms))`，毫秒粒度更直观。
+- **类名合并规范化**：移除 `classNames = clsx` 别名层，全仓组件统一直接 `import { clsx } from 'clsx'`。
+
+**2. 核心服务脱离第三方冗余依赖（fs-extra 彻底剥离）**
+- **原生 fs 升级**：`src/main/services/BackupManager.ts`（备份管理器）全面迁移至 Node.js 原生 `node:fs/promises` 与 `node:fs`。
+- **依赖瘦身**：彻底从 `package.json` 及 `pnpm-lock.yaml` 移除 `fs-extra` 与 `@types/fs-extra`。
+- **孤儿依赖清理**：清理无代码引用的 `react-player` 与 `tsx` 孤儿包。
+
+**3. 全仓死代码深度清理（净减 1000+ 行）**
+- **死逻辑/无用导出剔除**：删除 `formatPrivateKey`（83行）、`formatAzureOpenAIApiHost`、重复的 `getErrorMessage`、未调用的 `clearAllQueues`/`getTopicPendingRequestCount`、仅测试引用的 `getIntersection`、`updateFileCounts` 方法链、`getFileContent`、`getRawTopic`、废弃的 `Navbar.tsx`、死 barrel 桶文件等。
+- **TopView 弹窗死字段清理**：移除全仓 26 处无读取的 `static topviewId = 0` 死字段。
+
+**4. 重复架构合并与多窗口启动规范化**
+- **弹窗家族重构**：`BackupPopup` 与 `RestorePopup` 深度合并为 `BackupRestorePopup.tsx`；`SearchPopup`、`TextFilePreview` 改为基于 `GeneralPopup` 的轻量化呈现，消除数百行样板代码。
+- **多窗口引导统一**：抽象 `src/renderer/src/windows/bootstrap.ts`，统一多子窗口的 Keyv 初始化、Store 同步订阅与 Provider 容器。
+- **错误与失败响应统一**：`BaseFileService` 统一收口 7 处失败响应模板；`FmRadio` 统一复用 `dedupStationsByUrl`。
+
+**5. 严格质量与回归验证**
+- 全仓 214 个测试文件、3644+ 单元与集成测试全部 100% 通过。
+- Main 进程与 Web 渲染进程 TypeScript 类型检查零错误，Biome / Oxlint 规则全绿。
+
+## [1.7.0] - 2026-08-27
+
+### 核心主题：全新「习惯打卡（Habit Tracker）」TAB 工作台
+
+- 详见 `release-notes-1.7.0.md`。
+
+
 ## [1.6.3] - 2026-08-26
 
 ### 核心主题：动感视频助手全面打通三家厂商 + 视频结果可复制/可下载/自动保存

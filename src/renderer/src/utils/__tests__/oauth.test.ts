@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  oauthWith302AI,
-  oauthWithAihubmix,
-  oauthWithAiOnly,
-  oauthWithSiliconFlow
-} from '../oauth'
+import { oauthWith302AI, oauthWithAihubmix, oauthWithAiOnly, oauthWithSiliconFlow } from '../oauth'
 
 /**
  * OAuth postMessage 回传 origin 校验测试：
@@ -48,12 +43,18 @@ describe('oauth origin 校验', () => {
     const setKey = vi.fn()
     void oauthWithAihubmix(setKey)
 
-    dispatchOauthMessage('https://evil.example.com', { key: 'cherry_studio_oauth_callback', data: { iv: 'x', encryptedData: 'y' } })
+    dispatchOauthMessage('https://evil.example.com', {
+      key: 'cherry_studio_oauth_callback',
+      data: { iv: 'x', encryptedData: 'y' }
+    })
     await new Promise((r) => setTimeout(r, 10))
     expect(setKey).not.toHaveBeenCalled()
 
     // 正确 origin 但缺少解密依赖时会走 catch 分支，不会设置 key（验证不被恶意注入）
-    dispatchOauthMessage('https://console.inferera.com', { key: 'cherry_studio_oauth_callback', data: { iv: 'x', encryptedData: 'y' } })
+    dispatchOauthMessage('https://console.inferera.com', {
+      key: 'cherry_studio_oauth_callback',
+      data: { iv: 'x', encryptedData: 'y' }
+    })
     await new Promise((r) => setTimeout(r, 30))
     expect(setKey).not.toHaveBeenCalled()
   })

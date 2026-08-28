@@ -1,46 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { getDifference, getIntersection, getUnion } from '../collection'
+import { getDifference, getUnion } from '../collection'
 
 describe('Collection Utils', () => {
   // ================== Basic Types Tests ==================
-
-  describe('getIntersection - Basic Types', () => {
-    it('should get intersection of number arrays', () => {
-      const arr1 = [1, 2, 3, 4]
-      const arr2 = [3, 4, 5, 6]
-      const result = getIntersection(arr1, arr2)
-      expect(result).toEqual([3, 4])
-    })
-
-    it('should get intersection of string arrays', () => {
-      const arr1 = ['a', 'b', 'c']
-      const arr2 = ['b', 'c', 'd']
-      const result = getIntersection(arr1, arr2)
-      expect(result).toEqual(['b', 'c'])
-    })
-
-    it('should return empty array when no intersection', () => {
-      const arr1 = [1, 2, 3]
-      const arr2 = [4, 5, 6]
-      const result = getIntersection(arr1, arr2)
-      expect(result).toEqual([])
-    })
-
-    it('should return empty array when one array is empty', () => {
-      const arr1 = [1, 2, 3]
-      const arr2: number[] = []
-      const result = getIntersection(arr1, arr2)
-      expect(result).toEqual([])
-    })
-
-    it('should return empty array when both arrays are empty', () => {
-      const arr1: number[] = []
-      const arr2: number[] = []
-      const result = getIntersection(arr1, arr2)
-      expect(result).toEqual([])
-    })
-  })
 
   describe('getDifference - Basic Types', () => {
     it('should get difference of number arrays', () => {
@@ -122,30 +85,6 @@ describe('Collection Utils', () => {
     { id: 4, name: 'David', age: 28 }
   ]
 
-  describe('getIntersection - Object Types (Key Selector)', () => {
-    it('should get user intersection by id', () => {
-      const result = getIntersection(users1, users2, (user) => user.id)
-      expect(result).toEqual([
-        { id: 2, name: 'Bob', age: 30 },
-        { id: 3, name: 'Charlie', age: 35 }
-      ])
-    })
-
-    it('should get user intersection by name', () => {
-      const result = getIntersection(users1, users2, (user) => user.name)
-      expect(result).toEqual([
-        { id: 2, name: 'Bob', age: 30 },
-        { id: 3, name: 'Charlie', age: 35 }
-      ])
-    })
-
-    it('should return empty array when no intersection', () => {
-      const users3: User[] = [{ id: 5, name: 'Eve', age: 40 }]
-      const result = getIntersection(users1, users3, (user) => user.id)
-      expect(result).toEqual([])
-    })
-  })
-
   describe('getDifference - Object Types (Key Selector)', () => {
     it('should get user difference by id', () => {
       const result = getDifference(users1, users2, (user) => user.id)
@@ -182,31 +121,6 @@ describe('Collection Utils', () => {
   })
 
   // ================== Object Types Tests - Comparator Function ==================
-
-  describe('getIntersection - Object Types (Comparator)', () => {
-    it('should use custom comparator correctly', () => {
-      const result = getIntersection(users1, users2, (a, b) => a.id === b.id && a.name === b.name)
-      expect(result).toEqual([
-        { id: 2, name: 'Bob', age: 30 },
-        { id: 3, name: 'Charlie', age: 35 }
-      ])
-    })
-
-    it('should get users with similar age', () => {
-      const youngUsers: User[] = [
-        { id: 5, name: 'Eve', age: 26 },
-        { id: 6, name: 'Frank', age: 32 }
-      ]
-
-      const result = getIntersection(users1, youngUsers, (a, b) => Math.abs(a.age - b.age) <= 5)
-
-      expect(result).toEqual([
-        { id: 1, name: 'Alice', age: 25 },
-        { id: 2, name: 'Bob', age: 30 },
-        { id: 3, name: 'Charlie', age: 35 }
-      ])
-    })
-  })
 
   describe('getDifference - Object Types (Comparator)', () => {
     it('should use custom comparator for difference', () => {
@@ -261,7 +175,6 @@ describe('Collection Utils', () => {
     it('should handle identical arrays', () => {
       const arr = [1, 2, 3]
 
-      expect(getIntersection(arr, arr)).toEqual([1, 2, 3])
       expect(getDifference(arr, arr)).toEqual([])
       expect(getUnion(arr, arr)).toEqual([1, 2, 3])
     })
@@ -270,7 +183,6 @@ describe('Collection Utils', () => {
       const arr1 = [1, 1, 2, 2, 3]
       const arr2 = [2, 2, 3, 3, 4]
 
-      expect(getIntersection(arr1, arr2)).toEqual([2, 2, 3])
       expect(getDifference(arr1, arr2)).toEqual([1, 1])
       expect(getUnion(arr1, arr2)).toEqual([1, 2, 3, 4])
     })
@@ -285,9 +197,6 @@ describe('Collection Utils', () => {
         { id: 2, name: 'B' },
         { id: 3, name: 'C' }
       ]
-
-      const intersection = getIntersection(arr1, arr2, (item) => item.id)
-      expect(intersection).toEqual([{ id: 2, name: 'B' }])
 
       const union = getUnion(arr1, arr2, (item) => item.id)
       expect(union).toEqual([
@@ -305,50 +214,24 @@ describe('Collection Utils', () => {
       const numbers = [1, 2, 3]
       const strings = ['a', 'b', 'c']
 
-      const numberResult = getIntersection(numbers, numbers)
-      const stringResult = getIntersection(strings, strings)
+      const numberResult = getUnion(numbers, numbers)
+      const stringResult = getUnion(strings, strings)
 
       expect(typeof numberResult[0]).toBe('number')
       expect(typeof stringResult[0]).toBe('string')
-    })
-
-    it('should support complex object types', () => {
-      interface ComplexObject {
-        nested: {
-          value: number
-        }
-        array: string[]
-      }
-
-      const complex1: ComplexObject[] = [
-        { nested: { value: 1 }, array: ['a'] },
-        { nested: { value: 2 }, array: ['b'] }
-      ]
-
-      const complex2: ComplexObject[] = [
-        { nested: { value: 2 }, array: ['b'] },
-        { nested: { value: 3 }, array: ['c'] }
-      ]
-
-      const result = getIntersection(complex1, complex2, (obj) => obj.nested.value)
-      expect(result).toEqual([{ nested: { value: 2 }, array: ['b'] }])
     })
 
     it('should demonstrate why objects need comparators', () => {
       const obj1 = [{ id: 1, name: 'Alice' }]
       const obj2 = [{ id: 1, name: 'Alice' }]
 
-      // Bypass TypeScript type checking with 'any' to show runtime behavior
-      const anyObj1 = obj1 as any
-      const anyObj2 = obj2 as any
-
       // Without comparator, objects are compared by reference, not content
-      const result = getIntersection(anyObj1, anyObj2)
-      expect(result).toEqual([])
+      const result = getDifference(obj1 as any, obj2 as any)
+      expect(result).toEqual([{ id: 1, name: 'Alice' }])
 
       // With proper key selector, it works correctly
-      const correctResult = getIntersection(obj1, obj2, (item) => item.id)
-      expect(correctResult).toEqual([{ id: 1, name: 'Alice' }])
+      const correctResult = getDifference(obj1, obj2, (item) => item.id)
+      expect(correctResult).toEqual([])
     })
 
     it('should enforce type constraints at compile time', () => {
@@ -357,9 +240,6 @@ describe('Collection Utils', () => {
 
       // The following would cause TypeScript compilation errors:
       //
-      // ❌ Error: Type '{ id: number; name: string; }' does not satisfy the constraint 'string | number | boolean | null | undefined'
-      // getIntersection(obj1, obj2)
-      //
       // ❌ Error: Expected 3 arguments, but got 2. Object types require a comparator.
       // getDifference(obj1, obj2)
       //
@@ -367,11 +247,9 @@ describe('Collection Utils', () => {
       // getUnion(obj1, obj2)
 
       // ✅ Correct usage with key selector
-      const intersection = getIntersection(obj1, obj2, (item) => item.id)
       const difference = getDifference(obj1, obj2, (item) => item.id)
       const union = getUnion(obj1, obj2, (item) => item.id)
 
-      expect(intersection).toEqual([{ id: 1, name: 'Alice' }])
       expect(difference).toEqual([])
       expect(union).toEqual([{ id: 1, name: 'Alice' }])
     })
@@ -379,9 +257,6 @@ describe('Collection Utils', () => {
     it('should work correctly with primitive types without comparator', () => {
       const nums1 = [1, 2, 3]
       const nums2 = [2, 3, 4]
-
-      const intersection = getIntersection(nums1, nums2)
-      expect(intersection).toEqual([2, 3])
 
       const difference = getDifference(nums1, nums2)
       expect(difference).toEqual([1])

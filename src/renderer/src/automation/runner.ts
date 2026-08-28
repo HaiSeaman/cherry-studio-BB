@@ -11,7 +11,6 @@ import store from '@renderer/store'
 import { addAssistant, addTopic } from '@renderer/store/assistants'
 import type { Assistant, MCPTool, Model, Topic } from '@renderer/types'
 import { getAssistantType } from '@renderer/types'
-import { uuid } from '@renderer/utils'
 import { isAbortError } from '@renderer/utils/error'
 import { createMainTextBlock, createMessage } from '@renderer/utils/messageUtils/create'
 import type { AutomationRunStep, AutomationTask } from '@shared/automation'
@@ -35,10 +34,10 @@ export async function ensureDefaultAutomationAssistant(): Promise<void> {
     if (assistants.some((a) => getAssistantType(a) === 'automation')) return
     const tasks = await window.api.automation.getTasks()
     if (tasks.length === 0) return
-    const id = uuid()
+    const id = crypto.randomUUID()
     const now = new Date().toISOString()
     const topic = {
-      id: uuid(),
+      id: crypto.randomUUID(),
       assistantId: id,
       name: REPORT_TOPIC_NAME,
       createdAt: now,
@@ -250,7 +249,7 @@ async function writeRunReport(
     if (!topic) {
       const now = new Date().toISOString()
       topic = {
-        id: uuid(),
+        id: crypto.randomUUID(),
         assistantId: assistant.id,
         name: REPORT_TOPIC_NAME,
         createdAt: now,

@@ -1,8 +1,6 @@
 import { loggerService } from '@logger'
 import { NotificationService } from '@renderer/services/NotificationService'
 
-import { uuid } from '.'
-
 // 存储每个工具的确认Promise的resolve函数
 const toolConfirmResolvers = new Map<string, (value: boolean) => void>()
 // 存储每个工具的abort监听器清理函数
@@ -127,7 +125,7 @@ function flushToolApprovalNotification() {
   const message = `工具 "${tools.join('、')}" 需要审批`
 
   void NotificationService.getInstance().send({
-    id: uuid(),
+    id: crypto.randomUUID(),
     type: 'action',
     title: '助手响应',
     message,

@@ -3,11 +3,6 @@ import { isHexColor } from '@renderer/types'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-/**
- * 生成 class 字符串（基于 clsx）
- */
-export const classNames = clsx
-
 export function cn(...inputs: Parameters<typeof clsx>) {
   return twMerge(clsx(inputs))
 }

@@ -22,9 +22,3 @@
 
 // Export main service
 export { DbService, dbService } from './DbService'
-
-// Export types
-export type { MessageDataSource, MessageExchange } from './types'
-
-// Export implementations (for testing or direct access if needed)
-export { DexieMessageDataSource } from './DexieMessageDataSource'

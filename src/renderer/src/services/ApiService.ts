@@ -14,7 +14,7 @@ import { type FetchChatCompletionParams, getEffectiveMcpMode, isSystemProvider }
 import type { StreamTextParams } from '@renderer/types/aiCoreTypes'
 import { type Chunk, ChunkType } from '@renderer/types/chunk'
 import type { Message, ResponseError } from '@renderer/types/newMessage'
-import { removeSpecialCharactersForTopicName, uuid } from '@renderer/utils'
+import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { abortCompletion, readyToAbort } from '@renderer/utils/abortController'
 import { isToolUseModeFunction } from '@renderer/utils/assistant'
 import { isPromptToolUse, isSupportedToolUse } from '@renderer/utils/assistant'
@@ -36,7 +36,7 @@ import {
   getQuickModel
 } from './AssistantService'
 import { ConversationService } from './ConversationService'
-import type { BlockManager } from './messageStreaming'
+import type { BlockManager } from './messageStreaming/BlockManager'
 import type { StreamProcessorCallbacks } from './StreamProcessingService'
 // import WebSearchService from './WebSearchService'
 
@@ -720,7 +720,7 @@ export async function checkApi(provider: Provider, model: Model, timeout = 15000
     const timerPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
     await Promise.race([ai.getEmbeddingDimensions(model), timerPromise])
   } else {
-    const abortId = uuid()
+    const abortId = crypto.randomUUID()
     const signal = readyToAbort(abortId)
     let streamError: ResponseError | undefined
     const params: StreamTextParams = {

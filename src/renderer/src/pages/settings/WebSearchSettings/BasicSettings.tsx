@@ -17,7 +17,6 @@ import {
 import { useAppDispatch } from '@renderer/store'
 import { setMaxResult, setSearchWithTime } from '@renderer/store/websearch'
 import type { WebSearchProvider, WebSearchProviderId } from '@renderer/types'
-import { hasObjectKey } from '@renderer/utils'
 import { Slider, Switch, Tooltip } from 'antd'
 import { Info } from 'lucide-react'
 import type { FC } from 'react'
@@ -65,7 +64,7 @@ const BasicSettings: FC = () => {
     const provider = providers.find((p) => p.id === providerId)
     if (provider) {
       // Check if provider needs API key but doesn't have one
-      const needsApiKey = hasObjectKey(provider, 'apiKey')
+      const needsApiKey = Object.hasOwn(provider, 'apiKey')
       const hasApiKey = provider.apiKey && provider.apiKey.trim() !== ''
 
       if (needsApiKey && !hasApiKey) {
@@ -98,7 +97,7 @@ const BasicSettings: FC = () => {
 
   const renderProviderLabel = (provider: WebSearchProvider) => {
     const logo = getProviderLogo(provider.id)
-    const needsApiKey = hasObjectKey(provider, 'apiKey')
+    const needsApiKey = Object.hasOwn(provider, 'apiKey')
 
     return (
       <div className="flex items-center gap-2">

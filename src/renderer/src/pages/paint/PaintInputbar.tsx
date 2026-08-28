@@ -28,7 +28,13 @@ import { ImagePlus, Loader2, MessageSquareDiff, RefreshCw, Sparkles, Square, Wan
 import { type FC, useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
-import { abortCurrentGeneration, createPaintTopic, enhancePrompt, findModelByUniqId, generatePaintImage } from './services/paintService'
+import {
+  abortCurrentGeneration,
+  createPaintTopic,
+  enhancePrompt,
+  findModelByUniqId,
+  generatePaintImage
+} from './services/paintService'
 import { setIsGenerating, setLastGeneration, setSelectedModel } from './store/paintSlice'
 
 const logger = loggerService.withContext('PaintInputbar')
@@ -413,13 +419,8 @@ const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
         )}
         {/* 第三行：操作按钮 */}
         <ButtonRow>
-          <Tooltip
-            title={newTopicShortcut ? `新建话题 (${newTopicShortcut})` : '新建话题'}
-            mouseEnterDelay={0.5}>
-            <Button
-              icon={<MessageSquareDiff size={16} />}
-              onClick={handleCreateNewTopic}
-              disabled={isGenerating}>
+          <Tooltip title={newTopicShortcut ? `新建话题 (${newTopicShortcut})` : '新建话题'} mouseEnterDelay={0.5}>
+            <Button icon={<MessageSquareDiff size={16} />} onClick={handleCreateNewTopic} disabled={isGenerating}>
               {'新话题'}
             </Button>
           </Tooltip>

@@ -140,7 +140,6 @@ const TagItem = styled.div`
 const TopViewKey = 'AssistantTagsPopup'
 
 export default class AssistantTagsPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

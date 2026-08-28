@@ -83,7 +83,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         // 从 ref 读取最新 mode，避免 Theme_RequestPush/ThemeUpdated 回调触发时闭包过期
         mode: themeRef.current.mode
       }
-      if (tokens.primary) void window.api.themeTokens.push(tokens)
+      if (tokens.primary) window.api.themeTokens.push(tokens)
     }
     const raf = window.requestAnimationFrame(pushThemeTokens)
     const reqPush = window.electron.ipcRenderer.on(IpcChannel.Theme_RequestPush, () => {

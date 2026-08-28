@@ -80,7 +80,6 @@ const PopupContainer: React.FC<Props> = ({ provider, resolve, reject }) => {
 const TopViewKey = 'SelectProviderModelPopup'
 
 export default class SelectProviderModelPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

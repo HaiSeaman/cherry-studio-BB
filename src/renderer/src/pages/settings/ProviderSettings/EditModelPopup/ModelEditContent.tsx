@@ -17,7 +17,7 @@ import {
   isVisionModel,
   isWebSearchModel
 } from '@renderer/config/models'
-import { useDynamicLabelWidth } from '@renderer/hooks/useDynamicLabelWidth'
+import { getDynamicLabelWidth } from '@renderer/hooks/useDynamicLabelWidth'
 import type { Model, ModelCapability, ModelType, Provider } from '@renderer/types'
 import { getDefaultGroupName, getDifference, getUnion, uniqueObjectArray } from '@renderer/utils'
 import { isNewApiProvider } from '@renderer/utils/provider'
@@ -46,7 +46,7 @@ const ModelEditContent: FC<ModelEditContentProps & ModalProps> = ({ provider, mo
   const [supportedTextDelta, setSupportedTextDelta] = useState(model.supported_text_delta)
   const [hasUserModified, setHasUserModified] = useState(false)
 
-  const labelWidth = useDynamicLabelWidth(['端点类型'])
+  const labelWidth = getDynamicLabelWidth(['端点类型'])
 
   // 自动保存函数
   const autoSave = (overrides?: {

@@ -148,9 +148,7 @@ describe('toSerializedError', () => {
 
 describe('generateVideo', () => {
   it('服务商不存在时显式报错且不发起生成', async () => {
-    await expect(
-      generateVideo({ ...baseParams, providerId: 'not-exist' } as never)
-    ).rejects.toThrow('服务商已不存在')
+    await expect(generateVideo({ ...baseParams, providerId: 'not-exist' } as never)).rejects.toThrow('服务商已不存在')
     expect(mockedFetchVideoGeneration).not.toHaveBeenCalled()
   })
 

@@ -142,7 +142,6 @@ const ConfirmMessage = styled.div`
 const TopViewKey = 'UrlSchemaInfoPopup'
 
 export default class UrlSchemaInfoPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

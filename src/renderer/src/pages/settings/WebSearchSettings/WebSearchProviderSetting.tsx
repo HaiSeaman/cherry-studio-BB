@@ -16,7 +16,6 @@ import { useTimer } from '@renderer/hooks/useTimer'
 import { useDefaultWebSearchProvider, useWebSearchProvider } from '@renderer/hooks/useWebSearchProviders'
 import WebSearchService from '@renderer/services/WebSearchService'
 import type { WebSearchProviderId } from '@renderer/types'
-import { hasObjectKey } from '@renderer/utils'
 import { formatApiKeys } from '@shared/utils'
 import { Button, Divider, Flex, Form, Input, Space, Tooltip } from 'antd'
 import Link from 'antd/es/typography/Link'
@@ -179,7 +178,7 @@ const WebSearchProviderSetting: FC<Props> = ({ providerId }) => {
   const isDefault = defaultProvider?.id === provider.id
 
   // Check if provider needs API key but doesn't have one configured
-  const needsApiKey = hasObjectKey(provider, 'apiKey')
+  const needsApiKey = Object.hasOwn(provider, 'apiKey')
   const hasApiKey = provider.apiKey && provider.apiKey.trim() !== ''
   const canSetAsDefault = !isDefault && (!needsApiKey || hasApiKey)
 
@@ -223,7 +222,7 @@ const WebSearchProviderSetting: FC<Props> = ({ providerId }) => {
           </SettingHelpTextRow>
         </>
       )}
-      {!isLocalProvider && hasObjectKey(provider, 'apiKey') && (
+      {!isLocalProvider && Object.hasOwn(provider, 'apiKey') && (
         <>
           <SettingSubtitle
             style={{
@@ -268,7 +267,7 @@ const WebSearchProviderSetting: FC<Props> = ({ providerId }) => {
           </SettingHelpTextRow>
         </>
       )}
-      {!isLocalProvider && hasObjectKey(provider, 'apiHost') && (
+      {!isLocalProvider && Object.hasOwn(provider, 'apiHost') && (
         <>
           <SettingSubtitle style={{ marginTop: 5, marginBottom: 10 }}>{'API 地址'}</SettingSubtitle>
           <Flex gap={8}>
@@ -281,7 +280,7 @@ const WebSearchProviderSetting: FC<Props> = ({ providerId }) => {
           </Flex>
         </>
       )}
-      {!isLocalProvider && hasObjectKey(provider, 'basicAuthUsername') && (
+      {!isLocalProvider && Object.hasOwn(provider, 'basicAuthUsername') && (
         <>
           <SettingDivider style={{ marginTop: 12, marginBottom: 12 }} />
           <SettingSubtitle

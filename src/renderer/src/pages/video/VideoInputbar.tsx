@@ -198,7 +198,13 @@ const VideoInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
           }}
         />
         <Tooltip title={'视频时长'} mouseEnterDelay={0.5}>
-          <Select size="small" style={{ width: 88 }} value={duration} onChange={setDuration} options={VIDEO_DURATIONS} />
+          <Select
+            size="small"
+            style={{ width: 88 }}
+            value={duration}
+            onChange={setDuration}
+            options={VIDEO_DURATIONS}
+          />
         </Tooltip>
         <Tooltip title={'分辨率档位'} mouseEnterDelay={0.5}>
           <Select
@@ -284,7 +290,11 @@ const VideoInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
             {'停止生成'}
           </Button>
         ) : (
-          <Button type="primary" icon={<PlayCircle size={16} />} onClick={() => void handleGenerate()} disabled={!selectedModel || !prompt.trim()}>
+          <Button
+            type="primary"
+            icon={<PlayCircle size={16} />}
+            onClick={() => void handleGenerate()}
+            disabled={!selectedModel || !prompt.trim()}>
             {'生成视频'}
           </Button>
         )}

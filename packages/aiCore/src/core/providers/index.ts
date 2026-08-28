@@ -28,7 +28,7 @@ export type {
 // ==================== 工具函数 ====================
 
 // 工具函数和错误类
-export { formatPrivateKey, ProviderCreationError } from './core/utils'
+export { ProviderCreationError } from './core/utils'
 
 // ==================== Provider Extension 系统 ====================
 

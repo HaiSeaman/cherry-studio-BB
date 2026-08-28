@@ -171,11 +171,6 @@ class DbService implements MessageDataSource {
     // File operations only apply to Dexie source
     return this.dexieSource.updateFileCount(fileId, delta, deleteIfZero)
   }
-
-  async updateFileCounts(files: Array<{ id: string; delta: number; deleteIfZero?: boolean }>): Promise<void> {
-    // File operations only apply to Dexie source
-    return this.dexieSource.updateFileCounts(files)
-  }
 }
 
 // Export singleton instance

@@ -44,10 +44,6 @@ const inputbarRegistry = new Map<InputbarScope, InputbarScopeConfig>([
   ]
 ])
 
-export const registerInputbarConfig = (scope: InputbarScope, config: InputbarScopeConfig): void => {
-  inputbarRegistry.set(scope, config)
-}
-
 export const getInputbarConfig = (scope: InputbarScope): InputbarScopeConfig => {
   return inputbarRegistry.get(scope) || inputbarRegistry.get(DEFAULT_INPUTBAR_SCOPE)!
 }

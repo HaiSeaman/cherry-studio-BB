@@ -188,7 +188,6 @@ const UserAvatar = styled(Avatar)`
 `
 
 export default class UserPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide('UserPopup')
   }

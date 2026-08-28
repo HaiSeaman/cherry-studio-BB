@@ -364,7 +364,6 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
 const TopViewKey = 'DefaultAssistantSettingsPopup'
 
 export default class DefaultAssistantSettingsPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

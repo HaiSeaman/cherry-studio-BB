@@ -78,7 +78,6 @@ const PopupContainer: React.FC<Props> = ({
 const TopViewKey = 'AssistantsDrawer'
 
 export default class AssistantsDrawer {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

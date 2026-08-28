@@ -32,34 +32,12 @@ export const clearTopicQueue = (topicId: string): void => {
 }
 
 /**
- * Clear all topic queues
- */
-export const clearAllQueues = (): void => {
-  Object.keys(requestQueues).forEach((topicId) => {
-    requestQueues[topicId].clear()
-    delete requestQueues[topicId]
-  })
-}
-
-/**
  * Check if a topic has pending requests
  * @param topicId The ID of the topic
  * @returns True if the topic has pending requests
  */
 export const hasTopicPendingRequests = (topicId: string): boolean => {
   return requestQueues[topicId]?.size > 0 || requestQueues[topicId]?.pending > 0
-}
-
-/**
- * Get the number of pending requests for a topic
- * @param topicId The ID of the topic
- * @returns The number of pending requests
- */
-export const getTopicPendingRequestCount = (topicId: string): number => {
-  if (!requestQueues[topicId]) {
-    return 0
-  }
-  return requestQueues[topicId].size + requestQueues[topicId].pending
 }
 
 /**

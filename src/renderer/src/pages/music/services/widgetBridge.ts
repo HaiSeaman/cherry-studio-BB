@@ -40,7 +40,7 @@ function buildState(): WidgetPlayerState {
 }
 
 function send(msg: WidgetMsg): void {
-  void window.api.musicWidget.postToWidget(msg)
+  window.api.musicWidget.postToWidget(msg)
 }
 
 /** 4/s 进度广播（挂件连接且播放中才跑；暂停/停止随 update 停表） */

@@ -2,7 +2,6 @@ import { loggerService } from '@logger'
 import { useCodeStyle } from '@renderer/context/CodeStyleProvider'
 import { useCodeHighlight } from '@renderer/hooks/useCodeHighlight'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { uuid } from '@renderer/utils'
 import { getReactStyleFromToken } from '@renderer/utils/shiki'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { debounce } from 'lodash'
@@ -91,7 +90,7 @@ const CodeViewer = ({
   const { getShikiPreProperties, isShikiThemeDark } = useCodeStyle()
   const shikiThemeRef = useRef<HTMLDivElement>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
-  const callerId = useRef(`${Date.now()}-${uuid()}`).current
+  const callerId = useRef(`${Date.now()}-${crypto.randomUUID()}`).current
   const savedSelectionRef = useRef<SavedSelection | null>(null)
   // Ensure the active selection actually belongs to this CodeViewer instance
   const selectionBelongsToViewer = useCallback((sel: Selection | null) => {

@@ -1,7 +1,6 @@
 import { LoadingOutlined } from '@ant-design/icons'
 import { HStack } from '@renderer/components/Layout'
-import BackupPopup from '@renderer/components/Popups/BackupPopup'
-import RestorePopup from '@renderer/components/Popups/RestorePopup'
+import BackupRestorePopup from '@renderer/components/Popups/BackupRestorePopup'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
@@ -461,10 +460,10 @@ const BasicDataSettings: React.FC = () => {
         <SettingRow>
           <SettingRowTitle>{'数据备份与恢复'}</SettingRowTitle>
           <HStack gap="5px" justifyContent="space-between">
-            <Button onClick={() => BackupPopup.show()} icon={<SaveIcon size={14} />}>
+            <Button onClick={() => BackupRestorePopup.show('backup')} icon={<SaveIcon size={14} />}>
               {'备份'}
             </Button>
-            <Button onClick={RestorePopup.show} icon={<FolderOpen size={14} />}>
+            <Button onClick={() => BackupRestorePopup.show('restore')} icon={<FolderOpen size={14} />}>
               {'恢复'}
             </Button>
           </HStack>

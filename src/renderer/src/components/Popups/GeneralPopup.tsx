@@ -33,12 +33,12 @@ const PopupContainer: React.FC<Props> = ({ content, resolve, ...rest }) => {
   return (
     <Modal
       open={open}
+      centered
+      transitionName="animation-move-down"
+      {...rest}
       onOk={onOk}
       onCancel={onCancel}
-      afterClose={onClose}
-      transitionName="animation-move-down"
-      centered
-      {...rest}>
+      afterClose={onClose}>
       {content}
     </Modal>
   )
@@ -54,7 +54,6 @@ const TopViewKey = 'GeneralPopup'
 
 /** 在这个 Popup 中展示任意内容 */
 export default class GeneralPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

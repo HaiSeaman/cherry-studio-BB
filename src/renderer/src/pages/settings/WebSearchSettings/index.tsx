@@ -12,7 +12,6 @@ import ListItem from '@renderer/components/ListItem'
 import Scrollbar from '@renderer/components/Scrollbar'
 import { useDefaultWebSearchProvider, useWebSearchProviders } from '@renderer/hooks/useWebSearchProviders'
 import type { WebSearchProviderId } from '@renderer/types'
-import { hasObjectKey } from '@renderer/utils'
 import { Flex, Tag } from 'antd'
 import { Search } from 'lucide-react'
 import type { FC } from 'react'
@@ -49,7 +48,7 @@ const WebSearchSettings: FC = () => {
   const activeView = getActiveView()
 
   // Filter providers that have API settings (apiKey or apiHost)
-  const apiProviders = providers.filter((p) => hasObjectKey(p, 'apiKey') || hasObjectKey(p, 'apiHost'))
+  const apiProviders = providers.filter((p) => Object.hasOwn(p, 'apiKey') || Object.hasOwn(p, 'apiHost'))
   const localProviders = providers.filter((p) => p.id.startsWith('local'))
 
   // Provider logos map

@@ -42,7 +42,6 @@ type HostFormatter = {
   format: (provider: Provider, appendApiVersion: boolean) => string
 }
 
-// WARNING: if any changes are made here, please sync it to src/main/aiCore/provider/providerConfig.ts:formatProviderApiHost
 export function formatProviderApiHost(provider: Provider): Provider {
   const formatted = { ...provider }
   const appendApiVersion = !isWithTrailingSharp(provider.apiHost)

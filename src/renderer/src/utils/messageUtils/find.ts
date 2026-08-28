@@ -1,6 +1,5 @@
 import store from '@renderer/store'
 import { formatCitationsFromBlock, messageBlocksSelectors } from '@renderer/store/messageBlock'
-import type { FileMetadata } from '@renderer/types'
 import type {
   CitationMessageBlock,
   FileMessageBlock,
@@ -138,28 +137,6 @@ export const getCitationContent = (message: Message): string => {
         `[${citation.number}] [${citation.title || citation.url.slice(0, 1999)}](${citation.url.slice(0, 1999)})`
     )
     .join('\n\n')
-}
-
-/**
- * Gets the file content from all FileMessageBlocks and ImageMessageBlocks of a message.
- * @param message - The message object.
- * @returns The file content or an empty string if no file blocks are found.
- */
-export const getFileContent = (message: Message): FileMetadata[] => {
-  const files: FileMetadata[] = []
-  const fileBlocks = findFileBlocks(message)
-  for (const block of fileBlocks) {
-    if (block.file) {
-      files.push(block.file)
-    }
-  }
-  const imageBlocks = findImageBlocks(message)
-  for (const block of imageBlocks) {
-    if (block.file) {
-      files.push(block.file)
-    }
-  }
-  return files
 }
 
 /**

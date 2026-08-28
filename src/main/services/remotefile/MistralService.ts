@@ -42,11 +42,7 @@ export class MistralService extends BaseFileService {
       }
     } catch (error) {
       logger.error('Error uploading file:', error as Error)
-      return {
-        fileId: '',
-        displayName: file.origin_name,
-        status: 'failed'
-      }
+      return this.failedResponse('', file.origin_name)
     }
   }
 
@@ -96,12 +92,7 @@ export class MistralService extends BaseFileService {
       }
     } catch (error) {
       logger.error('Error retrieving file:', error as Error)
-      return {
-        fileId: fileId,
-        displayName: '',
-        status: 'failed',
-        originalFile: undefined
-      }
+      return this.failedResponse(fileId, '')
     }
   }
 }

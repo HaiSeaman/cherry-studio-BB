@@ -27,11 +27,6 @@ vi.mock('@renderer/components/Icons', () => ({
   ResetIcon: () => <span data-testid="reset">↻</span>
 }))
 
-// Mock utils
-vi.mock('@renderer/utils', () => ({
-  classNames: (...args: any[]) => args.filter(Boolean).join(' ')
-}))
-
 describe('ImageToolbar', () => {
   const mockPan = vi.fn()
   const mockZoom = vi.fn()

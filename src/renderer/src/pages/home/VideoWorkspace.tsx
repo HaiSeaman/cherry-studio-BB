@@ -27,11 +27,7 @@ const VideoWorkspace: FC<Props> = ({ assistant, activeTopic, setActiveTopic }) =
       <VideoHistoryList assistant={assistant} activeTopicId={validTopicId} onSelect={setActiveTopic} />
       <Main>
         <VideoContent topicId={validTopicId} />
-        <VideoInputbar
-          topicId={validTopicId}
-          assistantId={assistant.id}
-          onTopicChange={setActiveTopic}
-        />
+        <VideoInputbar topicId={validTopicId} assistantId={assistant.id} onTopicChange={setActiveTopic} />
       </Main>
     </Container>
   )

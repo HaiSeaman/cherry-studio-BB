@@ -6,6 +6,10 @@ export abstract class BaseFileService {
     this.provider = provider
   }
 
+  protected failedResponse(fileId: string, displayName: string): FileUploadResponse {
+    return { fileId, displayName, status: 'failed', originalFile: undefined }
+  }
+
   abstract uploadFile(file: FileMetadata): Promise<FileUploadResponse>
   abstract deleteFile(fileId: string): Promise<void>
   abstract listFiles(): Promise<FileListResponse>

@@ -7,6 +7,7 @@ import styled from 'styled-components'
 
 import { type FmStatus, useFmPlayer } from '../hooks/useFmPlayer'
 import {
+  dedupStationsByUrl,
   getCnHkMusicStations,
   getStationsBySource,
   getTopStations,
@@ -106,7 +107,7 @@ const FmRadio: FC = () => {
   const loadTop = useCallback(async (force = false) => {
     const cached = force ? null : getCachedTop()
     if (cached) {
-      setTopList(dedupMerge(cached.chinaHk, cached.stations))
+      setTopList(dedupStationsByUrl(cached.chinaHk, cached.stations))
       return
     }
     setLoading(true)
@@ -411,18 +412,6 @@ const FmRadio: FC = () => {
       </MXDialog>
     </MXCard>
   )
-}
-
-/** 热门榜缓存还原：中港置顶 → 全球榜（去重） */
-function dedupMerge(chinaHk: RadioStation[], stations: RadioStation[]): RadioStation[] {
-  const seen = new Set<string>()
-  const out: RadioStation[] = []
-  for (const s of [...chinaHk, ...stations]) {
-    if (seen.has(s.url)) continue
-    seen.add(s.url)
-    out.push(s)
-  }
-  return out
 }
 
 interface StationRowProps {

@@ -25,9 +25,9 @@ function extractHostname(url: string): string {
 }
 
 /** 识别服务商对应的视频适配器；未适配返回 null */
-export function resolveVideoAdapter(provider: Provider):
-  | { name: string; run: (params: VideoGenParams, onStatus?: VideoStatusCallback) => Promise<string> }
-  | null {
+export function resolveVideoAdapter(
+  provider: Provider
+): { name: string; run: (params: VideoGenParams, onStatus?: VideoStatusCallback) => Promise<string> } | null {
   const id = provider?.id || ''
   const host = extractHostname(provider?.apiHost || '')
 

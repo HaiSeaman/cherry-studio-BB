@@ -35,7 +35,9 @@ export function parseTencentCredentials(apiKey: string): { secretId: string; sec
   const trimmed = (apiKey || '').trim()
   const sepIndex = trimmed.indexOf(':')
   if (!trimmed || sepIndex <= 0 || sepIndex === trimmed.length - 1) {
-    throw new Error('腾讯混元 apiKey 请按「SecretId:SecretKey」格式填写（半角冒号分隔），可在腾讯云控制台 API 密钥管理中获取')
+    throw new Error(
+      '腾讯混元 apiKey 请按「SecretId:SecretKey」格式填写（半角冒号分隔），可在腾讯云控制台 API 密钥管理中获取'
+    )
   }
   return {
     secretId: trimmed.slice(0, sepIndex).trim(),

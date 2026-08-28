@@ -15,8 +15,8 @@ import { useShowTopics } from '@renderer/hooks/useStore'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import type { Assistant, Model, Topic } from '@renderer/types'
-import { classNames } from '@renderer/utils'
 import { Flex } from 'antd'
+import { clsx } from 'clsx'
 import { debounce } from 'lodash'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
@@ -154,7 +154,7 @@ const Chat: FC<Props> = (props) => {
   const mainHeight = isTopNavbar ? 'calc(100vh - var(--navbar-height) - 6px)' : '100vh'
 
   return (
-    <Container id="chat" className={classNames([messageStyle, { 'multi-select-mode': isMultiSelectMode }])}>
+    <Container id="chat" className={clsx([messageStyle, { 'multi-select-mode': isMultiSelectMode }])}>
       <HStack>
         <motion.div
           layout

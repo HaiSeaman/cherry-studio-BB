@@ -151,7 +151,6 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
 const TopViewKey = 'EditMcpJsonPopup'
 
 export default class EditMcpJsonPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

@@ -75,7 +75,7 @@ const StatsView: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; t
     const ratios = new Map<string, number>()
     for (let d = start; d <= today; d = addDaysISO(d, 1)) {
       ratios.set(d, dayRatio(d, createdISOs))
-    }    // 对齐到周列：显式计算每个格子的（周列, 星期行）坐标，供 Grid 显式定位（不变形、严格对齐）
+    } // 对齐到周列：显式计算每个格子的（周列, 星期行）坐标，供 Grid 显式定位（不变形、严格对齐）
     const startDow = weekdayOf(start)
     const cells: { key: string; date: string; level: number; week: number; dow: number }[] = []
     const labels: { week: number; label: string }[] = []
@@ -128,7 +128,13 @@ const StatsView: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; t
       <ChartCard>
         {daily.length > 0 ? (
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-            <polyline points={points} fill="none" stroke={mx.accent} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+            <polyline
+              points={points}
+              fill="none"
+              stroke={mx.accent}
+              strokeWidth="1.2"
+              vectorEffect="non-scaling-stroke"
+            />
           </svg>
         ) : (
           <EmptyText>暂无数据</EmptyText>

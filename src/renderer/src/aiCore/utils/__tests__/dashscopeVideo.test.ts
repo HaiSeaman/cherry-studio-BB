@@ -108,11 +108,7 @@ describe('generateDashScopeVideo', () => {
       () => jsonResponse({ output: { task_status: 'SUCCEEDED', video_url: 'u' } })
     ])
 
-    await generateDashScopeVideo(
-      { ...baseParams, duration: '5', resolution: '720p' },
-      undefined,
-      fastPoll
-    )
+    await generateDashScopeVideo({ ...baseParams, duration: '5', resolution: '720p' }, undefined, fastPoll)
 
     const parameters = (bodies[0] as { parameters: Record<string, unknown> }).parameters
     expect(parameters.duration).toBe(5)
@@ -186,9 +182,9 @@ describe('generateDashScopeVideo', () => {
       () => jsonResponse({ output: { task_id: 't', task_status: 'RUNNING' } })
     ])
 
-    await expect(
-      generateDashScopeVideo(baseParams, undefined, { intervalMs: 0, timeoutMs: 30 })
-    ).rejects.toThrow('超时')
+    await expect(generateDashScopeVideo(baseParams, undefined, { intervalMs: 0, timeoutMs: 30 })).rejects.toThrow(
+      '超时'
+    )
   })
 
   it('提交失败透出服务端错误信息', async () => {

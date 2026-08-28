@@ -11,8 +11,9 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { isGenerating, locateToMessage } from '@renderer/services/MessagesService'
 import NavigationService from '@renderer/services/NavigationService'
 import type { Topic } from '@renderer/types'
-import { classNames, runAsyncFunction } from '@renderer/utils'
+import { runAsyncFunction } from '@renderer/utils'
 import { Button, Divider, Empty } from 'antd'
+import { clsx } from 'clsx'
 import { Forward } from 'lucide-react'
 import type { FC } from 'react'
 import { useEffect, useRef, useState } from 'react'
@@ -65,7 +66,7 @@ const TopicMessages: FC<Props> = ({ topic: _topic, ...props }) => {
       <MessagesContainer {...props} ref={containerRef} onScroll={handleScroll}>
         <ContainerWrapper className={messageStyle}>
           {topic?.messages.map((message) => (
-            <MessageWrapper key={message.id} className={classNames([messageStyle, message.role])}>
+            <MessageWrapper key={message.id} className={clsx([messageStyle, message.role])}>
               <MessageItem message={message} topic={topic} hideMenuBar={true} />
               <Button
                 type="text"

@@ -1,4 +1,3 @@
-import { NavbarHeader } from '@renderer/components/app/Navbar'
 import SearchPopup from '@renderer/components/Popups/SearchPopup'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useNavbarPosition } from '@renderer/hooks/useSettings'
@@ -9,10 +8,22 @@ import { Tooltip } from 'antd'
 import { Menu, PanelLeftClose, PanelRightClose } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
+import styled from 'styled-components'
 
 import NavbarIcon from '../../../../components/NavbarIcon'
 import AssistantsDrawer from '../AssistantsDrawer'
 import ChatNavbarContent from './ChatNavbarContent'
+
+const NavbarHeader = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  min-height: var(--navbar-height);
+  max-height: var(--navbar-height);
+`
 
 interface Props {
   activeAssistant: Assistant

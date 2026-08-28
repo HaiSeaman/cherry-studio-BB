@@ -8,7 +8,6 @@ import { addTopic, updateTopic, updateTopicUpdatedAt } from '@renderer/store/ass
 import type { FileMetadata, Topic } from '@renderer/types'
 import { TopicType } from '@renderer/types'
 import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
-import { uuid } from '@renderer/utils'
 import { isAbortError, toSerializedError } from '@renderer/utils/error'
 import {
   createAssistantMessage,
@@ -31,7 +30,7 @@ export function abortCurrentVideoGeneration(): void {
 
 /** 创建新的视频会话，返回话题对象并同步到数据库与助手 topics 列表 */
 export async function createVideoTopic(assistantId?: string): Promise<Topic> {
-  const id = uuid()
+  const id = crypto.randomUUID()
   const now = new Date().toISOString()
   const targetAssistantId = assistantId || 'video'
   await db.topics.add({
@@ -140,18 +139,8 @@ export function buildProgressText(state: 'queued' | 'running', elapsedMs: number
  * 失败落 ERROR、用户中止落 PAUSED（不渲染红色错误卡）
  */
 export async function generateVideo(params: GenerateVideoParams): Promise<GenerateVideoResult> {
-  const {
-    modelId,
-    providerId,
-    prompt,
-    inputImage,
-    duration,
-    resolution,
-    aspectRatio,
-    topicId,
-    assistantId,
-    signal
-  } = params
+  const { modelId, providerId, prompt, inputImage, duration, resolution, aspectRatio, topicId, assistantId, signal } =
+    params
 
   // 从 provider store 取完整配置；找不到说明服务商已被删除，显式报错避免用错地址/密钥
   const provider = store.getState().llm.providers.find((p) => p.id === providerId)
@@ -299,4 +288,3 @@ function syncTopicMeta(assistantId: string, topicId: string, newName?: string): 
     store.dispatch(updateTopicUpdatedAt({ topicId }))
   }
 }
-

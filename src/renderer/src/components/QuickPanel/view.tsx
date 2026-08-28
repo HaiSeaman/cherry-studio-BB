@@ -2,8 +2,8 @@ import { RightOutlined } from '@ant-design/icons'
 import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
 import { isMac } from '@renderer/config/constant'
 import { useTimer } from '@renderer/hooks/useTimer'
-import { classNames } from '@renderer/utils'
 import { Flex } from 'antd'
+import { clsx } from 'clsx'
 import { debounce } from 'lodash'
 import { Check } from 'lucide-react'
 import React, { use, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -702,7 +702,7 @@ export const QuickPanelView: React.FC<Props> = ({ setInputText }) => {
 
       return (
         <QuickPanelItem
-          className={classNames({
+          className={clsx({
             focused: itemIndex === index,
             selected: item.isSelected,
             disabled: item.disabled

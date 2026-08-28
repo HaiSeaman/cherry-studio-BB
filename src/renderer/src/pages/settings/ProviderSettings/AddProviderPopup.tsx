@@ -49,7 +49,11 @@ const PROVIDER_TYPE_OPTIONS = [
   { label: 'CherryIN', value: 'cherryin-type' },
   { label: 'Ollama', value: 'ollama' },
   ...Object.keys(VIDEO_TYPE_TEMPLATES).map((key) => ({
-    label: { 'dashscope-video': '阿里云百炼 · 视频生成', 'ark-video': '火山豆包 · 视频生成', 'hunyuan-video': '腾讯混元 · 视频生成' }[key],
+    label: {
+      'dashscope-video': '阿里云百炼 · 视频生成',
+      'ark-video': '火山豆包 · 视频生成',
+      'hunyuan-video': '腾讯混元 · 视频生成'
+    }[key],
     value: key
   }))
 ]
@@ -354,7 +358,6 @@ const MenuItem = styled.div`
 `
 
 export default class AddProviderPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide('AddProviderPopup')
   }

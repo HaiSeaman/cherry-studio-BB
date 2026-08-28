@@ -22,7 +22,7 @@ import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import { removeBlocksThunk } from '@renderer/store/thunk/messageThunk'
 import type { Assistant, Model, Topic, TranslateLanguage } from '@renderer/types'
 import { type Message, type MessageBlock, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
-import { captureScrollableAsBlob, captureScrollableAsDataURL, classNames } from '@renderer/utils'
+import { captureScrollableAsBlob, captureScrollableAsDataURL } from '@renderer/utils'
 import { abortCompletion } from '@renderer/utils/abortController'
 import { copyMessageAsPlainText } from '@renderer/utils/copy'
 import { isAbortError } from '@renderer/utils/error'
@@ -44,6 +44,7 @@ import {
 } from '@renderer/utils/messageUtils/find'
 import type { MenuProps } from 'antd'
 import { Dropdown, Popconfirm, Tooltip } from 'antd'
+import { clsx } from 'clsx'
 import dayjs from 'dayjs'
 import {
   AtSign,
@@ -563,8 +564,7 @@ const MessageMenubar: FC<Props> = (props) => {
           <MessageTokens message={message} />
         </FooterMetadata>
       )}
-      <MenusBar
-        className={classNames({ menubar: true, show: isLastMessage, 'user-bubble-style': isUserBubbleStyleMessage })}>
+      <MenusBar className={clsx({ menubar: true, show: isLastMessage, 'user-bubble-style': isUserBubbleStyleMessage })}>
         {buttonIds.map((buttonId) => {
           const renderFn = buttonRenderers[buttonId]
           if (!renderFn) {

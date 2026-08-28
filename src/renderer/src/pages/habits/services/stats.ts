@@ -97,7 +97,12 @@ export function strengthIndex(doneSet: Set<string>, skipSet: Set<string>, create
 }
 
 /** 星期分布：按周几统计 done 率（分母排除 skip），索引 0=周日…6=周六，单位 % */
-export function weekdayDistribution(doneDates: string[], skipSet: Set<string>, createdISO: string, today: string): number[] {
+export function weekdayDistribution(
+  doneDates: string[],
+  skipSet: Set<string>,
+  createdISO: string,
+  today: string
+): number[] {
   const doneSet = new Set(doneDates)
   const denom = new Array(7).fill(0)
   const num = new Array(7).fill(0)

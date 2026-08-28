@@ -53,7 +53,9 @@ const StatsCards: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; 
         </div>
         <div className="label">今日进度</div>
         <ProgressTrack>
-          <ProgressFill $pct={stats.todayProgress.y === 0 ? 0 : (stats.todayProgress.x / stats.todayProgress.y) * 100} />
+          <ProgressFill
+            $pct={stats.todayProgress.y === 0 ? 0 : (stats.todayProgress.x / stats.todayProgress.y) * 100}
+          />
         </ProgressTrack>
       </Card>
       <Card>

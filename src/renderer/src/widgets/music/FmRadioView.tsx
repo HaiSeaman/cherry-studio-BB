@@ -102,7 +102,11 @@ const FmRadioView: FC<FmRadioViewProps> = ({ state, stations }) => {
         <button type="button" className="ctl" title="上一台" onClick={() => stepStation(-1)}>
           <SkipBack size={15} />
         </button>
-        <button type="button" className="ctl main" title={playing ? '暂停' : '播放'} onClick={() => sendCmd({ t: 'cmd', a: 'fmToggle' })}>
+        <button
+          type="button"
+          className="ctl main"
+          title={playing ? '暂停' : '播放'}
+          onClick={() => sendCmd({ t: 'cmd', a: 'fmToggle' })}>
           {playing ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: 2 }} />}
         </button>
         <button type="button" className="ctl" title="下一台" onClick={() => stepStation(1)}>

@@ -17,7 +17,11 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     playerStore.setTracks(tracks)
   }, [tracks])
 
-  const st = useSyncExternalStore(playerStore.subscribeLocal, playerStore.getLocalSnapshot, playerStore.getLocalSnapshot)
+  const st = useSyncExternalStore(
+    playerStore.subscribeLocal,
+    playerStore.getLocalSnapshot,
+    playerStore.getLocalSnapshot
+  )
 
   const favoriteIndices = useMemo(
     () =>

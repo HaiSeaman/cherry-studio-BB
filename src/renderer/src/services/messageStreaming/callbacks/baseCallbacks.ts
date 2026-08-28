@@ -16,7 +16,6 @@ import type {
   ToolMessageBlock
 } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
-import { uuid } from '@renderer/utils'
 import { isAbortError, serializeError } from '@renderer/utils/error'
 import { createBaseMessageBlock, createErrorBlock } from '@renderer/utils/messageUtils/create'
 import { findAllBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
@@ -167,7 +166,7 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
         const timeOut = duration > 30 * 1000
         if ((!isOnHomePage() && timeOut) || (!isFocused() && timeOut)) {
           await notificationService.send({
-            id: uuid(),
+            id: crypto.randomUUID(),
             type: 'error',
             title: '助手响应',
             message: serializableError.message ?? '',
@@ -332,7 +331,7 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
         // 发送长时间运行消息的成功通知
         if ((!isOnHomePage() && timeOut) || (!isFocused() && timeOut)) {
           await notificationService.send({
-            id: uuid(),
+            id: crypto.randomUUID(),
             type: 'success',
             title: '助手响应',
             message: content.length > 50 ? content.slice(0, 47) + '...' : content,

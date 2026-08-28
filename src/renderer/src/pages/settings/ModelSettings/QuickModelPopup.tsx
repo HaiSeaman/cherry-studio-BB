@@ -95,7 +95,6 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
 const TopViewKey = 'TopicNamingModalPopup'
 
 export default class TopicNamingModalPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

@@ -13,13 +13,13 @@ import { translateText } from '@renderer/services/TranslateService'
 import { useAppDispatch } from '@renderer/store'
 import { setSearching } from '@renderer/store/runtime'
 import type { FileMetadata } from '@renderer/types'
-import { classNames } from '@renderer/utils'
 import { formatQuotedText } from '@renderer/utils/formats'
 import { isSendMessageKeyPressed } from '@renderer/utils/input'
 import { IpcChannel } from '@shared/IpcChannel'
 import { Tooltip } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
 import type { TextAreaRef } from 'antd/lib/input/TextArea'
+import { clsx } from 'clsx'
 import { CirclePause, Languages } from 'lucide-react'
 import type { CSSProperties, FC } from 'react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -635,12 +635,12 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className={classNames('inputbar')}>
+        className={clsx('inputbar')}>
         {pinnedContent}
         {quickPanelElement}
         <InputBarContainer
           id="inputbar"
-          className={classNames('inputbar-container', isDragging && 'file-dragging', isExpanded && 'expanded')}>
+          className={clsx('inputbar-container', isDragging && 'file-dragging', isExpanded && 'expanded')}>
           <DragHandle onMouseDown={handleDragStart}>
             <HolderOutlined style={{ fontSize: 12 }} />
           </DragHandle>

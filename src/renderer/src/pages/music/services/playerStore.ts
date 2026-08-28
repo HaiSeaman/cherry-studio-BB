@@ -1,5 +1,5 @@
 import type { FmStatus, MusicTrack, PlayMode, RadioStation } from '../types'
-import { type AudioEngine,audioEngine } from './audioEngine'
+import { type AudioEngine, audioEngine } from './audioEngine'
 import { nextIndexInPool, prevIndexInPool, pushShuffleHistory, toFileUrl } from './playLogic'
 
 /** 播放模式/收藏夹模式持久化在 Redux（musicSettings），主窗口经 attachPlayerStoreDeps 注入读写通道 */
@@ -181,7 +181,10 @@ export class PlayerStore {
   }
 
   private get favoriteIndices(): number[] {
-    return this.tracks.map((t, i) => ({ t, i })).filter((x) => x.t.favorite === 1).map((x) => x.i)
+    return this.tracks
+      .map((t, i) => ({ t, i }))
+      .filter((x) => x.t.favorite === 1)
+      .map((x) => x.i)
   }
 
   private getPool(): number[] {
@@ -198,10 +201,7 @@ export class PlayerStore {
   }
 
   /** 按曲目 id 播放；曲库未就绪时接受调用方提供的最小曲目信息（音乐挂件路径） */
-  playTrackById(
-    id: number,
-    fallback?: Pick<MusicTrack, 'filePath' | 'title' | 'artist' | 'album' | 'duration'>
-  ): void {
+  playTrackById(id: number, fallback?: Pick<MusicTrack, 'filePath' | 'title' | 'artist' | 'album' | 'duration'>): void {
     const track = this.tracks.find((t) => t.id === id)
     if (track) return this.playTrack(track, true)
     if (!fallback) return
@@ -363,7 +363,10 @@ export class PlayerStore {
     if (this.deps.getFavoritesActive() && list[resumeIdx].favorite !== 1) {
       this.pendingReturnToFavorites = true
       // 基于删除后的实际列表重建收藏索引，避免旧索引错位
-      const pool = list.map((t, i) => ({ t, i })).filter((x) => x.t.favorite === 1).map((x) => x.i)
+      const pool = list
+        .map((t, i) => ({ t, i }))
+        .filter((x) => x.t.favorite === 1)
+        .map((x) => x.i)
       if (pool.length > 0) targetId = list[pool[0]].id
       else return this.stop()
     }

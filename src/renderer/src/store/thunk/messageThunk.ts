@@ -13,7 +13,6 @@ import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
 import type { FileMessageBlock, ImageMessageBlock, Message, MessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
-import { uuid } from '@renderer/utils'
 import { abortCompletion, addAbortController, removeAbortController } from '@renderer/utils/abortController'
 import {
   createAssistantMessage,
@@ -68,11 +67,6 @@ const finishTopicLoading = async (topicId: string) => {
   store.dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
   store.dispatch(newMessagesActions.setTopicFulfilled({ topicId, fulfilled: true }))
 }
-
-// TODO: 后续可以将db操作移到Listener Middleware中
-// export const saveMessageAndBlocksToDB = async (message: Message, blocks: MessageBlock[], messageIndex: number = -1) => {
-//   return saveMessageAndBlocksToDBV2(message.topicId, message, blocks, messageIndex)
-// }
 
 const updateExistingMessageAndBlocksInDB = async (
   updatedMessage: Partial<Message> & Pick<Message, 'id' | 'topicId'>,
@@ -1105,7 +1099,7 @@ export const cloneMessagesToNewTopicThunk =
 
       // 3. First pass: Create ID mappings for all messages
       for (const oldMessage of messagesToClone) {
-        const newMsgId = uuid()
+        const newMsgId = crypto.randomUUID()
         originalToNewMsgIdMap.set(oldMessage.id, newMsgId) // Store mapping for all cloned messages
       }
 
@@ -1136,7 +1130,7 @@ export const cloneMessagesToNewTopicThunk =
           for (const oldBlockId of oldMessage.blocks) {
             const oldBlock = state.messageBlocks.entities[oldBlockId]
             if (oldBlock) {
-              const newBlockId = uuid()
+              const newBlockId = crypto.randomUUID()
               const newBlock = {
                 ...oldBlock,
                 id: newBlockId,
@@ -1356,24 +1350,6 @@ export const loadTopicMessagesThunk =
       dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
     }
   }
-
-/**
- * Get raw topic data using unified DbService
- * Returns topic with messages array
- */
-export const getRawTopic = async (topicId: string): Promise<{ id: string; messages: Message[] } | undefined> => {
-  try {
-    const rawTopic = await dbService.getRawTopic(topicId)
-    logger.silly('Retrieved raw topic via DbService', {
-      topicId,
-      found: !!rawTopic
-    })
-    return rawTopic
-  } catch (error) {
-    logger.error('Failed to get raw topic:', { topicId, error })
-    return undefined
-  }
-}
 
 /**
  * Update file reference count

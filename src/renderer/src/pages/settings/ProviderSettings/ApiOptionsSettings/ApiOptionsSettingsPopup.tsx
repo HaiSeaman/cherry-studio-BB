@@ -48,7 +48,6 @@ const PopupContainer: React.FC<Props> = ({ providerId, resolve }) => {
 const TopViewKey = 'ApiOptionsSettingsPopup'
 
 export default class ApiOptionsSettingsPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

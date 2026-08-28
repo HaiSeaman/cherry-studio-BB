@@ -12,7 +12,7 @@ import { useTimer } from '@renderer/hooks/useTimer'
 import ImageStorage from '@renderer/services/ImageStorage'
 import type { Provider, ProviderType } from '@renderer/types'
 import { isSystemProvider } from '@renderer/types'
-import { getFancyProviderName, matchKeywordsInModel, matchKeywordsInProvider, uuid } from '@renderer/utils'
+import { getFancyProviderName, matchKeywordsInModel, matchKeywordsInProvider } from '@renderer/utils'
 import { isAnthropicSupportedProvider } from '@renderer/utils/provider'
 import type { MenuProps } from 'antd'
 import { Button, Dropdown, Input, Tag } from 'antd'
@@ -167,7 +167,7 @@ const ProviderList: FC<ProviderListProps> = ({ isOnboarding = false }) => {
     }
 
     const provider = {
-      id: uuid(),
+      id: crypto.randomUUID(),
       name: providerName.trim(),
       type,
       apiKey: '',

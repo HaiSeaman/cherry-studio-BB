@@ -145,7 +145,6 @@ const PopupContainer: React.FC<Props> = ({
 const TopViewKey = 'PrivacyPopup'
 
 export default class PrivacyPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

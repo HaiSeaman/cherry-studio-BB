@@ -13,6 +13,3 @@ import './generateImageTool'
 import './clearTopicTool'
 import './toggleExpandTool'
 import './newContextTool'
-
-// Export registry functions
-export { getAllTools, getTool, getToolsForScope, registerTool } from '../types'

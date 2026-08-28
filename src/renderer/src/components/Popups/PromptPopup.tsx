@@ -99,7 +99,6 @@ const PromptPopupContainer: React.FC<Props> = ({
 const TopViewKey = 'PromptPopup'
 
 export default class PromptPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide(TopViewKey)
   }

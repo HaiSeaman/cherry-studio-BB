@@ -2,7 +2,6 @@ import { loggerService } from '@logger'
 import store from '@renderer/store'
 import { addAssistant } from '@renderer/store/assistants'
 import type { Assistant } from '@renderer/types'
-import { uuid } from '@renderer/utils'
 
 import { DEFAULT_ASSISTANT_SETTINGS } from '../AssistantService'
 import { availableImporters } from './importers'
@@ -100,7 +99,7 @@ class ImportServiceClass {
       }
 
       // Create assistant
-      const assistantId = uuid()
+      const assistantId = crypto.randomUUID()
 
       // Parse conversations
       const result = await importer.parse(fileContent, assistantId)

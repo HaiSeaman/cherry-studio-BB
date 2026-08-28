@@ -1,11 +1,37 @@
 import { describe, expect, it } from 'vitest'
 
-import { completionRate, currentStreak, longestStreak, overallWindowCompletionRate, strengthIndex, weekdayDistribution } from '../services/stats'
+import {
+  completionRate,
+  currentStreak,
+  longestStreak,
+  overallWindowCompletionRate,
+  strengthIndex,
+  weekdayDistribution
+} from '../services/stats'
 
 // 手算基准区间：created='2026-08-01'，today='2026-08-10'（10 个自然日）
-const D1_9 = new Set(['2026-08-01', '2026-08-02', '2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07', '2026-08-08', '2026-08-09'])
+const D1_9 = new Set([
+  '2026-08-01',
+  '2026-08-02',
+  '2026-08-03',
+  '2026-08-04',
+  '2026-08-05',
+  '2026-08-06',
+  '2026-08-07',
+  '2026-08-08',
+  '2026-08-09'
+])
 const D1_10 = new Set([...D1_9, '2026-08-10'])
-const D1_8 = new Set(['2026-08-01', '2026-08-02', '2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07', '2026-08-08'])
+const D1_8 = new Set([
+  '2026-08-01',
+  '2026-08-02',
+  '2026-08-03',
+  '2026-08-04',
+  '2026-08-05',
+  '2026-08-06',
+  '2026-08-07',
+  '2026-08-08'
+])
 
 describe('currentStreak', () => {
   it('今天没打不算断：1~9 号 done，10 号空 → 连续 9', () => {
@@ -19,7 +45,16 @@ describe('currentStreak', () => {
     expect(currentStreak(D1_8, new Set(), '2026-08-01', '2026-08-10')).toBe(0)
   })
   it('skip 不断卡：1~5 done，6 skip，7~9 done，10 空 → 连续 9', () => {
-    const done = new Set(['2026-08-01', '2026-08-02', '2026-08-03', '2026-08-04', '2026-08-05', '2026-08-07', '2026-08-08', '2026-08-09'])
+    const done = new Set([
+      '2026-08-01',
+      '2026-08-02',
+      '2026-08-03',
+      '2026-08-04',
+      '2026-08-05',
+      '2026-08-07',
+      '2026-08-08',
+      '2026-08-09'
+    ])
     const skip = new Set(['2026-08-06'])
     expect(currentStreak(done, skip, '2026-08-01', '2026-08-10')).toBe(9)
   })
@@ -30,7 +65,16 @@ describe('currentStreak', () => {
 
 describe('longestStreak', () => {
   it('两段 3 天和 5 天 → 5', () => {
-    const done = new Set(['2026-08-01', '2026-08-02', '2026-08-03', '2026-08-06', '2026-08-07', '2026-08-08', '2026-08-09', '2026-08-10'])
+    const done = new Set([
+      '2026-08-01',
+      '2026-08-02',
+      '2026-08-03',
+      '2026-08-06',
+      '2026-08-07',
+      '2026-08-08',
+      '2026-08-09',
+      '2026-08-10'
+    ])
     expect(longestStreak(done, new Set(), '2026-08-01', '2026-08-10')).toBe(5)
   })
   it('skip 维持段长：1~3 done，4 skip，5~7 done → 最长 7', () => {
@@ -62,7 +106,16 @@ describe('strengthIndex（EMA，m=0.5^(1/13)）', () => {
   })
   it('skip 日不衰减：done 1 号 + skip 2~9 号，分数保持 done 当日值', () => {
     const doneOne = strengthIndex(new Set(['2026-08-01']), new Set(), '2026-08-01', '2026-08-01')
-    const skips = new Set(['2026-08-02', '2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07', '2026-08-08', '2026-08-09'])
+    const skips = new Set([
+      '2026-08-02',
+      '2026-08-03',
+      '2026-08-04',
+      '2026-08-05',
+      '2026-08-06',
+      '2026-08-07',
+      '2026-08-08',
+      '2026-08-09'
+    ])
     expect(strengthIndex(new Set(['2026-08-01']), skips, '2026-08-01', '2026-08-09')).toBeCloseTo(doneOne, 6)
   })
   it('断卡不清零：先完美 9 天再断 1 天，仍保留 30 分以上', () => {

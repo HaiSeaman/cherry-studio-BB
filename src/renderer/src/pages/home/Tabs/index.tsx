@@ -5,8 +5,8 @@ import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import type { Assistant, AssistantType, Topic } from '@renderer/types'
 import type { Tab } from '@renderer/types/chat'
-import { classNames, uuid } from '@renderer/utils'
 import { Modal } from 'antd'
+import { clsx } from 'clsx'
 import type { FC } from 'react'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -75,7 +75,7 @@ const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant,
 
   const createAssistantOfType = (type: AssistantType) => {
     setTypePickerOpen(false)
-    const id = uuid()
+    const id = crypto.randomUUID()
     const template = ASSISTANT_TEMPLATES.find((t) => t.type === type)!
     // chat 保持既有行为（继承默认助手配置）；生图/自动化换名字/emoji 并配全新默认话题
     const assistant: Assistant = {
@@ -118,7 +118,7 @@ const HomeTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveAssistant,
   return (
     <Container
       style={{ ...border, ...style }}
-      className={classNames('home-tabs', { right: position === 'right' && topicPosition === 'right' })}>
+      className={clsx('home-tabs', { right: position === 'right' && topicPosition === 'right' })}>
       {position === 'left' && topicPosition === 'left' && (
         <CustomTabs>
           <TabItem active={tab === 'assistants'} onClick={() => setTab('assistants')}>

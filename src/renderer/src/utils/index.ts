@@ -15,46 +15,6 @@ export const runAsyncFunction = async (fn: () => Promise<void>): Promise<void> =
 }
 
 /**
- * 创建一个延迟的 Promise，在指定秒数后解析。
- * @param {number} seconds 延迟的秒数
- * @returns {Promise<any>} 在指定秒数后解析的 Promise
- */
-export const delay = (seconds: number): Promise<any> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(true)
-    }, seconds * 1000)
-  })
-}
-
-export const uuid = () => crypto.randomUUID()
-
-/**
- * 从错误对象中提取错误信息。
- * @param {any} error 错误对象或字符串
- * @returns {string} 提取的错误信息，如果没有则返回空字符串
- */
-export function getErrorMessage(error: any): string {
-  if (!error) {
-    return ''
-  }
-
-  if (typeof error === 'string') {
-    return error
-  }
-
-  if (error?.error) {
-    return getErrorMessage(error.error)
-  }
-
-  if (error?.message) {
-    return error.message
-  }
-
-  return ''
-}
-
-/**
  * 检查 URL 是否是有效的代理 URL。
  * @param {string} url 代理 URL
  * @returns {boolean} 是否有效
@@ -77,20 +37,6 @@ export function modalConfirm(params: ModalFuncProps): Promise<boolean> {
       onCancel: () => resolve(false)
     })
   })
-}
-
-/**
- * 检查对象是否包含特定键。
- * @param {any} obj 输入对象
- * @param {string} key 要检查的键
- * @returns {boolean} 包含该键则返回 true，否则返回 false
- */
-export function hasObjectKey(obj: any, key: string): boolean {
-  if (typeof obj !== 'object' || obj === null) {
-    return false
-  }
-
-  return Object.keys(obj).includes(key)
 }
 
 /**

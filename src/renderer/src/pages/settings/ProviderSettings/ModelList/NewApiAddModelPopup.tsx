@@ -1,7 +1,7 @@
 import { TopView } from '@renderer/components/TopView'
 import { endpointTypeOptions } from '@renderer/config/endpointTypes'
 import { isNotSupportTextDeltaModel } from '@renderer/config/models'
-import { useDynamicLabelWidth } from '@renderer/hooks/useDynamicLabelWidth'
+import { getDynamicLabelWidth } from '@renderer/hooks/useDynamicLabelWidth'
 import { useProvider } from '@renderer/hooks/useProvider'
 import type { EndpointType, Model, Provider } from '@renderer/types'
 import { getDefaultGroupName } from '@renderer/utils'
@@ -94,7 +94,7 @@ const PopupContainer: React.FC<Props> = ({ title, provider, resolve, model, endp
       centered>
       <Form
         form={form}
-        labelCol={{ style: { width: useDynamicLabelWidth(['端点类型']) } }}
+        labelCol={{ style: { width: getDynamicLabelWidth(['端点类型']) } }}
         labelAlign="left"
         colon={false}
         style={{ marginTop: 25 }}
@@ -154,7 +154,6 @@ const PopupContainer: React.FC<Props> = ({ title, provider, resolve, model, endp
 }
 
 export default class NewApiAddModelPopup {
-  static topviewId = 0
   static hide() {
     TopView.hide('NewApiAddModelPopup')
   }

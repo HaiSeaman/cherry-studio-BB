@@ -140,7 +140,9 @@ body {
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .btns button:hover {
@@ -285,7 +287,9 @@ body {
   background: transparent;
   color: var(--text-3);
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .fav-btn:hover {
@@ -445,7 +449,10 @@ body {
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
 }
 
 .ctl:hover {
@@ -804,7 +811,9 @@ body {
   color: var(--text-2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .tool-btn:hover {
@@ -975,7 +984,9 @@ body {
   color: var(--text);
   background: var(--card);
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .input-bar input:focus {

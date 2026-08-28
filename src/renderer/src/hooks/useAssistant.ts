@@ -26,7 +26,6 @@ import {
 } from '@renderer/store/assistants'
 import { setDefaultModel, setQuickModel, setTranslateModel } from '@renderer/store/llm'
 import type { Assistant, AssistantSettings, Model, ThinkingOption, Topic } from '@renderer/types'
-import { uuid } from '@renderer/utils'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { TopicManager } from './useTopic'
@@ -47,7 +46,7 @@ export function useAssistants() {
         return
       }
       const index = assistants.findIndex((_assistant) => _assistant.id === assistant.id)
-      const _assistant: Assistant = { ...assistant, id: uuid(), topics: [getDefaultTopic(assistant.id)] }
+      const _assistant: Assistant = { ...assistant, id: crypto.randomUUID(), topics: [getDefaultTopic(assistant.id)] }
       if (index === -1) {
         logger.warn("Origin assistant's id not found. Fallback to addAssistant.")
         dispatch(addAssistant(_assistant))

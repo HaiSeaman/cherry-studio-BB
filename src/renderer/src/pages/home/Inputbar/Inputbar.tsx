@@ -33,7 +33,6 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { sendMessage as _sendMessage } from '@renderer/store/thunk/messageThunk'
 import { type Assistant, type FileMetadata, type Model, type Topic, TopicType } from '@renderer/types'
 import type { MessageInputBaseParams } from '@renderer/types/newMessage'
-import { delay } from '@renderer/utils'
 import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
 import { debounce } from 'lodash'
@@ -280,7 +279,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   const clearTopic = useCallback(async () => {
     if (loading) {
       await onPause()
-      await delay(1)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
 
     EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES, topic)

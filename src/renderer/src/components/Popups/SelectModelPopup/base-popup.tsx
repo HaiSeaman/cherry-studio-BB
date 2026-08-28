@@ -9,9 +9,10 @@ import { getModelUniqId } from '@renderer/services/ModelService'
 import { getProviderById } from '@renderer/services/ProviderService'
 import type { Model, Provider } from '@renderer/types'
 import { objectEntries } from '@renderer/types'
-import { classNames, filterModelsByKeywords, getFancyProviderName } from '@renderer/utils'
+import { filterModelsByKeywords, getFancyProviderName } from '@renderer/utils'
 import { getDuplicateModelNames, getModelTags } from '@renderer/utils/model'
 import { Avatar, Divider, Empty, Modal, Tooltip } from 'antd'
+import { clsx } from 'clsx'
 import { first, sortBy } from 'lodash'
 import { Settings2 } from 'lucide-react'
 import React, {
@@ -412,7 +413,7 @@ const SelectModelPopupView: React.FC<Props> = ({
       }
       return (
         <ModelItem
-          className={classNames({
+          className={clsx({
             focused: isFocused,
             selected: item.isSelected
           })}

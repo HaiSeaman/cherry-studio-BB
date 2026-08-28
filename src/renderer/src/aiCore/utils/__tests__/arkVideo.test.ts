@@ -63,9 +63,7 @@ afterEach(() => {
 
 describe('getArkBaseUrl', () => {
   it('去掉尾部斜杠', () => {
-    expect(getArkBaseUrl('https://ark.cn-beijing.volces.com/api/v3/')).toBe(
-      'https://ark.cn-beijing.volces.com/api/v3'
-    )
+    expect(getArkBaseUrl('https://ark.cn-beijing.volces.com/api/v3/')).toBe('https://ark.cn-beijing.volces.com/api/v3')
   })
 
   it('apiHost 未含版本段时自动补 /api/v3', () => {
@@ -128,10 +126,7 @@ describe('generateArkVideo', () => {
   })
 
   it('超时抛错', async () => {
-    mockFetchSequence([
-      () => jsonResponse({ id: 't' }),
-      () => jsonResponse({ status: 'running' })
-    ])
+    mockFetchSequence([() => jsonResponse({ id: 't' }), () => jsonResponse({ status: 'running' })])
 
     await expect(generateArkVideo(baseParams, undefined, { intervalMs: 0, timeoutMs: 30 })).rejects.toThrow('超时')
   })
