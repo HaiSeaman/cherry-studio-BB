@@ -62,6 +62,7 @@ const HabitDetail: FC<{ habit: Habit; today: string; allRecords: Map<string, Hab
 
       <SectionTitle>星期分布（薄弱日一眼看到）</SectionTitle>
       <WeekChart>
+        <Baseline />
         {data.dist.map((v, i) => (
           <BarCol key={i}>
             <BarWrap>
@@ -105,7 +106,7 @@ const ColorDot = styled.span<{ $color: string }>`
 
 const MetricRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 `
 
@@ -114,30 +115,49 @@ const Metric = styled.div`
   border: 1px solid ${mx.border};
   border-radius: 14px;
   padding: 12px 16px;
+  min-width: 0;
   .value {
     font-size: 22px;
     font-weight: 700;
+    line-height: 1.15;
     color: ${mx.text};
     font-variant-numeric: tabular-nums;
   }
   .label {
-    margin-top: 2px;
-    font-size: 11.5px;
+    margin-top: 3px;
+    font-size: 11px;
+    letter-spacing: 0.03em;
     color: ${mx.text3};
   }
 `
 
 const SectionTitle = styled.div`
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: ${mx.text2};
+  letter-spacing: 0.04em;
+  color: ${mx.text3};
 `
 
 const WeekChart = styled.div`
+  position: relative;
+  background: ${mx.card};
+  border: 1px solid ${mx.border};
+  border-radius: 14px;
+  padding: 14px 16px 12px;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 10px;
   align-items: end;
+`
+
+/* 100% 基准虚线：与柱形区顶对齐（padding-top 14px 处） */
+const Baseline = styled.div`
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 16px;
+  height: 0;
+  border-top: 1px dashed ${mx.border};
 `
 
 const BarCol = styled.div`

@@ -44,4 +44,7 @@ app.whenReady().then(async () => {
     console.error('SMOKE FAILED:', e.message)
     app.exit(1)
   }
+}).catch((e) => {
+  console.error('SMOKE FAILED (ready):', e?.message ?? e)
+  app.exit(1)
 })

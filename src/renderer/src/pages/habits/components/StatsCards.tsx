@@ -75,7 +75,7 @@ const StatsCards: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; 
 
 const CardRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 `
 
@@ -83,29 +83,32 @@ const Card = styled.div`
   background: ${mx.card};
   border: 1px solid ${mx.border};
   border-radius: 14px;
-  padding: 14px 18px;
+  padding: 13px 16px;
+  min-width: 0;
   .value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
+    line-height: 1.15;
     color: ${mx.text};
     font-variant-numeric: tabular-nums;
     .unit {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
-      color: ${mx.text2};
+      color: ${mx.text3};
       margin-left: 2px;
     }
   }
   .label {
-    margin-top: 2px;
-    font-size: 12.5px;
+    margin-top: 3px;
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
     color: ${mx.text3};
   }
 `
 
 const ProgressTrack = styled.div`
-  margin-top: 6px;
-  height: 5px;
+  margin-top: 8px;
+  height: 6px;
   border-radius: 999px;
   background: ${mx.soft};
   overflow: hidden;

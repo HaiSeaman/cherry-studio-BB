@@ -59,10 +59,6 @@ export function addMonths(year: number, month: number, delta: number): { year: n
   return { year: Math.floor(zero / 12), month: (zero % 12) + 1 }
 }
 
-export function monthTitle(year: number, month: number): string {
-  return `${year}年${month}月`
-}
-
 /** ISO 日期是周几（0=周日…6=周六），月历表头周末标记用 */
 export function weekdayOf(iso: string): number {
   const [y, m, d] = iso.split('-').map(Number)

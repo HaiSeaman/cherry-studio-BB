@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { addMonths, monthDays, monthRange, monthTitle, todayISO, toISODate, weekdayOf } from '../services/calendar'
+import { addMonths, monthDays, monthRange, todayISO, toISODate, weekdayOf } from '../services/calendar'
 
 describe('toISODate', () => {
   it('本地时区 YYYY-MM-DD（补零）', () => {
@@ -60,11 +60,5 @@ describe('weekdayOf', () => {
   it('2026-08-01 是周六(6)、08-02 是周日(0)', () => {
     expect(weekdayOf('2026-08-01')).toBe(6)
     expect(weekdayOf('2026-08-02')).toBe(0)
-  })
-})
-
-describe('monthTitle', () => {
-  it('中文年月', () => {
-    expect(monthTitle(2026, 8)).toBe('2026年8月')
   })
 })

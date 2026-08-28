@@ -83,7 +83,7 @@ function getShortcutHandler(shortcut: Shortcut) {
       }
     case 'screenshot':
       return () => {
-        screenshotService.startCapture()
+        void screenshotService.startCapture()
       }
     case 'desktop_widget':
       return () => {

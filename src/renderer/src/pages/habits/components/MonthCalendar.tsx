@@ -4,7 +4,7 @@ import { type FC, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 import { useActiveHabits, useAllRecords, useMonthRecords } from '../hooks/useHabits'
-import { addMonths, monthDays, monthTitle, toISODate, weekdayOf } from '../services/calendar'
+import { addMonths, monthDays, toISODate, weekdayOf } from '../services/calendar'
 import { restoreRecord, setSkip, toggleRecord } from '../services/habitService'
 import { currentStreak, longestStreak } from '../services/stats'
 import type { Habit, HabitRecord } from '../types'
@@ -74,11 +74,17 @@ const MonthCalendar: FC<{ today: string; onOpenDetail: (habit: Habit) => void }>
         <NavBtn onClick={() => shift(-1)} aria-label="上一月">
           <ChevronLeft size={16} />
         </NavBtn>
-        <MonthLabel>{monthTitle(viewYear, viewMonth)}</MonthLabel>
+        <MonthLabel>
+          <span className="y">{viewYear}年</span>
+          <span className="m">{viewMonth}月</span>
+        </MonthLabel>
         <NavBtn onClick={() => shift(1)} aria-label="下一月">
           <ChevronRight size={16} />
         </NavBtn>
-        <TodayBtn onClick={backToToday}>回到今天</TodayBtn>
+        {/* 非当前月才显示「回到今天」，当前月是冗余操作 */}
+        {(viewYear !== now.getFullYear() || viewMonth !== now.getMonth() + 1) && (
+          <TodayBtn onClick={backToToday}>回到今天</TodayBtn>
+        )}
       </Toolbar>
 
       <ScrollArea>
@@ -140,7 +146,7 @@ const MonthCalendar: FC<{ today: string; onOpenDetail: (habit: Habit) => void }>
                         $status={status}
                         $todayCol={d.isToday}
                         disabled={d.isFuture}
-                        title={d.isFuture ? '' : `${habit.name} · ${d.date}${isSkip ? '（跳过）' : ''}`}
+                        title={d.isFuture ? undefined : `${habit.name} · ${d.date}${isSkip ? '（跳过）' : ''}`}
                         onClick={() => void onClickCell(habit, d.date, record ?? null)}
                         aria-label={`${habit.name} ${d.date}`}>
                         {isSkip ? '-' : ''}
@@ -164,7 +170,7 @@ const MonthCalendar: FC<{ today: string; onOpenDetail: (habit: Habit) => void }>
 
       <Legend>
         <LegendItem>
-          <Swatch $done /> 已打卡
+          <Swatch $done title="示意色，实际为各习惯的主题色" /> 已打卡
         </LegendItem>
         <LegendItem>
           <Swatch $skip>-</Swatch> 跳过
@@ -216,12 +222,24 @@ const NavBtn = styled.button`
 `
 
 const MonthLabel = styled.div`
-  min-width: 110px;
+  min-width: 118px;
   text-align: center;
-  font-size: 16px;
-  font-weight: 700;
   color: ${mx.text};
   font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  .y {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: ${mx.text3};
+  }
+  .m {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
 `
 
 const TodayBtn = styled.button`

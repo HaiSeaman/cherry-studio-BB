@@ -66,9 +66,9 @@ const HabitManage: FC = () => {
         <List>
           {active.map((h) => (
             <Item key={h.id}>
+              <Dot $color={h.color} />
               <span className="emoji">{h.icon}</span>
               <span className="name">{h.name}</span>
-              <Dot $color={h.color} />
               <Spacer />
               <IconBtn title="编辑" onClick={() => setEditing(h)}>
                 <Pencil size={13} />
@@ -88,6 +88,7 @@ const HabitManage: FC = () => {
         <List>
           {archived.map((h) => (
             <Item key={h.id}>
+              <Dot $color={mx.border} />
               <span className="emoji">{h.icon}</span>
               <span className="name dim">{h.name}</span>
               <Spacer />
@@ -145,14 +146,15 @@ const HabitManage: FC = () => {
 const Wrap = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   max-width: 640px;
 `
 
 const SectionTitle = styled.div`
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: ${mx.text2};
+  letter-spacing: 0.04em;
+  color: ${mx.text3};
 `
 
 const List = styled.div`

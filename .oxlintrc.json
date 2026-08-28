@@ -57,7 +57,7 @@
     "no-fallthrough": "warn",
     "no-unassigned-vars": "warn",
     "no-unused-expressions": "off",
-    "no-unused-vars": ["warn", { "caughtErrors": "none" }],
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "caughtErrors": "none", "varsIgnorePattern": "^_" }],
     "no-useless-rename": "warn",
     "oxc/bad-array-method-on-arguments": "warn",
     "oxc/bad-char-at-comparison": "warn",

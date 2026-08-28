@@ -6,7 +6,10 @@ import {
   longestStreak,
   overallWindowCompletionRate,
   strengthIndex,
-  weekdayDistribution
+  weekdayDistribution,
+  yearlyCheckinStats,
+  yearlyHeatCells,
+  yearWindow
 } from '../services/stats'
 
 // 手算基准区间：created='2026-08-01'，today='2026-08-10'（10 个自然日）
@@ -150,5 +153,93 @@ describe('weekdayDistribution', () => {
     expect(dist[2]).toBe(0)
     expect(dist[5]).toBe(0)
     expect(dist[6]).toBe(50) // 周六
+  })
+})
+
+describe('yearWindow（自然年区间，起点不早于创建日，终点不晚于今天）', () => {
+  // 习惯创建于 2025-06-01，今天 2026-08-29
+  const created = '2025-06-01'
+  const today = '2026-08-29'
+  it('未满的当前年按今天截断：2026 → 01-01 ~ 08-29', () => {
+    expect(yearWindow(2026, created, today)).toEqual({ start: '2026-01-01', end: '2026-08-29' })
+  })
+  it('已过去的年取全年，起点不早于创建日：2025 → 06-01 ~ 12-31', () => {
+    expect(yearWindow(2025, created, today)).toEqual({ start: '2025-06-01', end: '2025-12-31' })
+  })
+  it('创建年之前的年份 → 空窗口（start > end），stats 全 0 不崩', () => {
+    const w = yearWindow(2024, created, today)
+    expect(w.start > w.end).toBe(true)
+    const s = yearlyCheckinStats(new Set(), new Set(), created, 2024, today)
+    expect(s.done).toBe(0)
+    expect(s.elapsedDays).toBe(0)
+    expect(s.rate).toBe(100)
+  })
+  it('闰年 12-31 不越界：2024 全年 → 01-01 ~ 12-31', () => {
+    expect(yearWindow(2024, '2024-01-01', '2024-12-31')).toEqual({ start: '2024-01-01', end: '2024-12-31' })
+  })
+})
+
+describe('yearlyCheckinStats（单习惯自然年打卡统计）', () => {
+  // 习惯创建于 2025-06-01；2026 年前 8 个月打卡（今天 2026-08-29）
+  const created = '2025-06-01'
+  const today = '2026-08-29'
+  const done = new Set([
+    '2026-01-01',
+    '2026-01-02',
+    '2026-01-03',
+    '2026-02-01',
+    '2026-02-02',
+    '2026-03-01',
+    '2025-12-31' // 上年记录，不应计入 2026
+  ])
+  const skip = new Set(['2026-01-05', '2026-01-06'])
+  it('只统计当年窗口内 done：6 天（2025-12-31 不计入）', () => {
+    const s = yearlyCheckinStats(done, skip, created, 2026, today)
+    expect(s.done).toBe(6)
+  })
+  it('elapsedDays = 01-01~08-29 = 241 天；skipCount = 2；rate = 6/(241-2)', () => {
+    const s = yearlyCheckinStats(done, skip, created, 2026, today)
+    expect(s.elapsedDays).toBe(241)
+    expect(s.skipCount).toBe(2)
+    expect(s.rate).toBeCloseTo((6 / 239) * 100, 1)
+  })
+  it('2025 年窗口从创建日起：06-01~12-31 = 214 天，done=1（2025-12-31）', () => {
+    const s = yearlyCheckinStats(done, skip, created, 2025, today)
+    expect(s.elapsedDays).toBe(214)
+    expect(s.done).toBe(1)
+  })
+  it('窗口内全 skip → rate 100 不崩', () => {
+    const s = yearlyCheckinStats(new Set(), new Set(['2026-01-01']), created, 2026, '2026-01-01')
+    expect(s.rate).toBe(100)
+  })
+})
+
+describe('yearlyHeatCells（自然年热力图格子，周列对齐）', () => {
+  it('2024 闰年全勤：366 格；2024-01-01 是周一 → 起始 week=0/dow=1；52 周+1 → cols=53', () => {
+    const done = new Set(['2024-02-29', '2024-12-31'])
+    const cells = yearlyHeatCells(done, new Set(), 2024, '2024-12-31')
+    expect(cells.cells).toHaveLength(366)
+    expect(cells.cells[0]).toEqual({ date: '2024-01-01', state: 'none', week: 0, dow: 1 })
+    const feb29 = cells.cells.find((c) => c.date === '2024-02-29')
+    expect(feb29?.state).toBe('done')
+    const dec31 = cells.cells.find((c) => c.date === '2024-12-31')
+    expect(dec31?.state).toBe('done')
+    expect(cells.cols).toBe(53)
+  })
+  it('skip 标 state=skip；未来日期标 future；今天之前未打卡标 none', () => {
+    const done = new Set(['2026-01-01'])
+    const skip = new Set(['2026-01-02'])
+    const cells = yearlyHeatCells(done, skip, 2026, '2026-01-05')
+    expect(cells.cells.find((c) => c.date === '2026-01-01')?.state).toBe('done')
+    expect(cells.cells.find((c) => c.date === '2026-01-02')?.state).toBe('skip')
+    expect(cells.cells.find((c) => c.date === '2026-01-03')?.state).toBe('none')
+    expect(cells.cells.find((c) => c.date === '2026-01-06')?.state).toBe('future')
+    expect(cells.cells).toHaveLength(365)
+  })
+  it('月份标签：年份首个格子所在周不重复打标（2026-01 只在首周出现一次）', () => {
+    const cells = yearlyHeatCells(new Set(), new Set(), 2026, '2026-12-31')
+    expect(cells.labels.length).toBeGreaterThanOrEqual(1)
+    expect(cells.labels[0].label).toBe('1月')
+    expect(cells.labels.filter((l) => l.label === '1月')).toHaveLength(1)
   })
 })

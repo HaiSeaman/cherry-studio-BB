@@ -1,16 +1,17 @@
 import { type FC, useCallback, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
-import { addDaysISO, toISODate, weekdayOf } from '../services/calendar'
+import { addDaysISO, toISODate } from '../services/calendar'
 import type { HabitDateSets } from '../services/stats'
 import { completionRate, strengthIndex } from '../services/stats'
 import type { Habit } from '../types'
 import { EmptyText, mx, MXTabs } from './mx'
+import NaturalYearStats from './NaturalYearStats'
 
 type RangeKey = '30' | '90' | '365'
 
 /**
- * 统计视图：每日完成率趋势折线（30/90/365）+ 各习惯完成率对比条（按强度排序）+ 年度热力图
+ * 统计视图：每日完成率趋势（30/90/365）+ 各习惯完成率对比条（按强度排序）+ 自然年统计
  */
 const StatsView: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; today: string }> = ({
   habits,
@@ -19,7 +20,7 @@ const StatsView: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; t
 }) => {
   const [range, setRange] = useState<RangeKey>('30')
 
-  // 单日「当日完成率」：当日应打（已创建且未跳过）习惯中被完成的占比——趋势图与热力图共用同一口径
+  // 单日「当日完成率」：当日应打（已创建且未跳过）习惯中被完成的占比
   const dayRatio = useCallback(
     (d: string, createdISOs: string[]): number => {
       let due = 0
@@ -67,131 +68,111 @@ const StatsView: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; t
       .sort((a, b) => b.strength - a.strength)
   }, [habits, allRecords, today])
 
-  // 年度热力图（365 天，列=周，GitHub 风格）：当日完成率 → 5 档
-  const heat = useMemo(() => {
-    const n = 365
-    const start = addDaysISO(today, -(n - 1))
-    const createdISOs = habits.map((h) => toISODate(new Date(h.createdAt)))
-    const ratios = new Map<string, number>()
-    for (let d = start; d <= today; d = addDaysISO(d, 1)) {
-      ratios.set(d, dayRatio(d, createdISOs))
-    } // 对齐到周列：显式计算每个格子的（周列, 星期行）坐标，供 Grid 显式定位（不变形、严格对齐）
-    const startDow = weekdayOf(start)
-    const cells: { key: string; date: string; level: number; week: number; dow: number }[] = []
-    const labels: { week: number; label: string }[] = []
-    let lastLabelWeek = -3
-    let index = startDow
-    let prevMonth = -1
-    for (let d = start; ; d = addDaysISO(d, 1)) {
-      const r = ratios.get(d) ?? 0
-      const level = r === 0 ? 0 : Math.max(1, Math.round(r * 4))
-      const week = Math.floor(index / 7)
-      const dow = index % 7
-      cells.push({ key: d, date: d, level, week, dow })
-      // 月份标签：每逢月份变化，在该月首周列顶部标注（间隔不足 2 列时跳过防重叠）
-      const month = Number(d.slice(5, 7))
-      if (month !== prevMonth) {
-        if (week - lastLabelWeek >= 2) {
-          labels.push({ week, label: `${month}月` })
-          lastLabelWeek = week
-        }
-        prevMonth = month
-      }
-      index++
-      if (d === today) break
-    }
-    const cols = Math.ceil((startDow + n) / 7)
-    return { cols, cells, labels }
-  }, [habits, today, dayRatio])
-
+  // SVG 折线坐标（viewBox 0~100，preserveAspectRatio=none 拉伸铺满）
   const W = 100
   const H = 100
-  const points = daily
-    .map((d, i) => `${daily.length === 1 ? 50 : (i / (daily.length - 1)) * W},${(1 - d.ratio) * H}`)
-    .join(' ')
+  const pt = (i: number, ratio: number): string =>
+    `${daily.length === 1 ? W / 2 : (i / (daily.length - 1)) * W},${(1 - ratio) * H}`
+  const points = daily.map((d, i) => pt(i, d.ratio)).join(' ')
+  const area = daily.length > 0 ? `${pt(0, daily[0].ratio)} ${points} ${W},${H} 0,${H}` : ''
+  const last = daily[daily.length - 1]
 
   return (
     <Wrap>
-      <SectionHead>
-        <SectionTitle>每日完成率趋势</SectionTitle>
-        <MXTabs<RangeKey>
-          value={range}
-          onChange={setRange}
-          size="sm"
-          options={[
-            { value: '30', label: '30天' },
-            { value: '90', label: '90天' },
-            { value: '365', label: '全年' }
-          ]}
-        />
-      </SectionHead>
-      <ChartCard>
-        {daily.length > 0 ? (
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-            <polyline
-              points={points}
-              fill="none"
-              stroke={mx.accent}
-              strokeWidth="1.2"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-        ) : (
-          <EmptyText>暂无数据</EmptyText>
-        )}
-      </ChartCard>
+      <Section>
+        <SectionHead>
+          <SectionTitle>每日完成率趋势</SectionTitle>
+          <MXTabs<RangeKey>
+            value={range}
+            onChange={setRange}
+            size="sm"
+            options={[
+              { value: '30', label: '30天' },
+              { value: '90', label: '90天' },
+              { value: '365', label: '全年' }
+            ]}
+          />
+        </SectionHead>
+        <ChartCard>
+          {daily.length > 0 ? (
+            <>
+              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={mx.accent} stopOpacity="0.28" />
+                    <stop offset="100%" stopColor={mx.accent} stopOpacity="0.02" />
+                  </linearGradient>
+                </defs>
+                {/* 参考线：25/50/75/100 */}
+                {[25, 50, 75].map((y) => (
+                  <line
+                    key={y}
+                    x1="0"
+                    x2={W}
+                    y1={100 - y}
+                    y2={100 - y}
+                    stroke={mx.border}
+                    strokeWidth="1"
+                    vectorEffect="non-scaling-stroke"
+                    strokeDasharray="3 4"
+                  />
+                ))}
+                <polygon points={area} fill="url(#trend-fill)" />
+                <polyline
+                  points={points}
+                  fill="none"
+                  stroke={mx.accent}
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+              {last && (
+                <TrendTip>
+                  {last.date.slice(5).replace('-', '/')} 完成率 <b>{Math.round(last.ratio * 100)}%</b>
+                </TrendTip>
+              )}
+            </>
+          ) : (
+            <EmptyText>暂无数据</EmptyText>
+          )}
+        </ChartCard>
+      </Section>
 
-      <SectionTitle>各习惯完成率（按强度指数排序）</SectionTitle>
-      <ChartCard>
-        {ranked.length === 0 ? (
-          <EmptyText>暂无数据</EmptyText>
-        ) : (
-          <BarList>
-            {ranked.map(({ habit, rate, strength }) => (
-              <BarRow key={habit.id}>
-                <div className="name">
-                  {habit.icon} {habit.name}
-                </div>
-                <div className="track">
-                  <Fill $color={habit.color} $w={Math.min(rate, 100)} />
-                </div>
-                <div className="pct">{rate}%</div>
-                <div className="strength" title="强度指数">
-                  {strength}
-                </div>
-              </BarRow>
-            ))}
-          </BarList>
-        )}
-      </ChartCard>
+      <Section>
+        <SectionTitle>各习惯完成率（按强度指数排序）</SectionTitle>
+        <ChartCard>
+          {ranked.length === 0 ? (
+            <EmptyText>暂无数据</EmptyText>
+          ) : (
+            <BarList>
+              <BarHead>
+                <span>习惯</span>
+                <span />
+                <span>完成率</span>
+                <span>强度</span>
+              </BarHead>
+              {ranked.map(({ habit, rate, strength }) => (
+                <BarRow key={habit.id}>
+                  <div className="name">
+                    {habit.icon} {habit.name}
+                  </div>
+                  <div className="track">
+                    <Fill $color={habit.color} $w={Math.min(rate, 100)} />
+                  </div>
+                  <div className="pct">{rate}%</div>
+                  <div className="strength" title="强度指数（0~100，近期打卡权重更高）">
+                    {strength}
+                  </div>
+                </BarRow>
+              ))}
+            </BarList>
+          )}
+        </ChartCard>
+      </Section>
 
-      <SectionTitle>年度热力图（颜色越深完成越好）</SectionTitle>
-      <ChartCard>
-        <HeatWrap>
-          <HeatGrid $cols={heat.cols}>
-            {heat.labels.map((m) => (
-              <HeatMonthLabel key={`m-${m.week}`} style={{ gridColumn: m.week + 1, gridRow: 1 }}>
-                {m.label}
-              </HeatMonthLabel>
-            ))}
-            {heat.cells.map((c) => (
-              <HeatCell
-                key={c.key}
-                $level={c.level}
-                title={`${c.date} · 完成率 ${Math.round((c.level / 4) * 100)}%`}
-                style={{ gridArea: `${c.dow + 2} / ${c.week + 1}` }}
-              />
-            ))}
-          </HeatGrid>
-          <HeatLegend>
-            <span>少</span>
-            {[0, 1, 2, 3, 4].map((l) => (
-              <HeatCell key={l} $level={l} style={{ width: 12, height: 12 }} />
-            ))}
-            <span>多</span>
-          </HeatLegend>
-        </HeatWrap>
-      </ChartCard>
+      <NaturalYearStats habits={habits} allRecords={allRecords} today={today} />
     </Wrap>
   )
 }
@@ -199,30 +180,50 @@ const StatsView: FC<{ habits: Habit[]; allRecords: Map<string, HabitDateSets>; t
 const Wrap = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+`
+
+/* 区块 = 标题 + 卡片成组，标题用小字号弱色 + 字距（eyebrow 风格） */
+const Section = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `
 
 const SectionHead = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 `
 
 const SectionTitle = styled.div`
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: ${mx.text2};
+  letter-spacing: 0.04em;
+  color: ${mx.text3};
 `
 
 const ChartCard = styled.div`
   background: ${mx.card};
   border: 1px solid ${mx.border};
   border-radius: 14px;
-  padding: 14px;
+  padding: 14px 16px;
   svg {
     width: 100%;
-    height: 120px;
+    height: 132px;
     display: block;
+  }
+`
+
+const TrendTip = styled.div`
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: ${mx.text3};
+  font-variant-numeric: tabular-nums;
+  b {
+    color: ${mx.text};
+    font-weight: 600;
   }
 `
 
@@ -230,6 +231,18 @@ const BarList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+`
+
+const BarHead = styled.div`
+  display: grid;
+  grid-template-columns: minmax(96px, 150px) 1fr 56px 44px;
+  gap: 10px;
+  font-size: 11px;
+  color: ${mx.text3};
+  letter-spacing: 0.04em;
+  span:nth-child(n + 3) {
+    text-align: right;
+  }
 `
 
 const Fill = styled.div<{ $color: string; $w: number }>`
@@ -242,11 +255,16 @@ const Fill = styled.div<{ $color: string; $w: number }>`
 
 const BarRow = styled.div`
   display: grid;
-  grid-template-columns: 130px 1fr 52px 40px;
+  grid-template-columns: minmax(96px, 150px) 1fr 56px 44px;
   align-items: center;
   gap: 10px;
   font-size: 12.5px;
   color: ${mx.text};
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .track {
     height: 10px;
     border-radius: 999px;
@@ -264,49 +282,6 @@ const BarRow = styled.div`
     font-variant-numeric: tabular-nums;
     font-size: 11.5px;
   }
-`
-
-const HeatWrap = styled.div`
-  max-width: 1680px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`
-
-/*
- * 弹性热力网格：列 repeat(cols, 1fr) 均分容器全部宽度（最大化铺满），
- * 高度定高 clamp 后 7 行 1fr 均分——格子统一尺寸、双向弹性、不变形。
- * 超宽屏时容器 1680px 封顶居中，格子不会大到离谱。
- */
-const HeatGrid = styled.div<{ $cols: number }>`
-  display: grid;
-  grid-template-columns: repeat(${(p) => p.$cols}, 1fr);
-  grid-template-rows: 16px repeat(7, 1fr);
-  gap: 3px;
-  height: clamp(170px, 22vh, 240px);
-`
-
-const HeatMonthLabel = styled.div`
-  font-size: 10.5px;
-  color: ${mx.text3};
-  white-space: nowrap;
-  align-self: end;
-`
-
-const HeatCell = styled.div<{ $level: number }>`
-  border-radius: 4px;
-  background: ${(p) => (p.$level <= 0 ? mx.soft : mx.accent)};
-  opacity: ${(p) => (p.$level <= 0 ? 1 : 0.25 + p.$level * 0.19)};
-`
-
-const HeatLegend = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  font-size: 11px;
-  color: ${mx.text3};
 `
 
 export default StatsView

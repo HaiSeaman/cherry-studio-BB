@@ -3,7 +3,7 @@
  * 口径（spec 4.4）：跳过(skip)日不算应打卡日、不断卡；今天未打卡不判死；强度指数为 EMA（半衰期 13 天）
  * 组件禁止自行实现口径，一律引用本模块
  */
-import { addDaysISO } from './calendar'
+import { addDaysISO, weekdayOf } from './calendar'
 
 /** ISO 日期加减天：统一从 calendar.ts 引入（见 calendar.addDaysISO） */
 
@@ -116,4 +116,85 @@ export function weekdayDistribution(
     if (doneSet.has(d)) num[w]++
   })
   return denom.map((n, i) => (n === 0 ? 0 : Number(((num[i] / n) * 100).toFixed(1))))
+}
+
+// ==================== 自然年统计（单习惯） ====================
+
+/**
+ * 自然年窗口：起点 = max(当年 01-01, 习惯创建日)，终点 = min(当年 12-31, 今天)。
+ * start > end 表示该自然年窗口为空（习惯当年尚未创建）。
+ */
+export function yearWindow(year: number, createdISO: string, today: string): { start: string; end: string } {
+  const start = createdISO > `${year}-01-01` ? createdISO : `${year}-01-01`
+  const end = today < `${year}-12-31` ? today : `${year}-12-31`
+  return { start, end }
+}
+
+/** 单习惯自然年打卡统计：done=窗口内打卡天数；elapsedDays=已过自然日；skipCount=窗口内跳过数；rate=完成率（分母=已过天数−skip，<=0 视为 100） */
+export function yearlyCheckinStats(
+  doneSet: Set<string>,
+  skipSet: Set<string>,
+  createdISO: string,
+  year: number,
+  today: string
+): { done: number; elapsedDays: number; skipCount: number; rate: number } {
+  const { start, end } = yearWindow(year, createdISO, today)
+  let done = 0
+  let skipCount = 0
+  let elapsedDays = 0
+  if (start <= end) {
+    eachDate(start, end, (d) => {
+      elapsedDays++
+      if (doneSet.has(d)) done++
+      if (skipSet.has(d)) skipCount++
+    })
+  }
+  const denom = elapsedDays - skipCount
+  return { done, elapsedDays, skipCount, rate: denom <= 0 ? 100 : Number(((done / denom) * 100).toFixed(1)) }
+}
+
+export type HeatCellState = 'done' | 'skip' | 'none' | 'future'
+
+export interface YearHeatCell {
+  date: string
+  state: HeatCellState
+  /** 0 起算的周列序号（Grid 定位用 week+1） */
+  week: number
+  /** 0=周日…6=周六 */
+  dow: number
+}
+
+export interface YearHeatData {
+  cols: number
+  cells: YearHeatCell[]
+  labels: { week: number; label: string }[]
+}
+
+/** 自然年热力图格子：整年 365/366 天周列对齐；done=打卡 / skip=跳过 / none=已过未打 / future=未来；创建前日期自然为 none */
+export function yearlyHeatCells(doneSet: Set<string>, skipSet: Set<string>, year: number, today: string): YearHeatData {
+  const totalDays = new Date(year, 1, 29).getDate() === 29 ? 366 : 365
+  const first = `${year}-01-01`
+  const startDow = weekdayOf(first)
+  const cells: YearHeatCell[] = []
+  const labels: { week: number; label: string }[] = []
+  let lastLabelWeek = -3
+  let prevMonth = 0
+  let index = startDow
+  for (let d = first, i = 0; i < totalDays; i++, d = addDaysISO(d, 1)) {
+    const week = Math.floor(index / 7)
+    const dow = index % 7
+    const state: HeatCellState = d > today ? 'future' : doneSet.has(d) ? 'done' : skipSet.has(d) ? 'skip' : 'none'
+    cells.push({ date: d, state, week, dow })
+    // 月份标签：每逢月份变化，在该月首周列顶部标注（间隔不足 2 列时跳过防重叠）
+    const month = Number(d.slice(5, 7))
+    if (month !== prevMonth) {
+      if (week - lastLabelWeek >= 2) {
+        labels.push({ week, label: `${month}月` })
+        lastLabelWeek = week
+      }
+      prevMonth = month
+    }
+    index++
+  }
+  return { cols: Math.ceil((startDow + totalDays) / 7), cells, labels }
 }

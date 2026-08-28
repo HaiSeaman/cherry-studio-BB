@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { ChevronLeft, Plus } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -42,7 +42,9 @@ const HabitsPage: FC = () => {
       <Header>
         <HeaderLeft>
           {detailHabit ? (
-            <BackBtn onClick={() => setDetailHabit(null)}>← 返回</BackBtn>
+            <BackBtn onClick={() => setDetailHabit(null)}>
+              <ChevronLeft size={14} /> 返回
+            </BackBtn>
           ) : (
             <MXTabs<ViewKey>
               value={view}
@@ -121,22 +123,30 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px 8px;
+  gap: 10px;
+  padding: 14px 16px 10px;
 `
 
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
+  min-width: 0;
 `
 
 const BackBtn = styled.button`
-  border: none;
-  background: transparent;
-  color: ${mx.accent};
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid transparent;
+  background: ${mx.soft};
+  color: ${mx.text2};
+  font-size: 12.5px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 999px;
   cursor: pointer;
+  transition: color 0.15s ease;
   &:hover {
-    text-decoration: underline;
+    color: ${mx.accent};
   }
 `
 
