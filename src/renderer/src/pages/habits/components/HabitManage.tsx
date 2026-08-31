@@ -4,6 +4,7 @@ import { type FC, useRef, useState } from 'react'
 import styled from 'styled-components'
 
 import { useActiveHabits, useArchivedHabits } from '../hooks/useHabits'
+import { todayISO } from '../services/calendar'
 import { deleteHabitForever, exportHabitsJson, importHabitsJson, setArchived } from '../services/habitService'
 import type { Habit } from '../types'
 import HabitForm from './HabitForm'
@@ -42,7 +43,7 @@ const HabitManage: FC = () => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `habit-backup-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`
+    a.download = `habit-backup-${todayISO().replace(/-/g, '')}.json`
     a.click()
     URL.revokeObjectURL(url)
   }

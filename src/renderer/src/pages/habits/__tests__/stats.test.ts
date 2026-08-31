@@ -64,6 +64,12 @@ describe('currentStreak', () => {
   it('不越过创建日：created 之后才有记录', () => {
     expect(currentStreak(D1_10, new Set(), '2026-08-05', '2026-08-10')).toBe(6)
   })
+  it('今天被跳过同样计 1 天：昨天 done + 今天 skip → 连续 10', () => {
+    expect(currentStreak(D1_9, new Set(['2026-08-10']), '2026-08-01', '2026-08-10')).toBe(10)
+  })
+  it('今天 skip 且昨天空：仅今天计 1（skip 未中断）', () => {
+    expect(currentStreak(new Set(), new Set(['2026-08-10']), '2026-08-01', '2026-08-10')).toBe(1)
+  })
 })
 
 describe('longestStreak', () => {

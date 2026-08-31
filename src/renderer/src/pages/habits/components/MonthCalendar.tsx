@@ -10,6 +10,8 @@ import { currentStreak, longestStreak } from '../services/stats'
 import type { Habit, HabitRecord } from '../types'
 import { mx } from './mx'
 
+const WEEK_INITIALS = ['日', '一', '二', '三', '四', '五', '六']
+
 /**
  * B 风格月历：每习惯一行，整月格子从左到右横向展开
  * 格子状态（spec 4.2）：done 习惯色浅底 / skip 灰底"-" / 今天(已打)实底深描边 /
@@ -88,17 +90,18 @@ const MonthCalendar: FC<{ today: string; onOpenDetail: (habit: Habit) => void }>
       </Toolbar>
 
       <ScrollArea>
-        <Grid $rows={Math.max(habits.length, 1)} $rowMax={habits.length <= 4 ? 88 : habits.length <= 7 ? 72 : 60}>
-          {/* 表头行：习惯名列占位 + 日期 1~31（周末微灰）+ 连续列 */}
+        <Grid $rows={Math.max(habits.length, 1)} $days={days.length}>
+          {/* 表头行：习惯名列占位 + 日期（含星期标注，周末微灰）+ 连续列 */}
           <HeaderCell $nameCol />
-          {days.map((d) => (
-            <HeaderCell
-              key={d.date}
-              $isToday={d.isToday}
-              $isWeekend={weekdayOf(d.date) === 0 || weekdayOf(d.date) === 6}>
-              {d.day}
-            </HeaderCell>
-          ))}
+          {days.map((d) => {
+            const wd = weekdayOf(d.date)
+            return (
+              <HeaderCell key={d.date} data-day={d.day} $isToday={d.isToday} $isWeekend={wd === 0 || wd === 6}>
+                <span className="d">{d.day}</span>
+                <span className="w">{WEEK_INITIALS[wd]}</span>
+              </HeaderCell>
+            )
+          })}
           <HeaderCell $streakCol>连续</HeaderCell>
 
           {habits.map((habit) => {
@@ -119,13 +122,15 @@ const MonthCalendar: FC<{ today: string; onOpenDetail: (habit: Habit) => void }>
                   const record = monthMap.get(d.date)
                   const isDone = record?.status === 'done'
                   const isSkip = record?.status === 'skip'
+                  // 创建日之前该习惯尚不存在：不算漏卡、不可打卡（与未来日同等对待）
+                  const isLocked = d.isFuture || d.date < createdISO
                   const status: 'done' | 'skip' | 'todayDone' | 'todayEmpty' | 'missed' | 'future' = isDone
                     ? d.isToday
                       ? 'todayDone'
                       : 'done'
                     : isSkip
                       ? 'skip'
-                      : d.isFuture
+                      : isLocked
                         ? 'future'
                         : d.isToday
                           ? 'todayEmpty'
@@ -140,13 +145,13 @@ const MonthCalendar: FC<{ today: string; onOpenDetail: (habit: Habit) => void }>
                     }
                   }
                   return (
-                    <Dropdown key={d.date} menu={menu} trigger={['contextMenu']} disabled={d.isFuture}>
+                    <Dropdown key={d.date} menu={menu} trigger={['contextMenu']} disabled={isLocked}>
                       <Cell
                         $color={habit.color}
                         $status={status}
                         $todayCol={d.isToday}
-                        disabled={d.isFuture}
-                        title={d.isFuture ? undefined : `${habit.name} · ${d.date}${isSkip ? '（跳过）' : ''}`}
+                        disabled={isLocked}
+                        title={isLocked ? undefined : `${habit.name} · ${d.date}${isSkip ? '（跳过）' : ''}`}
                         onClick={() => void onClickCell(habit, d.date, record ?? null)}
                         aria-label={`${habit.name} ${d.date}`}>
                         {isSkip ? '-' : ''}
@@ -263,14 +268,17 @@ const ScrollArea = styled.div`
 
 /*
  * 弹性网格（参考 CSS-Tricks minmax+1fr 方案）：
- * - 列：名称固定 180px，31 个日期格 minmax(20px, 1fr) 均分剩余全部宽度（最大化时铺满、不变形）
- * - 行：表头 auto，习惯行 minmax(26px, min(1fr, 行高上限)) 弹性铺满剩余高度（上限随习惯数分段）
+ * - 列：名称固定 180px，日期格数量随当月实际天数（28~31）动态生成，minmax(20px, 1fr) 均分剩余宽度
+ *   【关键】列数必须与每行渲染的格子数严格一致（名称 + 当月天数 + 连续），
+ *   否则 display: contents + 自动放置会把下一行的首格填进本行末尾的空列，逐行错位级联（9 月 30 天即触发）
+ * - 行：表头 auto，习惯行 minmax(26px, 1fr) 弹性铺满剩余高度（行高上限由 Cell 的 height 上限控制；
+ *   不能写成 min(1fr, Npx)——fr 不允许进 min()，整条声明会被浏览器判非法丢弃）
  * - 窗口过窄时列收缩到 20px 下限后出横向滚动
  */
-const Grid = styled.div<{ $rows: number; $rowMax: number }>`
+const Grid = styled.div<{ $rows: number; $days: number }>`
   display: grid;
-  grid-template-columns: 180px repeat(31, minmax(20px, 1fr)) 76px;
-  grid-template-rows: auto repeat(${(p) => p.$rows}, minmax(26px, min(1fr, ${(p) => p.$rowMax}px)));
+  grid-template-columns: 180px repeat(${(p) => p.$days}, minmax(20px, 1fr)) 76px;
+  grid-template-rows: auto repeat(${(p) => p.$rows}, minmax(26px, 1fr));
   gap: 4px;
   align-items: stretch;
   width: 100%;
@@ -279,13 +287,26 @@ const Grid = styled.div<{ $rows: number; $rowMax: number }>`
 `
 
 const HeaderCell = styled.div<{ $nameCol?: boolean; $streakCol?: boolean; $isToday?: boolean; $isWeekend?: boolean }>`
-  font-size: clamp(11px, 1vw, 15px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   font-variant-numeric: tabular-nums;
   text-align: center;
   align-self: end;
-  padding-bottom: 2px;
+  padding: 2px 0 3px;
   border-radius: 6px 6px 0 0;
   color: ${(p) => (p.$isToday ? mx.accent : p.$isWeekend ? mx.text3 : mx.text2)};
+  .d {
+    font-size: clamp(11px, 1vw, 15px);
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .w {
+    font-size: 9px;
+    line-height: 1;
+    opacity: 0.75;
+  }
   ${(p) => p.$nameCol && 'text-align: left;'}
   ${(p) =>
     p.$streakCol &&
@@ -293,8 +314,17 @@ const HeaderCell = styled.div<{ $nameCol?: boolean; $streakCol?: boolean; $isTod
     text-align: center;
     font-weight: 600;
     color: ${mx.text2};
+    font-size: clamp(11px, 1vw, 15px);
   `}
-  ${(p) => p.$isToday && 'font-weight: 700;'}
+  /* 今天表头：主色浅底胶囊，与今天列竖带上下呼应 */
+  ${(p) =>
+    p.$isToday &&
+    `
+    background: ${mx.accentSoft};
+    border-radius: 8px;
+    .d { font-weight: 700; }
+    .w { opacity: 1; }
+  `}
 `
 
 const Row = styled.div`

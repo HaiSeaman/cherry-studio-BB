@@ -19,7 +19,8 @@ function eachDate(from: string, to: string, fn: (iso: string) => void): void {
 /** 当前连续（未中断天数）：从今天往前数；今天没打不判死（从昨天数）；done/skip 都计 1 天；空格停；不越过创建日 */
 export function currentStreak(doneSet: Set<string>, skipSet: Set<string>, createdISO: string, today: string): number {
   let count = 0
-  let d = doneSet.has(today) ? today : addDaysISO(today, -1)
+  // 今天已处理（done 或 skip）从今天起算——skip 当天同样计 1 天（口径：未中断）
+  let d = doneSet.has(today) || skipSet.has(today) ? today : addDaysISO(today, -1)
   while (d >= createdISO) {
     if (doneSet.has(d) || skipSet.has(d)) {
       count++

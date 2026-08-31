@@ -98,14 +98,57 @@ export async function exportHabitsJson(): Promise<string> {
   return JSON.stringify(backup, null, 2)
 }
 
-/** JSON 导入（整体替换式：清空现有打卡数据后写入，幂等；UI 侧必须确认） */
-export async function importHabitsJson(json: string): Promise<{ habits: number; records: number }> {
-  const parsed = JSON.parse(json) as HabitsBackup
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/** 系统边界校验：导入是替换式写库（不可逆），行数据损坏会整库污染日历/统计，必须在写入前拦下 */
+function isValidHabitRow(h: unknown): h is Habit {
+  if (typeof h !== 'object' || h === null) return false
+  const o = h as Record<string, unknown>
+  return (
+    typeof o.id === 'string' &&
+    typeof o.name === 'string' &&
+    typeof o.icon === 'string' &&
+    typeof o.color === 'string' &&
+    typeof o.order === 'number' &&
+    typeof o.archived === 'boolean' &&
+    typeof o.createdAt === 'number'
+  )
+}
+
+function isValidRecordRow(r: unknown): r is HabitRecord {
+  if (typeof r !== 'object' || r === null) return false
+  const o = r as Record<string, unknown>
+  return (
+    typeof o.habitId === 'string' &&
+    typeof o.date === 'string' &&
+    ISO_DATE_RE.test(o.date) &&
+    (o.status === 'done' || o.status === 'skip') &&
+    typeof o.createdAt === 'number'
+  )
+}
+
+/** 解析并校验备份 JSON：结构或任一行不合法即抛错（调用方负责提示） */
+export function parseHabitsBackup(json: string): HabitsBackup {
+  const parsed = JSON.parse(json) as Partial<HabitsBackup>
   if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.habits) || !Array.isArray(parsed.records)) {
     throw new Error('invalid habits backup file')
   }
-  const habits = parsed.habits
-  const records = parsed.records
+  if (!parsed.habits.every(isValidHabitRow) || !parsed.records.every(isValidRecordRow)) {
+    throw new Error('invalid habits backup file')
+  }
+  // 引用完整性：记录必须挂在已知的习惯上（孤儿记录会静默入库且永不显示）
+  const habitIds = new Set(parsed.habits.map((h) => h.id))
+  if (!parsed.records.every((r) => habitIds.has(r.habitId))) {
+    throw new Error('invalid habits backup file')
+  }
+  return { version: 1, exportedAt: parsed.exportedAt ?? Date.now(), habits: parsed.habits, records: parsed.records }
+}
+
+/** JSON 导入（整体替换式：清空现有打卡数据后写入，幂等；UI 侧必须确认） */
+export async function importHabitsJson(json: string): Promise<{ habits: number; records: number }> {
+  const backup = parseHabitsBackup(json)
+  const habits = backup.habits
+  const records = backup.records
   await db.transaction('rw', db.habits, db.habit_records, async () => {
     await db.habits.clear()
     await db.habit_records.clear()
