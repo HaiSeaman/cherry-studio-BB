@@ -3,6 +3,7 @@ import { loggerService } from '@logger'
 import { REPORT_TOPIC_NAME } from '@renderer/automation/runner'
 import ModelSelector from '@renderer/components/ModelSelector'
 import { db } from '@renderer/databases'
+import { useLiveAssistant } from '@renderer/hooks/useAssistant'
 import { getMcpServersForAssistant } from '@renderer/services/ApiService'
 import { getAssistantById } from '@renderer/services/AssistantService'
 import { getModelUniqId } from '@renderer/services/ModelService'
@@ -183,36 +184,61 @@ const AutomationWorkspace: FC<Props> = ({ assistant }) => {
     }
   }, [runs, tasks])
 
+  // 以下操作都由 `void xxx()` 触发，内部必须兜住异常：
+  // 否则 IPC 失败会变成未处理的 Promise rejection，界面上毫无反馈
   const toggleEnabled = async (task: AutomationTask, enabled: boolean) => {
-    await window.api.automation.saveTask({ ...task, enabled })
-    message.success(enabled ? '已启用' : '已暂停')
+    try {
+      await window.api.automation.saveTask({ ...task, enabled })
+      message.success(enabled ? '已启用' : '已暂停')
+    } catch (e) {
+      logger.error('切换任务启用状态失败', e as Error)
+      message.error({
+        content: `${enabled ? '启用' : '暂停'}失败：${(e as Error)?.message ?? '未知错误'}`,
+        duration: 5
+      })
+    }
   }
 
   const runNow = async (task: AutomationTask) => {
-    const run = await window.api.automation.runTask(task.id)
-    if (run) {
-      message.success('已开始运行')
-      setViewingRunId(run.id)
-    } else {
-      message.warning('当前运行中的任务已达上限（2 个），请稍后再试')
+    try {
+      const run = await window.api.automation.runTask(task.id)
+      if (run) {
+        message.success('已开始运行')
+        setViewingRunId(run.id)
+      } else {
+        message.warning('当前运行中的任务已达上限（2 个），请稍后再试')
+      }
+    } catch (e) {
+      logger.error('立即运行任务失败', e as Error)
+      message.error({ content: `运行失败：${(e as Error)?.message ?? '未知错误'}`, duration: 5 })
     }
   }
 
   const duplicate = async (task: AutomationTask) => {
-    await window.api.automation.saveTask({
-      ...task,
-      id: `task_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-      name: `${task.name}（副本）`,
-      enabled: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    })
-    message.success('已复制（默认暂停）')
+    try {
+      await window.api.automation.saveTask({
+        ...task,
+        id: `task_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        name: `${task.name}（副本）`,
+        enabled: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      })
+      message.success('已复制（默认暂停）')
+    } catch (e) {
+      logger.error('复制任务失败', e as Error)
+      message.error({ content: `复制失败：${(e as Error)?.message ?? '未知错误'}`, duration: 5 })
+    }
   }
 
   const remove = async (task: AutomationTask) => {
-    await window.api.automation.deleteTask(task.id)
-    message.success('已删除')
+    try {
+      await window.api.automation.deleteTask(task.id)
+      message.success('已删除')
+    } catch (e) {
+      logger.error('删除任务失败', e as Error)
+      message.error({ content: `删除失败：${(e as Error)?.message ?? '未知错误'}`, duration: 5 })
+    }
   }
 
   const renderTaskList = (list: AutomationTask[]) => (
@@ -693,9 +719,15 @@ const TaskEditForm: FC<{ taskId: string | null; defaultAssistantId: string; onDo
       ...(existing?.lastRunAt !== undefined ? { lastRunAt: existing.lastRunAt } : {}),
       ...(existing?.lastTriggerKey !== undefined ? { lastTriggerKey: existing.lastTriggerKey } : {})
     }
-    await window.api.automation.saveTask(task)
-    message.success(isEdit ? '已保存' : '任务已创建')
-    onDone()
+    // onFinish 用 `void onSave(v)` 触发，异常必须在此兜住，否则变成未处理的 rejection
+    try {
+      await window.api.automation.saveTask(task)
+      message.success(isEdit ? '已保存' : '任务已创建')
+      onDone()
+    } catch (e) {
+      logger.error('保存任务失败', e as Error)
+      message.error({ content: `保存失败：${(e as Error)?.message ?? '未知错误'}`, duration: 5 })
+    }
   }
 
   if (loading) {
@@ -957,7 +989,9 @@ type ReportRow = {
 }
 
 const RecordsView: FC<{ assistant: Assistant }> = ({ assistant }) => {
-  const topic = (assistant.topics ?? []).find((t) => t.name === REPORT_TOPIC_NAME)
+  // 用 Redux 实时助手：简报话题由任务运行时动态创建，快照里的 topics 找不到它
+  const liveAssistant = useLiveAssistant(assistant)
+  const topic = (liveAssistant.topics ?? []).find((t) => t.name === REPORT_TOPIC_NAME)
   const data = useLiveQuery(async () => {
     if (!topic) return null
     const row = (await db.topics.get(topic.id)) as ReportRow | undefined

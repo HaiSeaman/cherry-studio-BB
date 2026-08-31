@@ -5,6 +5,54 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.7.3] - 2026-08-31
+
+### 核心主题：修复生图助手「新建会话后无法生图 / 生成结果不可见」+ 全功能链路代码审计加固
+
+**1. 根因修复：生图助手新建会话后生成结果看不见（P0）**
+
+现象：新建会话后无法在其中生图；强行删除后仍看不到新图，但图片确实已生成并自动保存到默认目录。
+
+根因是 **`HomePage` 把 assistant 整个对象存进了 `useState`，成为永不刷新的快照**：`addTopic` / `removeTopic` 经 Immer 会换掉 store 中的对象引用，快照的 `topics` 永远停在挂载那一刻；而 `PaintWorkspace` 恰恰用 `assistant.topics` 做会话归属守卫，于是新建的话题一律被判为「不属于本助手」。
+
+```
+新建话题 → Redux 已有、快照没有 → 守卫判定不属于本助手 → validTopicId = null
+        → 内容区空态 + 输入区 topicId=null → 每次生成都再建一个孤儿话题
+        → 图片照常落盘（回调与 UI 无关）→ 用户在当前会话里永远看不到
+```
+「历史列表能看到、点进去却空白」也由此而来——列表组件此前已自行回 Redux 取数，两个数据源不一致。
+
+- **根治（B）**：`HomePage` state 只存 `activeAssistantId`，`activeAssistant` 改用 `useMemo` 从 Redux 派生；模块级缓存拆为 `_activeAssistantId` / `_activeAssistant`（后者仅作删除兜底）。
+- **防御（A）**：新增共享约定 `hooks/useAssistant.ts` —— `resolveLiveAssistant`（纯函数）/ `useLiveAssistant`（hook 版）/ `resolveValidTopicId`（会话归属守卫，两个 Workspace 共用）。`PaintWorkspace`、`VideoWorkspace`、`AutomationWorkspace.RecordsView` 及两个历史列表统一改用实时助手。
+
+**2. 顺带修掉：会话记录缺失时内容区永远转圈**
+
+`PaintContent` / `VideoContent` 把 `!data` 一律当加载态渲染 `<Spin>`，但 `useLiveQuery` 首屏返回 `undefined`（真加载中）、查询结果为 `null`（**库中已无此会话**）。已拆分为 `data === undefined`（转圈）与 `data === null`（提示「会话不存在或已被删除」）。
+
+**3. 全功能链路代码审计加固（`/code-review` 严格审计）**
+
+| 问题 | 说明与修复 |
+|---|---|
+| **生成期间新建话题会吞掉结果**（4 处） | `PaintInputbar` / `PaintHistoryList` / `VideoInputbar` / `VideoHistoryList` 的 `handleCreateNewTopic` 均无 `isGenerating` 守卫。按钮虽 `disabled`，但 **`new_topic` 快捷键走同一入口、绕过了禁用**；切到新会话后在途结果仍写回旧会话，表现与本次 P0 完全一致。四处统一加拦截，两个「+」按钮加 `disabled` + 置灰 |
+| **视频 `isGenerating` 无法跨组件共享** | 原为 `VideoInputbar` 局部 state，历史列表拿不到 → 提升到 `VideoWorkspace` 以 props 下发（生图侧本就走 Redux `paint.isGenerating`，无需改造） |
+| **删除会话时造幽灵话题**（2 处） | 两个历史列表的 `handleDelete` 用 `getDefaultTopic()` 生成随机 id 话题（不在 db、不在 Redux），还会往 `newMessage` slice 写入永远清不掉的 topicId。改为从**剩余 topics** 挑下一个；没有剩余则不动 `activeTopic`，交给归属守卫判空态。两处同时补 `try/catch` + 错误 toast |
+| **自动化工作台 5 处浮空 Promise** | `toggleEnabled` / `runNow` / `duplicate` / `remove` / `TaskForm.onSave` 均为 `void xxx()` 且无 `try/catch`，IPC 失败 = 未处理 rejection + 零反馈。全部补 `logger.error` + `message.error` |
+| toast 配置字段 | `window.toast.error` 的正文项是 `description` 而非 `message`（`components/TopView/toast.tsx` 的 `ToastConfig`） |
+
+**4. 审计中核实为「不是 bug」、避免误改的项**
+
+图生图 UI 显示「1 张」而 `batchSize` 仍为 4（`fetchPaintGeneration` 走 `editImage` 分支，不传 batchSize，实际就是 1 张）；`videoService.onStatus` 整体覆盖 `metadata`（生成期只有 `progressText`，无损失）；`saveImageToDirectory` 不注册进内部 FileStorage（不重复占存储）；`persistRemoteImages` + `saveGeneratedImages` 不重复保存。
+
+**5. 文档与测试**
+
+- 新增回归测试 `src/renderer/src/pages/paint/__tests__/workspaceTopicGuard.test.ts`（8 用例，用**真实 reducer** 驱动纯函数守卫：新建放行 / 快照拒绝 / 连续新建 / 删除收缩 / 边界）。
+- 开发者文档新增 `docs/wiki/06-数据存储与状态管理.md §6`「状态陷阱：assistant 快照 vs Redux 实时对象」，把上述约定写成强制规范；同步更新 `docs/wiki/04-渲染进程模块.md`。
+
+**6. 质量验证**
+
+- Vitest：renderer **174 个测试文件 / 2892 个测试全部通过**；shared 89、aiCore 360 全通过；main 25/26 文件通过（7 个 filesystem 用例失败为沙箱 `safe-delete` 对 `fs.rm` 的拦截，已用 `git stash` 在干净工作区复跑确认为**改动前既有**，main 项目只含 `src/main/**` 与本次改动无交集）。
+- TypeScript Main / Web 全量类型检查零错误；Biome 格式与 lint、ESLint、oxlint 对全部改动文件 0 error。
+
 ## [1.7.2] - 2026-08-29
 
 ### 核心主题：打卡 TAB「自然年统计」新模块 + 打卡页排版与 UI 重设计 + 全仓代码审计加固

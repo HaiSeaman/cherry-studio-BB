@@ -126,12 +126,18 @@ const PaintContent: FC<Props> = ({ topicId, assistantId }) => {
     return <EmptyPlaceholder>{'选择或新建一个绘画会话'}</EmptyPlaceholder>
   }
 
-  if (!data) {
+  // useLiveQuery 首屏返回 undefined（加载中）；null 表示库中已无此会话。
+  // 旧实现把两者都当加载态，会话记录缺失时会永远转圈，这里区分出来给用户明确反馈
+  if (data === undefined) {
     return (
       <EmptyPlaceholder>
         <Spin size="small" />
       </EmptyPlaceholder>
     )
+  }
+
+  if (data === null) {
+    return <EmptyPlaceholder>{'会话不存在或已被删除'}</EmptyPlaceholder>
   }
 
   if (data.messages.length === 0) {

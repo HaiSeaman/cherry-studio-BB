@@ -22,6 +22,9 @@ interface Props {
   topicId: string | null
   /** 归属的视频助手 id */
   assistantId?: string
+  /** 是否正在生成（由工作台持有，历史列表需要同时感知） */
+  isGenerating: boolean
+  setIsGenerating: (v: boolean) => void
   /** 自动新建会话后切换当前话题（由工作台传入 setActiveTopic） */
   onTopicChange?: (topic: Topic) => void
 }
@@ -56,7 +59,7 @@ const VIDEO_ASPECT_RATIOS = ['16:9', '9:16', '1:1']
 /**
  * 视频生成输入栏：模型选择（仅视频模型）、提示词（可优化）、首帧参考图、时长/分辨率/宽高比胶囊、生成/停止
  */
-const VideoInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
+const VideoInputbar: FC<Props> = ({ topicId, assistantId, isGenerating, setIsGenerating, onTopicChange }) => {
   const storeProviders = useAppSelector((s) => s.llm.providers)
   const newTopicShortcut = useShortcutDisplay('new_topic')
 
@@ -65,7 +68,6 @@ const VideoInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
   const [duration, setDuration] = useState<string>('5')
   const [resolution, setResolution] = useState<string>('720p')
   const [aspectRatio, setAspectRatio] = useState<string>('16:9')
-  const [isGenerating, setIsGenerating] = useState(false)
   const [enhancing, setEnhancing] = useState(false)
 
   // 模型选择：存 {modelId, providerId} 引用，渲染时从 provider store 解析完整模型
@@ -99,6 +101,11 @@ const VideoInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
   }
 
   const handleCreateNewTopic = useCallback(async () => {
+    // 生成期间禁止新建：切走到新会话后，在途生成的结果仍写回旧会话，
+    // 用户眼前却是全新的空会话。按钮已 disabled，但 new_topic 快捷键走同一入口，必须在此拦截。
+    if (isGenerating) {
+      return
+    }
     // 立即新建空白话题并挂载，旧话题安全保留在历史中
     if (onTopicChange && assistantId) {
       const newTopic = await createVideoTopic(assistantId)
@@ -106,7 +113,7 @@ const VideoInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
     }
     setPrompt('')
     setInputImage(undefined)
-  }, [assistantId, onTopicChange])
+  }, [assistantId, isGenerating, onTopicChange])
 
   useShortcut('new_topic', handleCreateNewTopic, {
     preventDefault: true,

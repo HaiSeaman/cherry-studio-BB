@@ -58,6 +58,12 @@ const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
   const newTopicShortcut = useShortcutDisplay('new_topic')
 
   const handleCreateNewTopic = useCallback(async () => {
+    // 生成期间禁止新建：一旦切走到新会话，在途生成的结果仍写回旧会话，
+    // 用户眼前却是一个全新的空会话 —— 表现为「生成完成但图片不见了」。
+    // 按钮已 disabled，但 new_topic 快捷键走的是同一入口，必须在此拦截。
+    if (isGenerating) {
+      return
+    }
     // 立即新建空白话题并挂载，旧话题安全保留在历史中
     if (onTopicChange && assistantId) {
       const newTopic = await createPaintTopic(assistantId)
@@ -66,7 +72,7 @@ const PaintInputbar: FC<Props> = ({ topicId, assistantId, onTopicChange }) => {
     setPrompt('')
     setUploadedImages([])
     dispatch(setLastGeneration(null))
-  }, [assistantId, dispatch, onTopicChange])
+  }, [assistantId, dispatch, isGenerating, onTopicChange])
 
   // 快捷键支持：新建话题
   useShortcut('new_topic', handleCreateNewTopic, {

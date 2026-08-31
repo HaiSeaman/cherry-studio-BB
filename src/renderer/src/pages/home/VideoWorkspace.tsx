@@ -1,5 +1,6 @@
+import { resolveValidTopicId, useLiveAssistant } from '@renderer/hooks/useAssistant'
 import type { Assistant, Topic } from '@renderer/types'
-import { type FC } from 'react'
+import { type FC, useState } from 'react'
 import styled from 'styled-components'
 
 import VideoContent from '../video/VideoContent'
@@ -17,17 +18,34 @@ interface Props {
  * 左=生成历史列表（各会话视频数，可切换/删除）；右=消息流 + 视频输入栏
  */
 const VideoWorkspace: FC<Props> = ({ assistant, activeTopic, setActiveTopic }) => {
-  // 校验 activeTopic 仍属于本助手：删光话题/跨助手切换时 useActiveTopic 可能残留
-  // 已删话题（topics 为空不触发自动重置），失效 id 会导致内容区无限加载、生成写入已删话题
-  const validTopicId =
-    activeTopic && (assistant.topics ?? []).some((t) => t.id === activeTopic.id) ? activeTopic.id : null
+  // 必须用 Redux 实时助手做归属校验：父组件传来的 assistant 可能是挂载时的快照，
+  // 其 topics 不含之后新建的话题，会把新建会话误判为不属于本助手（同 PaintWorkspace）
+  const liveAssistant = useLiveAssistant(assistant)
+
+  // 校验 activeTopic 仍属于本助手（详见 resolveValidTopicId）
+  const validTopicId = resolveValidTopicId(liveAssistant, activeTopic)
+
+  // 生成中状态提升到本层：历史列表要在生成期间禁用「新建会话」，
+  // 否则切到新会话后在途结果仍写回旧会话，表现成「生成了但看不见」
+  const [isGenerating, setIsGenerating] = useState(false)
 
   return (
     <Container id="video-workspace">
-      <VideoHistoryList assistant={assistant} activeTopicId={validTopicId} onSelect={setActiveTopic} />
+      <VideoHistoryList
+        assistant={liveAssistant}
+        activeTopicId={validTopicId}
+        isGenerating={isGenerating}
+        onSelect={setActiveTopic}
+      />
       <Main>
         <VideoContent topicId={validTopicId} />
-        <VideoInputbar topicId={validTopicId} assistantId={assistant.id} onTopicChange={setActiveTopic} />
+        <VideoInputbar
+          topicId={validTopicId}
+          assistantId={liveAssistant.id}
+          isGenerating={isGenerating}
+          setIsGenerating={setIsGenerating}
+          onTopicChange={setActiveTopic}
+        />
       </Main>
     </Container>
   )

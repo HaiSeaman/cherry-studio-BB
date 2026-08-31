@@ -1,12 +1,14 @@
+import { loggerService } from '@logger'
 import { db } from '@renderer/databases'
+import { useLiveAssistant } from '@renderer/hooks/useAssistant'
 import { useShortcutDisplay } from '@renderer/hooks/useShortcuts'
 import { TopicManager } from '@renderer/hooks/useTopic'
-import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { useAppSelector } from '@renderer/store'
 import { removeTopic } from '@renderer/store/assistants'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
 import { MessageBlockType } from '@renderer/types/newMessage'
+import { getErrorMessage } from '@renderer/utils/error'
 import { Tooltip } from 'antd'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { History, Image as ImageIcon, Plus, Trash2 } from 'lucide-react'
@@ -16,6 +18,8 @@ import styled from 'styled-components'
 
 import { createPaintTopic } from './services/paintService'
 import { setLastGeneration } from './store/paintSlice'
+
+const logger = loggerService.withContext('PaintHistoryList')
 
 interface Props {
   assistant: Assistant
@@ -38,12 +42,11 @@ type HistoryItem = {
  */
 const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => {
   const dispatch = useDispatch()
+  const isGenerating = useAppSelector((s) => s.paint.isGenerating)
 
-  // 用 Redux 最新助手兜底：HomePage 的 activeAssistant 是稳定引用，删除 topic 后 props 引用不变化，
-  // 导致下方 useLiveQuery 的 [assistant] 依赖不更新、列表不刷新；这里从 store 取最新 topics 解决。
-  const liveAssistant = useAppSelector(
-    (state) => state.assistants.assistants.find((a) => a.id === assistant.id) ?? assistant
-  )
+  // 用 Redux 最新助手兜底：父组件传来的 assistant 可能是挂载时的快照，删除/新增 topic 后
+  // props 引用不变化，导致下方 useLiveQuery 的 [assistant] 依赖不更新、列表不刷新
+  const liveAssistant = useLiveAssistant(assistant)
 
   const items = useLiveQuery(async (): Promise<HistoryItem[]> => {
     const topics = liveAssistant.topics ?? []
@@ -82,28 +85,44 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
   const newTopicShortcut = useShortcutDisplay('new_topic')
 
   const handleCreateNewTopic = useCallback(async () => {
+    // 生成期间禁止新建：切走到新会话后，在途生成的结果仍写回旧会话，
+    // 用户眼前却是全新的空会话，表现为「图片生成了但不见了」
+    if (isGenerating) {
+      return
+    }
     // 立即新建空白话题并挂载，旧话题保留在历史中
     const newTopic = await createPaintTopic(assistant.id)
     onSelect(newTopic)
     dispatch(setLastGeneration(null))
-  }, [assistant.id, dispatch, onSelect])
+  }, [assistant.id, dispatch, isGenerating, onSelect])
 
   const handleDelete = useCallback(
     async (topic: Topic) => {
-      // 1. 从 Dexie 数据库中物理删除该 topic 的所有 message 与 messageBlock，以及 topic 记录
-      await TopicManager.removeTopic(topic.id)
-      // 2. 清除 Redux 内存中的消息缓存（newMessage slice）
-      dispatch(newMessagesActions.clearTopicMessages(topic.id))
-      // 3. 从助手 topics 列表中移除该 topic（若为当前激活 topic 会在 useActiveTopic 自动置空或切回第一项）
-      dispatch(removeTopic({ assistantId: assistant.id, topic }))
-      // 4. 同步清除 paint 全局状态中的 lastGeneration 结果（避免当前视图残留）
-      dispatch(setLastGeneration(null))
-      // 5. 若当前激活的正是被删除的话题，切换回默认话题
-      if (activeTopicId === topic.id) {
-        onSelect(getDefaultTopic(assistant.id))
+      try {
+        // 1. 从 Dexie 数据库中物理删除该 topic 的所有 message 与 messageBlock，以及 topic 记录
+        await TopicManager.removeTopic(topic.id)
+        // 2. 清除 Redux 内存中的消息缓存（newMessage slice）
+        dispatch(newMessagesActions.clearTopicMessages(topic.id))
+        // 3. 从助手 topics 列表中移除该 topic
+        dispatch(removeTopic({ assistantId: assistant.id, topic }))
+        // 4. 同步清除 paint 全局状态中的 lastGeneration 结果（避免当前视图残留）
+        dispatch(setLastGeneration(null))
+        // 5. 删掉的正是当前会话时切到剩下的第一个；没有剩余会话就不动 activeTopic，
+        //    由 Workspace 的归属守卫判为空态。此前这里用 getDefaultTopic 造了一个
+        //    随机 id 的幽灵话题（不在 db 也不在 Redux），会往 newMessage slice 写入
+        //    永远清不掉的 topicId，且删除后仍会短暂渲染出空会话。
+        if (activeTopicId === topic.id) {
+          const nextTopic = (liveAssistant.topics ?? []).find((t) => t.id !== topic.id)
+          if (nextTopic) {
+            onSelect(nextTopic)
+          }
+        }
+      } catch (error) {
+        logger.error('删除绘画会话失败:', error as Error)
+        window.toast.error({ title: '删除会话失败', description: getErrorMessage(error), timeout: 5000 })
       }
     },
-    [assistant.id, dispatch, activeTopicId, onSelect]
+    [assistant.id, dispatch, activeTopicId, liveAssistant.topics, onSelect]
   )
 
   const sorted = (items ?? []).slice().sort((a, b) => (b.topic.updatedAt || '').localeCompare(a.topic.updatedAt || ''))
@@ -114,8 +133,12 @@ const PaintHistoryList: FC<Props> = ({ assistant, activeTopicId, onSelect }) => 
         <History size={14} />
         <span>生成历史</span>
         <CountChip>{sorted.length}</CountChip>
-        <Tooltip title={newTopicShortcut ? `新建话题 (${newTopicShortcut})` : '新建话题'} placement="bottom">
-          <NewTopicBtn onClick={handleCreateNewTopic} aria-label="新建话题">
+        <Tooltip
+          title={
+            isGenerating ? '生成中，暂不能新建会话' : newTopicShortcut ? `新建话题 (${newTopicShortcut})` : '新建话题'
+          }
+          placement="bottom">
+          <NewTopicBtn onClick={() => void handleCreateNewTopic()} disabled={isGenerating} aria-label="新建话题">
             <Plus size={15} />
           </NewTopicBtn>
         </Tooltip>
@@ -206,9 +229,13 @@ const NewTopicBtn = styled.button`
   cursor: pointer;
   padding: 0;
   transition: all 0.15s ease;
-  &:hover {
+  &:hover:not(:disabled) {
     color: var(--color-text-1);
     background: var(--color-background-soft);
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 `
 

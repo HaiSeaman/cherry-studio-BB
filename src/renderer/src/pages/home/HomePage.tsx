@@ -14,7 +14,7 @@ import { getAssistantType } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
-import { lazy, startTransition, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -27,7 +27,9 @@ const PaintWorkspace = lazy(() => import('./PaintWorkspace'))
 const VideoWorkspace = lazy(() => import('./VideoWorkspace'))
 const AutomationWorkspace = lazy(() => import('./AutomationWorkspace'))
 
-let _activeAssistant: Assistant
+// 跨路由挂载时保持当前助手：只记 id，助手对象一律从 Redux 派生（见下方 activeAssistant）
+let _activeAssistantId: string | undefined
+let _activeAssistant: Assistant | undefined
 
 // 每会话只跑一次：启动期数据回流（绘画话题挂回生图助手 / 补建自动化助手入口，均幂等）
 let _startupMigrated = false
@@ -39,15 +41,31 @@ const HomePage: FC = () => {
   const location = useLocation()
   const state = location.state
 
-  const [activeAssistant, _setActiveAssistant] = useState<Assistant>(
-    state?.assistant || _activeAssistant || assistants[0]
+  // state 里只存「当前助手 id」，助手对象统一从 Redux 派生。
+  // 之前用 useState 存整个 assistant 对象，而 addTopic / removeTopic 经 Immer 会换掉 store 中的
+  // 对象引用，快照的 topics 永远停在挂载那一刻；下游 Workspace 用 assistant.topics 校验话题归属时，
+  // 新建的话题会被误判为「不属于本助手」→ 内容区空白、生成结果写进孤儿话题。
+  const [activeAssistantId, setActiveAssistantId] = useState<string | undefined>(
+    state?.assistant?.id ?? _activeAssistantId ?? assistants[0]?.id
   )
+
+  // 兜底顺序：Redux 命中 > 路由带来的游离助手 > 上次会话 > 首个助手（含 assistants 尚未水合的初始渲染）
+  const activeAssistant = useMemo(
+    () =>
+      (activeAssistantId ? assistants.find((a) => a.id === activeAssistantId) : undefined) ??
+      state?.assistant ??
+      _activeAssistant ??
+      assistants[0],
+    [assistants, activeAssistantId, state?.assistant]
+  ) as Assistant
+
   const { activeTopic, setActiveTopic: _setActiveTopic } = useActiveTopic(activeAssistant?.id ?? '', state?.topic)
   const { showAssistants, showTopics, topicPosition } = useSettings()
   const { setShowAssistants, toggleShowAssistants } = useShowAssistants()
   const { toggleShowTopics } = useShowTopics()
   const dispatch = useDispatch()
 
+  _activeAssistantId = activeAssistantId
   _activeAssistant = activeAssistant
 
   useShortcut('toggle_show_assistants', () => {
@@ -86,15 +104,15 @@ const HomePage: FC = () => {
 
   const setActiveAssistant = useCallback(
     (newAssistant: Assistant) => {
-      if (newAssistant.id === activeAssistant?.id) return
+      if (newAssistant.id === activeAssistantId) return
       startTransition(() => {
-        _setActiveAssistant(newAssistant)
+        setActiveAssistantId(newAssistant.id)
         // 同步更新 active topic，避免不必要的重新渲染
         const newTopic = newAssistant.topics[0]
         _setActiveTopic((prev) => (prev && newTopic?.id === prev.id ? prev : newTopic))
       })
     },
-    [_setActiveTopic, activeAssistant?.id]
+    [_setActiveTopic, activeAssistantId]
   )
 
   const setActiveTopic = useCallback(

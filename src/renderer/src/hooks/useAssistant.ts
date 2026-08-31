@@ -70,6 +70,36 @@ export function useAssistants() {
   }
 }
 
+/**
+ * 从 Redux 的 assistants 列表里取最新助手对象，取不到时回退传入的对象。
+ * 纯函数，便于在测试里直接验证「快照 → 最新」这一解析规则。
+ */
+export function resolveLiveAssistant(assistants: Assistant[], assistant: Assistant): Assistant {
+  return assistants.find((a) => a.id === assistant.id) ?? assistant
+}
+
+/**
+ * 取 Redux 里的最新助手对象，替代调用方手里的「快照」。
+ *
+ * 背景：HomePage 等父组件常把 assistant 存在 useState 里，而 addTopic / removeTopic
+ * 经 Immer 会换掉 store 中的对象引用，快照的 topics 却停留在挂载那一刻。用快照做
+ * 「话题是否属于本助手」判定，会把新建的话题误判为不属于本助手（生图/视频助手表现为
+ * 新建会话后内容区空白、生成结果写进孤儿话题）。凡是要读 assistant.topics 的地方都应该用它。
+ */
+export function useLiveAssistant(assistant: Assistant): Assistant {
+  return useAppSelector((state) => resolveLiveAssistant(state.assistants.assistants, assistant))
+}
+
+/**
+ * 会话归属守卫：activeTopic 是否仍属于该助手。
+ * 删光话题 / 跨助手切换时 activeTopic 可能残留失效 id，放行会导致内容区无限加载、
+ * 生成结果写入已删话题，故不命中一律返回 null（由调用方渲染空态）。
+ * 注意：必须用 useLiveAssistant 取到的实时助手调用，快照会把新建话题误判为不属于本助手。
+ */
+export function resolveValidTopicId(assistant: Assistant, activeTopic: Topic | undefined): string | null {
+  return activeTopic && (assistant.topics ?? []).some((t) => t.id === activeTopic.id) ? activeTopic.id : null
+}
+
 export function useAssistant(id: string) {
   const assistant = useAppSelector((state) => state.assistants.assistants.find((a) => a.id === id) as Assistant)
   const dispatch = useAppDispatch()
