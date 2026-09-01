@@ -1,6 +1,6 @@
 {
   "name": "CherryStudio",
-  "version": "1.7.4",
+  "version": "1.8.0",
   "private": true,
   "description": "A powerful AI assistant for producer.",
   "desktopName": "CherryStudio.desktop",
@@ -59,10 +59,13 @@
     "electron-screenshots": "^0.6.2",
     "font-list": "2.0.0",
     "jsdom": "26.1.0",
+    "mammoth": "^1.12.2",
+    "minisearch": "^7.2.0",
     "node-stream-zip": "1.15.0",
     "officeparser": "4.2.0",
     "os-proxy-config": "1.1.2",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^6.3.289",
     "selection-hook": "2.0.1",
     "turndown": "7.2.0"
   },

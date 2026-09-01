@@ -210,7 +210,13 @@ const api = {
   },
   fs: {
     read: (pathOrUrl: string, encoding?: BufferEncoding) => ipcRenderer.invoke(IpcChannel.Fs_Read, pathOrUrl, encoding),
-    readText: (pathOrUrl: string): Promise<string> => ipcRenderer.invoke(IpcChannel.Fs_ReadText, pathOrUrl)
+    readText: (pathOrUrl: string): Promise<string> => ipcRenderer.invoke(IpcChannel.Fs_ReadText, pathOrUrl),
+    scanDir: (
+      folderPath: string,
+      extensions?: string[],
+      recursive?: boolean
+    ): Promise<{ success: boolean; files: { filePath: string; size: number }[]; truncated: boolean; error?: string }> =>
+      ipcRenderer.invoke(IpcChannel.Fs_ScanDir, { folderPath, extensions, recursive })
   },
   pdf: {
     extractText: (data: Uint8Array | ArrayBuffer | string): Promise<string> =>

@@ -14,37 +14,40 @@ try {
   app.exit(1)
 }
 
-app.whenReady().then(async () => {
-  try {
-    const s = new Screenshots()
-    console.log('SMOKE: Screenshots instance created')
+app
+  .whenReady()
+  .then(async () => {
+    try {
+      const s = new Screenshots()
+      console.log('SMOKE: Screenshots instance created')
 
-    s.on('ok', (_e, buffer, data) => {
-      console.log('SMOKE: ok event, buffer bytes:', buffer.length, 'bounds:', JSON.stringify(data.bounds))
-    })
-    s.on('cancel', () => console.log('SMOKE: cancel event'))
-    s.on('windowCreated', (win) => console.log('SMOKE: window created', win.getBounds()))
+      s.on('ok', (_e, buffer, data) => {
+        console.log('SMOKE: ok event, buffer bytes:', buffer.length, 'bounds:', JSON.stringify(data.bounds))
+      })
+      s.on('cancel', () => console.log('SMOKE: cancel event'))
+      s.on('windowCreated', (win) => console.log('SMOKE: window created', win.getBounds()))
 
-    await s.startCapture()
-    console.log('SMOKE: startCapture resolved')
+      await s.startCapture()
+      console.log('SMOKE: startCapture resolved')
 
-    // auto-end after 2s so the user is barely disturbed
-    setTimeout(async () => {
-      try {
-        await s.endCapture()
-        console.log('SMOKE: endCapture resolved')
-        console.log('SMOKE: PASS')
-        app.exit(0)
-      } catch (e) {
-        console.error('SMOKE FAILED: endCapture error:', e.message)
-        app.exit(1)
-      }
-    }, 2000)
-  } catch (e) {
-    console.error('SMOKE FAILED:', e.message)
+      // auto-end after 2s so the user is barely disturbed
+      setTimeout(async () => {
+        try {
+          await s.endCapture()
+          console.log('SMOKE: endCapture resolved')
+          console.log('SMOKE: PASS')
+          app.exit(0)
+        } catch (e) {
+          console.error('SMOKE FAILED: endCapture error:', e.message)
+          app.exit(1)
+        }
+      }, 2000)
+    } catch (e) {
+      console.error('SMOKE FAILED:', e.message)
+      app.exit(1)
+    }
+  })
+  .catch((e) => {
+    console.error('SMOKE FAILED (ready):', e?.message ?? e)
     app.exit(1)
-  }
-}).catch((e) => {
-  console.error('SMOKE FAILED (ready):', e?.message ?? e)
-  app.exit(1)
-})
+  })

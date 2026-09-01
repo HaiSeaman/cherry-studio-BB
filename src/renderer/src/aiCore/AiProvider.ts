@@ -256,6 +256,33 @@ export default class AiProvider {
   }
 
   /**
+   * 批量嵌入文本 → 向量数组（知识库入库用）。
+   * 复用与 getEmbeddingDimensions 相同的 AI SDK embedMany 通道，本地/云端 provider 均已适配。
+   * @param texts 待嵌入的文本块
+   */
+  public async embedTexts(texts: string[]): Promise<Float32Array[]> {
+    if (!this.model) {
+      throw new Error('Model is required for embedTexts. Please use constructor with model parameter.')
+    }
+    if (!this.config) {
+      this.config = await Promise.resolve(providerToAiSdkConfig(this.actualProvider, this.model))
+    }
+
+    const executor = await createExecutor<AppProviderSettingsMap>(
+      this.config.providerId,
+      this.config.providerSettings,
+      []
+    )
+
+    const result = await executor.embedMany({
+      model: this.model.id,
+      values: texts
+    })
+
+    return result.embeddings.map((e) => Float32Array.from(e))
+  }
+
+  /**
    * 懒加载初始化 config
    * 当 constructor 只传入 provider 时，config 不会被初始化
    * 此方法根据 modelId 从 provider 的 models 中查找真实 Model 并生成 config

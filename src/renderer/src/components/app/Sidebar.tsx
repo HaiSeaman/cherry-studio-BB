@@ -12,7 +12,17 @@ import type { SidebarIcon } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { IpcChannel } from '@shared/IpcChannel'
 import { Avatar, Tooltip } from 'antd'
-import { CalendarCheck2, LayoutGrid, MessageSquare, Minus, Settings, Square, StickyNote, X } from 'lucide-react'
+import {
+  BookOpen,
+  CalendarCheck2,
+  LayoutGrid,
+  MessageSquare,
+  Minus,
+  Settings,
+  Square,
+  StickyNote,
+  X
+} from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -201,14 +211,16 @@ const MainMenus: FC = () => {
     assistants: <MessageSquare size={18} className="icon" />,
     minapp: <LayoutGrid size={18} className="icon" />,
     notes: <StickyNote size={18} className="icon" />,
-    habits: <CalendarCheck2 size={18} className="icon" />
+    habits: <CalendarCheck2 size={18} className="icon" />,
+    knowledge: <BookOpen size={18} className="icon" />
   }
 
   const pathMap = {
     assistants: '/',
     minapp: '/apps',
     notes: '/notes',
-    habits: '/habits'
+    habits: '/habits',
+    knowledge: '/knowledge'
   }
 
   // 右侧导航栏下段（从上往下）：顺序以「显示设置→侧边栏设置」的拖拽排序为准，

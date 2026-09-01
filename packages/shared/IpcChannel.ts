@@ -159,6 +159,7 @@ export enum IpcChannel {
   File_Base64File = 'file:base64File',
   Fs_Read = 'fs:read',
   Fs_ReadText = 'fs:readText',
+  Fs_ScanDir = 'fs:scanDir',
   File_OpenWithRelativePath = 'file:openWithRelativePath',
   File_IsTextFile = 'file:isTextFile',
   File_IsDirectory = 'file:isDirectory',

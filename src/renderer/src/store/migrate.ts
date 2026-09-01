@@ -19,6 +19,10 @@ export const migrate = async (state: any) => {
       if (!icons.visible.includes('habits')) {
         icons.visible.push('habits')
       }
+      // 新增知识库入口默认补入（老用户持久化 settings 的 visible 里没有 knowledge；用户已显式禁用的不强行加回）
+      if (!icons.visible.includes('knowledge') && !(icons.disabled ?? []).includes('knowledge')) {
+        icons.visible.push('knowledge')
+      }
     }
     if (Array.isArray(icons.disabled)) {
       icons.disabled = icons.disabled.filter((i: string) => !DEPRECATED_SIDEBAR_ICONS.includes(i))

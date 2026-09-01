@@ -130,7 +130,8 @@ const sidebarIconKeyMap = {
   store: '助手库',
   minapp: '小程序',
   notes: '效率助手',
-  habits: '打卡'
+  habits: '打卡',
+  knowledge: '知识库'
 } as const
 
 export const getSidebarIconLabel = (key: string): string => {

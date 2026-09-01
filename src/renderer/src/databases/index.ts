@@ -21,9 +21,10 @@ import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMes
 import { Dexie, type EntityTable, type Table } from 'dexie'
 
 import type { Habit, HabitRecord } from '../pages/habits/types'
+import type { KBChunk, KBFile, KnowledgeBase } from '../pages/knowledge/types'
 import type { MusicTrack, RadioStation } from '../pages/music/types'
 import type { HubActivity, HubAlarm, HubDayNote, HubNote, HubNoteSnapshot, HubTodo } from '../pages/notes/types'
-import { upgradeToV5, upgradeToV7, upgradeToV8, upgradeToV13 } from './upgrades'
+import { upgradeToV5, upgradeToV7, upgradeToV8, upgradeToV13, upgradeToV14 } from './upgrades'
 
 // Database declaration (move this to its own module also)
 export const db = new Dexie('CherryStudio', {
@@ -49,6 +50,11 @@ export const db = new Dexie('CherryStudio', {
   // 打卡 TAB（习惯定义/打卡记录，复合主键 [habitId+date]）
   habits: EntityTable<Habit, 'id'>
   habit_records: Table<HabitRecord, [string, string]>
+  // 知识库 TAB（知识库/文件/切块向量/检索索引序列化）
+  kb_bases: EntityTable<KnowledgeBase, 'id'>
+  kb_files: EntityTable<KBFile, 'id'>
+  kb_chunks: EntityTable<KBChunk, 'id'>
+  kb_search_index: EntityTable<{ base_id: string; payload: string; updated_at: string }, 'base_id'>
 }
 
 db.version(1).stores({
@@ -193,5 +199,15 @@ db.version(13)
     habit_records: '[habitId+date], date'
   })
   .upgrade((tx) => upgradeToV13(tx))
+
+// --- NEW VERSION 14：知识库 TAB 四张表（库/文件/切块向量/检索索引），无存量数据迁移 ---
+db.version(14)
+  .stores({
+    kb_bases: 'id, embedding_model_id',
+    kb_files: 'id, base_id, status',
+    kb_chunks: 'id, base_id, file_id, index',
+    kb_search_index: '&base_id'
+  })
+  .upgrade((tx) => upgradeToV14(tx))
 
 export default db

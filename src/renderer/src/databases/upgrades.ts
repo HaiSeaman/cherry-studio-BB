@@ -385,3 +385,8 @@ export async function upgradeToV13(_tx: Transaction): Promise<void> {
   // v13 仅新增 habits/habit_records 两张表（打卡 TAB），无存量数据迁移，Dexie 按 stores 声明自动建表
   logger.info('DB migration to version 13 started')
 }
+
+export async function upgradeToV14(_tx: Transaction): Promise<void> {
+  // v14 仅新增 kb_bases/kb_files/kb_chunks/kb_search_index 四张表（知识库 TAB），无存量数据迁移
+  logger.info('DB migration to version 14 started')
+}
