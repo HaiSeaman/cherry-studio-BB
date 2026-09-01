@@ -23,6 +23,17 @@ export function makeModel(base: KnowledgeBase): Model {
   }
 }
 
+/** 依据库配置构造重排 Model（无配置时返回 null，检索时不启用精排） */
+export function makeRerankModel(base: KnowledgeBase): Model | null {
+  if (!base.rerank_model_id || !base.rerank_provider_id) return null
+  return {
+    id: base.rerank_model_id,
+    provider: base.rerank_provider_id,
+    name: base.rerank_model_id,
+    group: 'Rerank'
+  }
+}
+
 /**
  * 知识库入库流水线（状态机：pending→parsing→chunking→embedding→ready/error）。
  * 文件读取依赖主进程 window.api，故在主线程异步执行（分批 await 让出事件循环），
@@ -30,7 +41,7 @@ export function makeModel(base: KnowledgeBase): Model {
  */
 export const KnowledgeService = {
   /** 创建知识库：按所选模型的推荐默认参数初始化，并探测固化向量维度 */
-  async createBase(name: string, model: Model): Promise<KnowledgeBase> {
+  async createBase(name: string, model: Model, rerankModel?: Model | null): Promise<KnowledgeBase> {
     const ai = new AiProvider(model)
     const dim = await ai.getEmbeddingDimensions(model)
     const defaults = getModelDefaults(model.id)
@@ -43,6 +54,8 @@ export const KnowledgeService = {
       chunk_size: defaults.chunk_size,
       chunk_overlap: defaults.chunk_overlap,
       top_k: defaults.top_k,
+      rerank_model_id: rerankModel?.id ?? '',
+      rerank_provider_id: rerankModel?.provider ?? '',
       created_at: now(),
       updated_at: now()
     }
@@ -50,12 +63,19 @@ export const KnowledgeService = {
     return base
   },
 
-  /** 更新库的检索/切块参数（只影响之后新添加的文件） */
+  /** 更新库的检索/切块参数（只影响之后新添加的文件；重排模型即时生效） */
   async updateBaseSettings(
     baseId: string,
-    patch: Partial<Pick<KnowledgeBase, 'chunk_size' | 'chunk_overlap' | 'top_k'>>
+    patch: Partial<
+      Pick<KnowledgeBase, 'chunk_size' | 'chunk_overlap' | 'top_k' | 'rerank_model_id' | 'rerank_provider_id'>
+    >
   ): Promise<void> {
-    await db.kb_bases.update(baseId, { ...patch, updated_at: now() })
+    // Dexie 的 update() 会跳过值为 undefined 的属性，无法借此"清除"已存字段；
+    // 因此显式传入的重排字段统一归一化为空串（'') 表示未启用，空串可正常写入覆盖旧值。
+    const normalized: typeof patch = { ...patch }
+    if ('rerank_model_id' in normalized) normalized.rerank_model_id = normalized.rerank_model_id ?? ''
+    if ('rerank_provider_id' in normalized) normalized.rerank_provider_id = normalized.rerank_provider_id ?? ''
+    await db.kb_bases.update(baseId, { ...normalized, updated_at: now() })
     invalidateIndex(baseId)
   },
 

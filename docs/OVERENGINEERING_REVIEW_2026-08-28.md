@@ -141,4 +141,4 @@ net: -1050 行（采纳风险项后 -1390 行）
 
 ## 附：配套工具
 
-`scripts/find-dead-files.mjs`（本次新建）——死文件候选扫描器，已修复副作用导入与桶文件判定。用法：`node scripts/find-dead-files.mjs .`。注意输出需人工复核（配置入口类误报见"执行摘要"第 4 条）。
+`scripts/find-dead-files.mjs`（本次新建）——死文件候选扫描器，已修复副作用导入与桶文件判定。用法：`node scripts/find-dead-files.mjs .`。注意输出需人工复核（配置入口类误报见"执行摘要"第 4 条）。**更新（2026-09 后续清理）：该脚本其后被移除——误报率过高（自研正则解析器把 electron.d/env.d/全局 setup 等"本就不需被 import"的配置声明文件误判为死文件，真正的死文件一个未点名），由 `tsgo --noEmit`（noUnusedLocals）+ code review 替代。**

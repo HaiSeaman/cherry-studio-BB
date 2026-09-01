@@ -1,15 +1,8 @@
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import type { Message } from '@renderer/types/newMessage' // Assuming correct Message type import
+import type { Message } from '@renderer/types/newMessage'
 import { MessageBlockType } from '@renderer/types/newMessage'
-// May need Block types if refactoring to use them
-// import type { MessageBlock, MainTextMessageBlock } from '@renderer/types/newMessageTypes';
-import { remove, takeRight } from 'lodash'
-import { isEmpty } from 'lodash'
-// Assuming getGroupedMessages is also moved here or imported
-// import { getGroupedMessages } from './path/to/getGroupedMessages';
-
-// const logger = loggerService.withContext('Utils.filter')
+import { remove, takeRight, isEmpty } from 'lodash'
 
 /**
  * Filters out messages of type '@' or 'clear' and messages without main text content.
@@ -196,20 +189,6 @@ export function filterErrorOnlyMessagesWithRelated(messages: Message[]): Message
     return true
   })
 }
-
-// Note: getGroupedMessages might also need to be moved or imported.
-// It depends on message.askId which should still exist on the Message type.
-// export function getGroupedMessages(messages: Message[]): { [key: string]: (Message & { index: number })[] } {
-//   const groups: { [key: string]: (Message & { index: number })[] } = {}
-//   messages.forEach((message, index) => {
-//     const key = message.askId ? 'assistant' + message.askId : 'user' + message.id
-//     if (key && !groups[key]) {
-//       groups[key] = []
-//     }
-//     groups[key].unshift({ ...message, index }) // Keep unshift if order matters for useful filter
-//   })
-//   return groups
-// }
 
 /**
  * Filters and processes messages based on context requirements

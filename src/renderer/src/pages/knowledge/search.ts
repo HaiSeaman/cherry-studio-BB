@@ -3,7 +3,7 @@ import MiniSearch from 'minisearch'
 
 import AiProvider from '../../aiCore/AiProvider'
 import { assertDimensions } from './embedding'
-import { makeModel } from './KnowledgeService'
+import { makeModel, makeRerankModel } from './KnowledgeService'
 import { cosine, rrfScore, tokenizeZh } from './retriever'
 import type { KBChunk, KBFile, KBHit, KnowledgeBase } from './types'
 
@@ -73,23 +73,51 @@ export async function searchKnowledge(
     console.warn('知识库向量检索失败，降级为关键词检索：', error)
   }
 
-  // 融合
+  // 融合（候选池放大 2 倍，为重排预留精排空间）
   const fused = rrfScore([kwIds, vecIds])
-  const top = [...fused.entries()].sort((a, b) => b[1] - a[1]).slice(0, topK)
+  const candidates = [...fused.entries()].sort((a, b) => b[1] - a[1]).slice(0, topK * 2)
+  if (candidates.length === 0) return []
 
   // 组装命中（附来源文件）
   const chunkById = new Map(chunks.map((c) => [c.id, c]))
-  const fileIds = [...new Set(top.map(([id]) => chunkById.get(id)!.file_id))]
-  const files = (await db.kb_files.bulkGet(fileIds)).filter((f): f is KBFile => Boolean(f))
-  const fileById = new Map(files.map((f) => [f.id, f]))
+  const assemble = async (ranked: [string, number][]): Promise<KBHit[]> => {
+    const fileIds = [...new Set(ranked.map(([id]) => chunkById.get(id)!.file_id))]
+    const files = (await db.kb_files.bulkGet(fileIds)).filter((f): f is KBFile => Boolean(f))
+    const fileById = new Map(files.map((f) => [f.id, f]))
+    return ranked
+      .map(([id, score]) => {
+        const chunk = chunkById.get(id)
+        if (!chunk) return null
+        const file = fileById.get(chunk.file_id)
+        if (!file) return null
+        return { chunk, file, score }
+      })
+      .filter((h): h is KBHit => h !== null)
+  }
 
-  return top
-    .map(([id, score]) => {
-      const chunk = chunkById.get(id)
-      if (!chunk) return null
-      const file = fileById.get(chunk.file_id)
-      if (!file) return null
-      return { chunk, file, score }
-    })
-    .filter((h): h is KBHit => h !== null)
+  // 可选重排（Rerank）：配置了重排模型时，用交叉编码模型对候选精排（失败降级为 RRF 结果）
+  const rerankModel = makeRerankModel(base)
+  if (rerankModel) {
+    try {
+      const ai = new AiProvider(rerankModel)
+      const docs = candidates.map(([id]) => chunkById.get(id)?.text ?? '')
+      const ranked = await ai.rerankDocuments(query, docs, topK)
+      if (ranked.length > 0) {
+        const reranked: [string, number][] = ranked
+          .map((r) => {
+            const candidateId = candidates[r.index]?.[0]
+            return candidateId ? ([candidateId, r.score] as [string, number]) : null
+          })
+          .filter((x): x is [string, number] => x !== null)
+        if (reranked.length > 0) {
+          return await assemble(reranked)
+        }
+      }
+    } catch (error) {
+      // 重排失败不阻断检索，降级为融合结果（与向量路降级策略一致）
+      console.warn('知识库重排失败，降级为 RRF 融合结果：', error)
+    }
+  }
+
+  return await assemble(candidates.slice(0, topK))
 }

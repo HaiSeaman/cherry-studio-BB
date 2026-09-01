@@ -6,6 +6,7 @@ import type { Assistant, EditImageParams, GenerateImageParams, Model, Provider }
 import type { StreamTextParams } from '@renderer/types/aiCoreTypes'
 import { getLowerBaseModelName } from '@renderer/utils'
 import { buildClaudeCodeSystemModelMessage } from '@shared/anthropic'
+import axios from 'axios'
 
 import AiSdkToChunkAdapter from './chunk/AiSdkToChunkAdapter'
 import { buildPlugins } from './plugins/PluginBuilder'
@@ -280,6 +281,71 @@ export default class AiProvider {
     })
 
     return result.embeddings.map((e) => Float32Array.from(e))
+  }
+
+  /**
+   * 重排（Rerank）召回结果：调用 OpenAI 兼容的 /rerank 端点（jina / qwen / cohere 等）。
+   * rerank 是运行时模型，不参与索引构建，可随时更换。
+   * @param query 查询文本
+   * @param documents 待精排的候选文档（保持召回原始顺序）
+   * @param topN 返回条数
+   * @returns 按相关度降序的 { index, score }[]，index 指向 documents 原始下标
+   */
+  public async rerankDocuments(
+    query: string,
+    documents: string[],
+    topN?: number
+  ): Promise<{ index: number; score: number }[]> {
+    if (!this.model) {
+      throw new Error('Model is required for rerank. Please use constructor with model parameter.')
+    }
+    const baseURL = this.getBaseURL()
+    if (!baseURL) {
+      throw new Error('Rerank 模型所属 Provider 未配置 API 地址（Base URL）')
+    }
+    const url = `${baseURL.replace(/\/+$/, '')}/rerank`
+    const apiKey = this.getApiKey()
+    let data: unknown
+    try {
+      const response = await axios.post(
+        url,
+        {
+          model: this.model.id,
+          query,
+          documents,
+          top_n: topN ?? documents.length
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+          },
+          timeout: 60000
+        }
+      )
+      data = response.data
+    } catch (error) {
+      const detail = axios.isAxiosError(error)
+        ? `HTTP ${error.response?.status ?? 'ERR'}: ${
+            error.response?.data ? JSON.stringify(error.response.data).slice(0, 300) : error.message
+          }`
+        : error instanceof Error
+          ? error.message
+          : String(error)
+      throw new Error(`Rerank 请求失败：${detail}`)
+    }
+    const results = (data as { results?: unknown; data?: unknown })?.results ?? (data as { data?: unknown })?.data
+    if (!Array.isArray(results)) {
+      throw new Error('Rerank 响应缺少 results 数组')
+    }
+    return results
+      .filter((r): r is { index: number; relevance_score?: number; score?: number } => typeof r?.index === 'number')
+      .map((r) => ({
+        index: r.index,
+        score: typeof r.relevance_score === 'number' ? r.relevance_score : typeof r.score === 'number' ? r.score : 0
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topN ?? documents.length)
   }
 
   /**

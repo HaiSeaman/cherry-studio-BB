@@ -1,49 +1,30 @@
-import { SearxngClient } from '@agentic/searxng'
 import { loggerService } from '@logger'
 import type { WebSearchState } from '@renderer/store/websearch'
 import type { WebSearchProvider, WebSearchProviderResponse } from '@renderer/types'
 import { fetchWebContent, noContent } from '@renderer/utils/fetch'
 import axios from 'axios'
-import ky from 'ky'
 
 import BaseWebSearchProvider from './BaseWebSearchProvider'
 
 const logger = loggerService.withContext('SearxngProvider')
 
 export default class SearxngProvider extends BaseWebSearchProvider {
-  private searxng: SearxngClient
   private engines: string[] = []
   private readonly basicAuthUsername?: string
-  private readonly basicAuthPassword?: string
+  private readonly basicAuthPassword: string
   private isInitialized = false
 
   constructor(provider: WebSearchProvider) {
     super(provider)
     if (!provider.apiHost) {
-      throw new Error('API host is required for SearxNG provider')
+      throw new Error('API host is required for SearXNG provider')
     }
 
     this.apiHost = provider.apiHost
     this.basicAuthUsername = provider.basicAuthUsername
-    this.basicAuthPassword = provider.basicAuthPassword ? provider.basicAuthPassword : ''
+    this.basicAuthPassword = provider.basicAuthPassword ?? ''
 
-    try {
-      // `ky` do not support basic auth directly
-      const headers = this.basicAuthUsername
-        ? {
-            Authorization: `Basic ` + btoa(`${this.basicAuthUsername}:${this.basicAuthPassword}`)
-          }
-        : undefined
-      this.searxng = new SearxngClient({
-        apiBaseUrl: this.apiHost,
-        ky: ky.create({ headers })
-      })
-    } catch (error) {
-      throw new Error(
-        `Failed to initialize SearxNG client: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-    }
-    this.initEngines().catch((err) => logger.error('Failed to initialize SearxNG engines:', err))
+    this.initEngines().catch((err) => logger.error('Failed to initialize SearXNG engines:', err))
   }
   private async initEngines(): Promise<void> {
     try {
@@ -51,7 +32,7 @@ export default class SearxngProvider extends BaseWebSearchProvider {
       const auth = this.basicAuthUsername
         ? {
             username: this.basicAuthUsername,
-            password: this.basicAuthPassword ? this.basicAuthPassword : ''
+            password: this.basicAuthPassword
           }
         : undefined
       const response = await axios.get(`${this.apiHost}/config`, {
@@ -106,24 +87,31 @@ export default class SearxngProvider extends BaseWebSearchProvider {
         await this.initEngines().catch(() => {}) // Ignore errors
       }
 
-      const result = await this.searxng.search({
-        query: query,
-        engines: this.engines as any,
-        language: 'auto'
+      const result = await axios.get(`${this.apiHost}/search`, {
+        params: {
+          q: query,
+          engines: this.engines.join(','),
+          language: 'auto',
+          format: 'json'
+        },
+        timeout: 15000,
+        validateStatus: (status) => status === 200, // 仅接受 200 状态码
+        auth: this.basicAuthUsername
+          ? { username: this.basicAuthUsername, password: this.basicAuthPassword }
+          : undefined
       })
 
-      if (!result || !Array.isArray(result.results)) {
+      const searchResults = result.data?.results
+      if (!Array.isArray(searchResults)) {
         throw new Error('Invalid search results from SearxNG')
       }
 
-      const validItems = result.results
-        .filter((item) => item.url.startsWith('http') || item.url.startsWith('https'))
+      const validItems = searchResults
+        .filter((item) => item.url?.startsWith('http') || item.url?.startsWith('https'))
         .slice(0, websearch.maxResults)
-      // Logger.log('Valid search items:', validItems)
 
       // Fetch content for each URL concurrently
       const fetchPromises = validItems.map(async (item) => {
-        // Logger.log(`Fetching content for ${item.url}...`)
         return await fetchWebContent(item.url, 'markdown', this.provider.usingBrowser)
       })
 

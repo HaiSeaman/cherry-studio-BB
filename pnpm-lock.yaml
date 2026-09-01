@@ -113,9 +113,6 @@ importers:
       '@agentic/exa':
         specifier: ^7.3.3
         version: 7.6.9(zod@4.3.4)
-      '@agentic/searxng':
-        specifier: ^7.3.3
-        version: 7.6.9(zod@4.3.4)
       '@agentic/tavily':
         specifier: ^7.3.3
         version: 7.6.9(zod@4.3.4)
@@ -485,9 +482,6 @@ importers:
       katex:
         specifier: 0.16.22
         version: 0.16.22
-      ky:
-        specifier: 1.8.1
-        version: 1.8.1
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
@@ -760,11 +754,6 @@ packages:
 
   '@agentic/exa@7.6.9':
     resolution: {integrity: sha512-qvVOhFmDmLAsTL4fkh0616NSAsfX8xKo92uCnRYbtGkXpHrTk/9DFLveck/giY6Fl5aGkae+vNvTCXc0Etgozg==}
-    peerDependencies:
-      zod: ^3.25.67
-
-  '@agentic/searxng@7.6.9':
-    resolution: {integrity: sha512-2VfS833PV9ZiEZnKE4g1h+raKmr3OP81G936hXIEs4MYtn0shdgfIwo0dNlCDbz1dDUoO7sRHTvF8+I8b7wPNw==}
     peerDependencies:
       zod: ^3.25.67
 
@@ -8992,14 +8981,6 @@ snapshots:
       - babel-plugin-macros
 
   '@agentic/exa@7.6.9(zod@4.3.4)':
-    dependencies:
-      '@agentic/core': 7.6.9(zod@4.3.4)
-      ky: 1.8.1
-      zod: 4.3.4
-    transitivePeerDependencies:
-      - babel-plugin-macros
-
-  '@agentic/searxng@7.6.9(zod@4.3.4)':
     dependencies:
       '@agentic/core': 7.6.9(zod@4.3.4)
       ky: 1.8.1
