@@ -12,6 +12,7 @@ import styled from 'styled-components'
 
 import { SettingContainer } from '..'
 import BasicDataSettings from './BasicDataSettings'
+import CrossDeviceSyncSettings from './CrossDeviceSyncSettings'
 import ExportMenuOptions from './ExportMenuSettings'
 import JoplinSettings from './JoplinSettings'
 import LocalBackupSettings from './LocalBackupSettings'
@@ -34,6 +35,8 @@ const DataSettings: FC = () => {
     { key: 'local_backup', title: '本地备份', icon: <FolderCog size={16} /> },
     { key: 'webdav', title: 'WebDAV', icon: <CloudSyncOutlined style={{ fontSize: 16 }} /> },
     { key: 's3', title: 'S3 兼容存储', icon: <CloudServerOutlined style={{ fontSize: 16 }} /> },
+    { key: 'divider_1b', isDivider: true, text: '跨设备同步' },
+    { key: 'cross_device', title: '跨设备同步（便签等）', icon: <CloudSyncOutlined style={{ fontSize: 16 }} /> },
     { key: 'divider_2', isDivider: true, text: '导入设置' },
     {
       key: 'import_settings',
@@ -107,6 +110,7 @@ const DataSettings: FC = () => {
         {menu === 'obsidian' && <ObsidianSettings />}
         {menu === 'siyuan' && <SiyuanSettings />}
         {menu === 'local_backup' && <LocalBackupSettings />}
+        {menu === 'cross_device' && <CrossDeviceSyncSettings />}
       </SettingContainer>
     </Container>
   )

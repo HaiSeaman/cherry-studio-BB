@@ -217,6 +217,11 @@ export enum IpcChannel {
   Backup_DeleteS3File = 'backup:deleteS3File',
   Backup_CheckS3Connection = 'backup:checkS3Connection',
 
+  // 跨设备同步（便签/待办/日历/打卡/提醒，表级 JSON 文件柜）
+  Sync_PutFile = 'sync:put-file',
+  Sync_GetFile = 'sync:get-file',
+  Sync_DeleteFile = 'sync:delete-file',
+
   // zip
   Zip_Decompress = 'zip:decompress',
 

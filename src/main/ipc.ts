@@ -36,6 +36,7 @@ import fontList from 'font-list'
 import appService from './services/AppService'
 import automationService from './services/AutomationService'
 import BackupManager from './services/BackupManager'
+import { syncStorage } from './services/CherrySyncStorage'
 import { configManager } from './services/ConfigManager'
 import DxtService from './services/DxtService'
 import { ExportService } from './services/ExportService'
@@ -457,6 +458,11 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.Backup_ListS3Files, backupManager.listS3Files.bind(backupManager))
   ipcMain.handle(IpcChannel.Backup_DeleteS3File, backupManager.deleteS3File.bind(backupManager))
   ipcMain.handle(IpcChannel.Backup_CheckS3Connection, backupManager.checkS3Connection.bind(backupManager))
+
+  // 跨设备同步：表级 JSON 文件柜（cherry-rk-sync/）
+  ipcMain.handle(IpcChannel.Sync_PutFile, (_e, channel, config, key, content) => syncStorage.putFile(channel, config, key, content))
+  ipcMain.handle(IpcChannel.Sync_GetFile, (_e, channel, config, key) => syncStorage.getFile(channel, config, key))
+  ipcMain.handle(IpcChannel.Sync_DeleteFile, (_e, channel, config, key) => syncStorage.deleteFile(channel, config, key))
 
   // file
   ipcMain.handle(IpcChannel.File_Open, fileManager.open.bind(fileManager))
