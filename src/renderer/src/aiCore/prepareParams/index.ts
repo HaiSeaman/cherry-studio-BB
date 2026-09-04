@@ -12,11 +12,8 @@
 // 基础参数处理
 export { getTimeout } from './modelParameters'
 
-// 文件处理
-export { extractFileContent } from './fileProcessor'
-
 // 消息转换
 export { convertMessagesToSdkMessages, convertMessageToSdkParam } from './messageConverter'
 
 // 参数构建 (主要API)
-export { buildGenerateTextParams, buildStreamTextParams } from './parameterBuilder'
+export { buildStreamTextParams } from './parameterBuilder'

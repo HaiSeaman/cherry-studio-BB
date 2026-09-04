@@ -9,6 +9,8 @@ import { isSafeExternalUrl } from './security'
 
 const logger = loggerService.withContext('WebviewService')
 
+let userAgentHookRegistered = false
+
 /**
  * init the useragent of the webview session
  * remove the CherryStudio and Electron from the useragent
@@ -19,6 +21,10 @@ export function initSessionUserAgent() {
   const newUA = originUA.replace(/CherryStudio\/\S+\s/, '').replace(/Electron\/\S+\s/, '')
 
   wvSession.setUserAgent(newUA)
+  // 主窗口每次重建都会调用本函数：onBeforeSendHeaders 若重复注册会累积 handler，
+  // 只允许注册一次（session.webRequest 无移除 API，必须用标志位防重）
+  if (userAgentHookRegistered) return
+  userAgentHookRegistered = true
   wvSession.webRequest.onBeforeSendHeaders((details, cb) => {
     const language = configManager.getLanguage()
     const headers = {

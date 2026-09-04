@@ -5,6 +5,7 @@ import {
   detectColor,
   normalizeItems,
   parseFileNameW,
+  partitionProtected,
   pruneByCount,
   pruneByTime,
   sortForDisplay,
@@ -27,13 +28,21 @@ describe('upsertAndEvict', () => {
     expect(items.map((i) => i.id)).toEqual(['c', 'a', 'b'])
   })
 
-  it('指纹命中已有条目 → 合并（继承 id/pinned/fav）并提升置顶、刷新 ts，不重复占位', () => {
+  it('指纹命中已有条目 → 保留位置与时间戳，不提升置顶（点击复制不再自动排序）', () => {
     const base = [text('a', 'A', 1, false, true), text('b', 'B', 2)]
     const { items } = upsertAndEvict(base, { ...text('x', 'A', 9) })
     expect(items).toHaveLength(2)
     expect(items[0].id).toBe('a')
     expect(items[0].fav).toBe(true) // 收藏标志随条目标签保留
-    expect(items[0].ts).toBe(9)
+    expect(items[0].ts).toBe(1) // 时间戳不被刷新为 9
+    expect(items[1].id).toBe('b') // 位置不被提升
+  })
+
+  it('命中中间的条目也不改变其相对位置', () => {
+    const base = [text('a', 'A', 3), text('b', 'B', 2), text('c', 'C', 1)]
+    const { items } = upsertAndEvict(base, { ...text('x', 'B', 99) })
+    expect(items.map((i) => i.id)).toEqual(['a', 'b', 'c'])
+    expect(items.find((i) => i.id === 'b')?.ts).toBe(2)
   })
 
   it('超限淘汰最旧的非收藏非固定条目，收藏与固定永不被淘汰', () => {
@@ -79,6 +88,26 @@ describe('pruneByCount', () => {
     const { items: next, evicted } = pruneByCount(items, 2)
     expect(evicted.map((i) => i.id)).toEqual(['old'])
     expect(next.map((i) => i.id)).toEqual(['mid', 'new'])
+  })
+})
+
+describe('partitionProtected', () => {
+  it('清空时保留收藏与置顶，其余待删除', () => {
+    const items = [
+      text('a', 'A', 1),
+      text('f', 'F', 2, false, true),
+      text('p', 'P', 3, true),
+      text('fp', 'FP', 4, true, true)
+    ]
+    const { keep, removed } = partitionProtected(items)
+    expect(keep.map((i) => i.id)).toEqual(['f', 'p', 'fp'])
+    expect(removed.map((i) => i.id)).toEqual(['a'])
+  })
+
+  it('空列表返回空', () => {
+    const { keep, removed } = partitionProtected([])
+    expect(keep).toHaveLength(0)
+    expect(removed).toHaveLength(0)
   })
 })
 

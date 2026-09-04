@@ -11,6 +11,7 @@ export class ProxyManager {
   private config: ProxyConfig = { mode: 'direct' }
   private systemProxyInterval: NodeJS.Timeout | null = null
   private isSettingProxy = false
+  private pendingConfig: ProxyConfig | null = null
   private nodeProxyController = new NodeProxyController(logger)
 
   private async monitorSystemProxy(): Promise<void> {
@@ -47,7 +48,10 @@ export class ProxyManager {
     // (http://user:pass@host) which would leak into the log file.
     logger.info(`configureProxy: mode=${config?.mode} rulesConfigured=${Boolean(config?.proxyRules)}`)
 
+    // 上一次设置仍在进行中：记录本次请求，设置完成后重放"最新"配置，
+    // 而不是直接 return 静默丢弃（并发调用的最后一个请求才是用户想要的结果）
     if (this.isSettingProxy) {
+      this.pendingConfig = config
       return
     }
 
@@ -72,6 +76,14 @@ export class ProxyManager {
       throw error
     } finally {
       this.isSettingProxy = false
+      // 重放等待中的最新请求
+      if (this.pendingConfig) {
+        const next = this.pendingConfig
+        this.pendingConfig = null
+        this.configureProxy(next).catch((error) => {
+          logger.error('Failed to apply pending proxy config:', error as Error)
+        })
+      }
     }
   }
 

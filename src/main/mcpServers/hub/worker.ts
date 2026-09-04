@@ -158,8 +158,10 @@ const handleExec = async (code) => {
   } catch (error) {
     // Errors thrown inside the vm context are NOT \`instanceof Error\` in this
     // realm, so read the message property defensively.
+    // NOTE: this string is evaluated as plain JS by new Worker(src, { eval: true }),
+    // so must NOT use TypeScript-only syntax (e.g. \`as\` casts).
     const errorMessage =
-      error && typeof error === 'object' && 'message' in error ? String((error as { message: unknown }).message) : String(error)
+      error && typeof error === 'object' && 'message' in error ? String(error.message) : String(error)
     parentPort?.postMessage({ type: 'error', error: errorMessage, logs: logs.length > 0 ? logs : undefined })
   } finally {
     pendingCalls.clear()

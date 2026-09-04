@@ -1326,3 +1326,54 @@ body {
   padding: 4px 8px;
   font-size: 12px;
 }
+
+/* ================= 剪贴板视图：双击详情小窗口 ================= */
+.clip-detail-card {
+  width: min(340px, calc(100% - 28px));
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100% - 28px);
+}
+
+.clip-detail-time {
+  flex: 1;
+  margin-left: 8px;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.clip-detail-text {
+  user-select: text;
+  cursor: text;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-y: auto;
+  max-height: 320px;
+  padding: 8px 10px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.clip-detail-hint {
+  color: var(--text-3);
+}
+
+.clip-detail-image {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+}
+
+.clip-detail-copy {
+  color: var(--accent-strong);
+  border-color: var(--accent-soft);
+}

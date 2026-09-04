@@ -248,10 +248,11 @@ const HomeWindow: FC<{ draggable?: boolean }> = ({ draggable = true }) => {
   }, [isPinned])
 
   useEffect(() => {
-    window.electron.ipcRenderer.on(IpcChannel.ShowMiniWindow, onWindowShow)
-
+    const cleanup = window.electron.ipcRenderer.on(IpcChannel.ShowMiniWindow, onWindowShow)
     return () => {
-      window.electron.ipcRenderer.removeAllListeners(IpcChannel.ShowMiniWindow)
+      // 用 on() 返回的精准清理函数：removeAllListeners 会把该通道的所有监听一并摘除，
+      // 会误伤同窗口其他模块注册的同通道监听
+      cleanup()
     }
   }, [onWindowShow])
 

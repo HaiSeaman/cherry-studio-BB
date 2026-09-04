@@ -95,6 +95,8 @@ const MusicWidgetApp: FC = () => {
       onHostMessage((msg) => {
         switch (msg.t) {
           case 'snapshot':
+            // 收到快照即表明主进程可达：取消 2s 超时，避免挂件打开后永远"假未连接"
+            window.clearTimeout(snapshotTimer.current)
             setConnected(true)
             setStations(msg.stations)
             setState(msg.s)
@@ -106,6 +108,7 @@ const MusicWidgetApp: FC = () => {
             }
             break
           case 'update':
+            window.clearTimeout(snapshotTimer.current)
             setConnected(true)
             setState(msg.s)
             emitPosition(msg.s.position, msg.s.duration)

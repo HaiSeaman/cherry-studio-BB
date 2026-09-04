@@ -147,7 +147,7 @@ const Markdown: FC<Props> = ({ block, postProcess }) => {
   }, [mathEngine, messageContent, block.id, rehypeMathjax])
 
   const components = useMemo(() => {
-    return {
+    const comps = {
       a: (props: any) => <Link {...props} />,
       code: (props: any) => <CodeBlock {...props} blockId={block.id} />,
       table: (props: any) => <Table {...props} blockId={block.id} />,
@@ -160,11 +160,13 @@ const Markdown: FC<Props> = ({ block, postProcess }) => {
       },
       svg: MarkdownSvgRenderer
     } as Partial<Components>
-  }, [block.id])
-
-  if (/<style\b[^>]*>/i.test(messageContent)) {
-    components.style = MarkdownShadowDOMRenderer as any
-  }
+    // 在 useMemo 内按条件生成 style 组件：流式内容从含 <style> 变不含时
+    // components 会重建缓存，旧属性不会残留（原来在渲染期就地改 memo 对象）
+    if (/<style\b[^>]*>/i.test(messageContent)) {
+      comps.style = MarkdownShadowDOMRenderer as any
+    }
+    return comps
+  }, [block.id, messageContent])
 
   const urlTransform = useCallback((value: string) => {
     if (value.startsWith('data:image/png') || value.startsWith('data:image/jpeg')) return value

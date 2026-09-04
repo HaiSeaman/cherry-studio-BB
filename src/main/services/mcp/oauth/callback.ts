@@ -42,6 +42,7 @@ function getTranslation(key: string): string {
 export class CallBackServer {
   private server: Promise<http.Server>
   private events: EventEmitter
+  private waitReject: ((err: Error) => void) | null = null
 
   constructor(options: OAuthCallbackServerOptions) {
     const { port, path, events } = options
@@ -144,15 +145,39 @@ export class CallBackServer {
   }
 
   async close() {
-    const server = await this.server
-    server.close()
+    // server 可能从未成功启动（如端口被占用 listen 失败），此时 promise 已 reject：
+    // 必须捕获，避免 void close() 调用方产生 unhandled rejection（dev 模式无全局处理器）
+    try {
+      const server = await this.server
+      server.close()
+    } catch (error) {
+      logger.warn('OAuth callback server was never started, nothing to close', {
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
   }
 
   async waitForAuthCode(): Promise<string> {
-    return new Promise((resolve) => {
+    // 已被中止时直接拒绝
+    if (this.waitReject) {
+      return Promise.reject(new Error('OAuth callback wait already aborted'))
+    }
+    return new Promise<string>((resolve, reject) => {
+      this.waitReject = reject
       this.events.once('auth-code-received', (code) => {
+        this.waitReject = null
         resolve(code)
       })
     })
+  }
+
+  /** 中止等待：超时/外部取消时调用，让 waitForAuthCode 的 promise 结束而不是永久挂起 */
+  abort(): void {
+    this.events.removeAllListeners('auth-code-received')
+    if (this.waitReject) {
+      const reject = this.waitReject
+      this.waitReject = null
+      reject(new Error('OAuth callback wait aborted'))
+    }
   }
 }

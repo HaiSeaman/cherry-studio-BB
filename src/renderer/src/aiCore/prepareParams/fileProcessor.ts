@@ -6,44 +6,15 @@
 import type OpenAI from '@cherrystudio/openai'
 import { loggerService } from '@logger'
 import { getProviderByModel } from '@renderer/services/AssistantService'
-import type { FileMetadata, Message, Model } from '@renderer/types'
+import type { FileMetadata, Model } from '@renderer/types'
 import { FILE_TYPE } from '@renderer/types'
 import type { FileMessageBlock } from '@renderer/types/newMessage'
-import { findFileBlocks } from '@renderer/utils/messageUtils/find'
 import type { FilePart, TextPart } from 'ai'
 
 import { getAiSdkProviderId } from '../provider/factory'
 import { getFileSizeLimit, supportsImageInput, supportsLargeFileUpload } from './modelCapabilities'
 
 const logger = loggerService.withContext('fileProcessor')
-
-/**
- * 提取文件内容
- */
-export async function extractFileContent(message: Message): Promise<string> {
-  const fileBlocks = findFileBlocks(message)
-  if (fileBlocks.length > 0) {
-    const textFileBlocks = fileBlocks.filter(
-      (fb) => fb.file && [FILE_TYPE.TEXT, FILE_TYPE.DOCUMENT].some((type) => fb.file.type === type)
-    )
-
-    if (textFileBlocks.length > 0) {
-      let text = ''
-      const divider = '\n\n---\n\n'
-
-      for (const fileBlock of textFileBlocks) {
-        const file = fileBlock.file
-        const fileContent = (await window.api.file.read(file.id + file.ext)).trim()
-        const fileNameRow = 'file: ' + file.origin_name + '\n\n'
-        text = text + fileNameRow + fileContent + divider
-      }
-
-      return text
-    }
-  }
-
-  return ''
-}
 
 /**
  * 将文件块转换为文本部分

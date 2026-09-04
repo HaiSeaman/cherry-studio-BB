@@ -16,12 +16,14 @@ export type RequestPayload = z.infer<typeof RequestPayloadSchema>
 export class Fetcher {
   private static async _fetch({ url, headers }: RequestPayload): Promise<Response> {
     try {
+      // 加 30s 超时：恶意/超慢站点不再能无限挂住 LLM 调用请求
       const response = await net.fetch(url, {
         headers: {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           ...headers
-        }
+        },
+        signal: AbortSignal.timeout(30000)
       })
 
       if (!response.ok) {

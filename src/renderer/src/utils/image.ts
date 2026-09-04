@@ -290,9 +290,8 @@ export async function captureScrollableIframe(
   const ensureFontStyle = (css: string): HTMLStyleElement => {
     const EXISTING = doc.head.querySelector('style[data-cs-inline-fonts="true"]') as HTMLStyleElement | null
     if (EXISTING) {
-      if (css && css.trim()) {
-        EXISTING.textContent = `${EXISTING.textContent || ''}\n${css}`
-      }
+      // 同一 iframe 可能被反复捕获：直接覆盖而不是追加，避免 style 文本无限膨胀/重复内嵌字体
+      EXISTING.textContent = css || ''
       return EXISTING
     }
     const style = doc.createElement('style')
@@ -366,6 +365,8 @@ export async function captureScrollableIframe(
   } finally {
     // 恢复动画
     animationStyle.remove()
+    // 移除本次注入的字体样式，防止 iframe 复用时样式残留/膨胀
+    injectedFontStyle?.remove()
   }
 }
 

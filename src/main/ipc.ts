@@ -701,7 +701,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.Mcp_GetResource, mcpService.getResource)
   ipcMain.handle(IpcChannel.Mcp_GetInstallInfo, mcpService.getInstallInfo)
   ipcMain.handle(IpcChannel.Mcp_CheckConnectivity, mcpService.checkMcpConnectivity)
-  ipcMain.handle(IpcChannel.Mcp_AbortTool, mcpService.abortTool)
+  ipcMain.handle(IpcChannel.Mcp_AbortTool, (_event, callId: string) => mcpService.abortTool(callId))
   ipcMain.handle(IpcChannel.Mcp_ResolveHubTool, async (_event, nameOrId: string) => {
     const { resolveHubToolName } = await import('@main/mcpServers/hub/mcp-bridge')
     return resolveHubToolName(nameOrId)
@@ -711,11 +711,9 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
 
   // DXT upload handler
   ipcMain.handle(IpcChannel.Mcp_UploadDxt, async (event, fileBuffer: ArrayBuffer, fileName: string) => {
+    const tempPath = await fileManager.createTempFile(event, fileName)
     try {
-      // Create a temporary file with the uploaded content
-      const tempPath = await fileManager.createTempFile(event, fileName)
       await fileManager.writeFile(event, tempPath, Buffer.from(fileBuffer))
-
       // Process DXT file using the temporary path
       return await dxtService.uploadDxt(event, tempPath)
     } catch (error) {
@@ -723,6 +721,13 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to upload DXT file'
+      }
+    } finally {
+      // 无论成功/失败都清理临时上传文件，避免每次上传泄漏一个文件到 temp 目录
+      try {
+        await fileManager.deleteExternalFile(event, tempPath)
+      } catch {
+        /* 清理失败留孤儿文件，无害 */
       }
     }
   })

@@ -11,6 +11,7 @@ import {
   detectColor,
   normalizeItems,
   parseFileNameW,
+  partitionProtected,
   pruneByCount,
   pruneByTime,
   sortForDisplay,
@@ -27,13 +28,13 @@ const POLL_INTERVAL = 500
 const MAX_TEXT_LENGTH = 5000
 /** 缩略图目标宽度（等比缩放） */
 const THUMB_WIDTH = 240
-/** 默认容量限制（需求4：条数 + 天数；收藏条目永不参与清理） */
+/** 默认容量限制（需求4：条数 + 天数；收藏与置顶条目永不参与清理） */
 const DEFAULT_LIMITS: ClipboardLimits = { maxItems: 500, maxDays: 30 }
 
 /**
  * 主进程剪贴板历史服务（挂件剪贴板视图的后端）。
  * - 轮询捕获：文件路径 / 图片 / 富文本 HTML / 富文本 RTF / 文本（含十六进制色号识别）
- * - 数据:改写 memory + history.json；容量按 maxItems/maxDays 修剪（收藏与固定不删）
+ * - 数据:改写 memory + history.json；容量按 maxItems/maxDays 修剪（收藏与置顶不删）
  */
 class ClipboardService {
   private items: ClipboardItem[] = []
@@ -191,7 +192,7 @@ class ClipboardService {
       }
     }
     const { items, evicted } = upsertAndEvict(this.items, item, this.limits.maxItems)
-    // 需求4：天数修剪（收藏/固定双保护）
+    // 需求4：天数修剪（收藏/置顶双保护）
     const { items: pruned, evicted: byTime } = pruneByTime(items, Date.now(), this.limits.maxDays)
     this.items = pruned
     for (const e of [...evicted, ...byTime]) this.removeThumb(e)
@@ -294,12 +295,14 @@ class ClipboardService {
     this.broadcast()
   }
 
-  /** 需求3：清空所有未收藏的条目（收藏的永不被删除；固定但未收藏的也会被清掉） */
+  /** 需求3：清空所有未收藏且未固定的条目（收藏与置顶的消息永不被删除，不受上限限制） */
   clearUnfav(): number {
-    const keep = this.items.filter((i) => i.fav)
-    const removed = this.items.filter((i) => !i.fav)
+    const { keep, removed } = partitionProtected(this.items)
     for (const item of removed) this.removeThumb(item)
     this.items = keep
+    // 重置"轮间变化闸门"：清空后用户再次复制与历史相同的内容也能正常重新入库
+    // （否则 lastCheapKey 仍是旧内容特征，poller 会整轮跳过，条目永久不出现）
+    this.lastCheapKey = ''
     this.scheduleSave()
     this.broadcast()
     return removed.length
@@ -314,7 +317,7 @@ class ClipboardService {
     const days = Math.floor(Number(maxDays))
     this.limits.maxItems = Number.isFinite(items) && items > 0 ? items : DEFAULT_LIMITS.maxItems
     this.limits.maxDays = Number.isFinite(days) && days > 0 ? days : DEFAULT_LIMITS.maxDays
-    // 立即按新上限修剪一次，保证"容量设置"即时生效（收藏/固定双保护）
+    // 立即按新上限修剪一次，保证"容量设置"即时生效（收藏/置顶双保护）
     const { items: pruned, evicted } = pruneByCount(this.items, this.limits.maxItems)
     const { items: byTime, evicted: evictedByTime } = pruneByTime(pruned, Date.now(), this.limits.maxDays)
     this.items = byTime

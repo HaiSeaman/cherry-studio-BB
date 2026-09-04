@@ -38,7 +38,8 @@ export function useAppInit() {
   }, [])
 
   useEffect(() => {
-    window.electron.ipcRenderer.on(IpcChannel.App_SaveData, async () => {
+    // 返回清理函数，与下方 FullscreenStatusChanged 的监听使用方式保持一致，避免组件重挂重复注册
+    return window.electron.ipcRenderer.on(IpcChannel.App_SaveData, async () => {
       await handleSaveData()
     })
   }, [])

@@ -308,7 +308,7 @@ export type ClipboardItem = {
   type: 'text' | 'color' | 'html' | 'rtf' | 'image' | 'files'
   ts: number
   pinned: boolean
-  /** 收藏：被【清空】保护的标志（收藏的消息永不被清空删除） */
+  /** 收藏：被清理保护的标志（收藏与置顶的消息永不被清空/上限清理删除） */
   fav: boolean
   fingerprint: string
   text?: string
@@ -323,7 +323,7 @@ export type ClipboardItem = {
   paths?: string[]
 }
 
-/** 历史记录容量限制（需求4）：条数与天数双上限；收藏条目永不参与清理 */
+/** 历史记录容量限制（需求4）：条数与天数双上限；收藏与置顶条目永不参与清理 */
 export type ClipboardLimits = {
   maxItems: number
   maxDays: number

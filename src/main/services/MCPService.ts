@@ -592,6 +592,8 @@ class McpService {
           // Set a timeout to close the callback server
           const timeoutId = setTimeout(() => {
             getServerLogger(server).warn(`OAuth flow timed out`)
+            // abort() 会让 waitForAuthCode 的 promise 拒绝并结束，避免 handleAuth 永久挂起
+            callbackServer.abort()
             void callbackServer.close()
           }, 300000) // 5 minutes timeout
 
@@ -1175,7 +1177,8 @@ class McpService {
   }
 
   // 实现 abortTool 方法
-  public async abortTool(_: Electron.IpcMainInvokeEvent, callId: string) {
+  // event 参数从未在实现中使用：去掉它，避免调用方被迫传 null 伪造 IpcMainInvokeEvent
+  public async abortTool(callId: string) {
     const activeToolCall = this.activeToolCalls.get(callId)
     if (activeToolCall) {
       activeToolCall.abort()

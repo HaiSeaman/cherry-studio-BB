@@ -103,11 +103,13 @@ export class ConfigManager {
     this.setAndNotify(ConfigKeys.ZoomFactor, factor)
   }
 
-  subscribe<T>(key: string, callback: (newValue: T) => void) {
+  subscribe<T>(key: string, callback: (newValue: T) => void): () => void {
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, [])
     }
     this.subscribers.get(key)!.push(callback)
+    // 返回解绑函数，便于调用方管理订阅生命周期（避免重复注册累积）
+    return () => this.unsubscribe(key, callback)
   }
 
   unsubscribe<T>(key: string, callback: (newValue: T) => void) {

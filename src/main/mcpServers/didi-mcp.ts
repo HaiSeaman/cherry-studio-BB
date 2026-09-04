@@ -18,7 +18,8 @@ const logger = loggerService.withContext('DiDiMCPServer')
 
 export class DiDiMcpServer {
   private _server: Server
-  private readonly baseUrl = 'http://mcp.didichuxing.com/mcp-servers'
+  // HTTPS + 头传递 API key：明文 http + URL query 会把 key 泄漏到访问日志/代理
+  private readonly baseUrl = 'https://mcp.didichuxing.com/mcp-servers'
   private apiKey: string
 
   constructor(apiKey?: string) {
@@ -444,15 +445,16 @@ export class DiDiMcpServer {
       ...(Object.keys(params).length > 0 && { params })
     }
 
-    // API key is passed as URL parameter
-    const url = `${this.baseUrl}?key=${this.apiKey}`
-
-    const response = await fetch(url, {
+    // API key 通过 header 传递（不再拼进 URL query，避免 key 泄漏到日志/代理）
+    const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-API-Key': this.apiKey
       },
-      body: JSON.stringify(requestData)
+      body: JSON.stringify(requestData),
+      // 30s 超时，防止服务端无响应时挂住调用
+      signal: AbortSignal.timeout(30000)
     })
 
     if (!response.ok) {

@@ -753,6 +753,10 @@ export async function checkApi(provider: Provider, model: Model, timeout = 15000
       if (!isAbortError(e) && !isAbortError(streamError)) {
         throw streamError ?? e
       }
+    } finally {
+      // 无论成功/失败/超时都注销 abort 注册，防止 abortMap 条目永久残留（内存泄漏）。
+      // abortCompletion 对已结束的请求调用 abort 是无副作用的，幂等安全。
+      abortCompletion(abortId)
     }
   }
 }

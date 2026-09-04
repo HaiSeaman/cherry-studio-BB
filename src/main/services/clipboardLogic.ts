@@ -10,7 +10,7 @@ export type { ClipboardItem }
 /** 历史上限默认（条数；需求4：可被 ClipboardLimits 覆盖） */
 export const HISTORY_LIMIT = 200
 
-/** 收藏与固定都是"钉住"语义：清空时只保护收藏（需求3），容量修剪时两者都保护（需求4） */
+/** 收藏与固定都是"钉住"语义：清空与容量修剪时两者都保护（需求3/4：收藏+置顶永不清理） */
 const isProtected = (i: ClipboardItem): boolean => i.fav || i.pinned
 
 /** 归一化：老版本持久化数据可能缺 fav 字段（JSON 加载兜底） */
@@ -46,8 +46,10 @@ export function pruneByCount(items: ClipboardItem[], limit: number): { items: Cl
 }
 
 /**
- * 入库：指纹命中已有条目 → 继承其 id/pinned/fav 后删除旧条目（同内容复制提升置顶）；
- * 新条目插到最前；超出上限时淘汰最旧的非收藏非固定条目。
+ * 入库：
+ * - 指纹未命中（全新内容）→ 插到最前（时间顺序：最新复制在最前）；
+ * - 指纹命中已有条目 → 该条保持身份/时间戳/位置全不变（同内容再次复制不提升置顶、不刷新时间）；
+ * - 超出上限时淘汰最旧的非收藏非固定条目。
  * 返回更新后的列表与被淘汰条目（调用方负责删缩略图文件）。
  */
 export function upsertAndEvict(
@@ -55,12 +57,22 @@ export function upsertAndEvict(
   incoming: ClipboardItem,
   limit: number = HISTORY_LIMIT
 ): { items: ClipboardItem[]; evicted: ClipboardItem[] } {
-  const existing = items.find((i) => i.fingerprint === incoming.fingerprint)
-  const merged: ClipboardItem = existing
-    ? { ...incoming, id: existing.id, pinned: existing.pinned, fav: existing.fav }
-    : incoming
-  const next = [merged, ...items.filter((i) => i.fingerprint !== incoming.fingerprint)]
+  const existingIdx = items.findIndex((i) => i.fingerprint === incoming.fingerprint)
+  if (existingIdx === -1) {
+    return pruneByCount([incoming, ...items], limit)
+  }
+  // 同内容再次复制：原样保留（含 pinned/fav/ts/列表位置），避免"点击复制后自动置顶"
+  const next = [...items]
   return pruneByCount(next, limit)
+}
+
+/** 清空/清理保留集合：收藏与置顶的条目一律保留（需求3：永不清理），其余返回待删除 */
+export function partitionProtected(
+  items: ClipboardItem[]
+): { keep: ClipboardItem[]; removed: ClipboardItem[] } {
+  const keep = items.filter(isProtected)
+  const keepIds = new Set(keep.map((i) => i.id))
+  return { keep, removed: items.filter((i) => !keepIds.has(i.id)) }
 }
 
 /** 天数修剪（需求4）：删除超过 maxDays 天且未收藏未固定条目；返回被删条目 */

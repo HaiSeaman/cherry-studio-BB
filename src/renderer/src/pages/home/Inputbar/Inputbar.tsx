@@ -262,7 +262,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
 
       setText('')
       setFiles([])
-      setTimeoutTimer('sendMessage_1', () => setText(''), 500)
+      // 发送时已立即清空，600ms 后再清一次会误吞用户发送后立刻开始的新输入（去掉历史遗留的二次清空）
       setTimeoutTimer('sendMessage_2', () => resizeTextArea(), 0)
       // Restore focus to textarea after sending to maintain IME state (fcitx5 issue)
       focusTextarea()

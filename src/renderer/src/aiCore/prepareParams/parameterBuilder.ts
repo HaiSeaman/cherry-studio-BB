@@ -33,7 +33,6 @@ import { IdleTimeoutController, type IdleTimeoutHandle } from '@renderer/utils/I
 import { replacePromptVariables } from '@renderer/utils/prompt'
 import { isAIGatewayProvider, isAwsBedrockProvider, isSupportUrlContextProvider } from '@renderer/utils/provider'
 import { DEFAULT_TIMEOUT } from '@shared/config/constant'
-import type { ModelMessage } from 'ai'
 import { stepCountIs } from 'ai'
 
 import { getAiSdkProviderId } from '../provider/factory'
@@ -248,21 +247,4 @@ export async function buildStreamTextParams(
     webSearchPluginConfig,
     idleTimeout
   }
-}
-
-/**
- * 构建非流式的 generateText 参数
- */
-export async function buildGenerateTextParams(
-  messages: ModelMessage[],
-  assistant: Assistant,
-  provider: Provider,
-  options: {
-    mcpTools?: MCPTool[]
-    allowedTools?: string[]
-    enableTools?: boolean
-  } = {}
-): Promise<any> {
-  // 复用流式参数的构建逻辑
-  return await buildStreamTextParams(messages, assistant, provider, options)
 }

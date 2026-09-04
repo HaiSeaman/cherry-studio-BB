@@ -74,6 +74,9 @@ export class SelectionService {
   private filterMode = 'default'
   private filterList: string[] = []
 
+  // 配置订阅回调引用：start() 注册、stop() 解绑，防止反复开关划词助手时订阅累积（回调重复执行）
+  private readonly configUnsubscribers: Array<() => void> = []
+
   private toolbarWindow: BrowserWindow | null = null
   private actionWindows = new Set<BrowserWindow>()
   private preloadedActionWindows: BrowserWindow[] = []
@@ -207,42 +210,64 @@ export class SelectionService {
     this.setHookGlobalFilterMode(this.filterMode, this.filterList)
     this.setHookFineTunedList()
 
-    configManager.subscribe(ConfigKeys.SelectionAssistantTriggerMode, (triggerMode: TriggerMode) => {
-      const oldTriggerMode = this.triggerMode
+    // stop() 时统一解除订阅，避免每次 start() 重复注册
+    this.configUnsubscribers.push(
+      configManager.subscribe(ConfigKeys.SelectionAssistantTriggerMode, (triggerMode: TriggerMode) => {
+        const oldTriggerMode = this.triggerMode
 
-      this.triggerMode = triggerMode
-      this.processTriggerMode()
+        this.triggerMode = triggerMode
+        this.processTriggerMode()
 
-      //trigger mode changed, need to update the filter list
-      if (oldTriggerMode !== triggerMode) {
-        this.setHookGlobalFilterMode(this.filterMode, this.filterList)
-      }
-    })
-
-    configManager.subscribe(ConfigKeys.SelectionAssistantFollowToolbar, (isFollowToolbar: boolean) => {
-      this.isFollowToolbar = isFollowToolbar
-    })
-
-    configManager.subscribe(ConfigKeys.SelectionAssistantRemeberWinSize, (isRemeberWinSize: boolean) => {
-      this.isRemeberWinSize = isRemeberWinSize
-      //when off, reset the last action window size to default
-      if (!this.isRemeberWinSize) {
-        this.lastActionWindowSize = {
-          width: this.ACTION_WINDOW_WIDTH,
-          height: this.ACTION_WINDOW_HEIGHT
+        //trigger mode changed, need to update the filter list
+        if (oldTriggerMode !== triggerMode) {
+          this.setHookGlobalFilterMode(this.filterMode, this.filterList)
         }
+      })
+    )
+
+    this.configUnsubscribers.push(
+      configManager.subscribe(ConfigKeys.SelectionAssistantFollowToolbar, (isFollowToolbar: boolean) => {
+        this.isFollowToolbar = isFollowToolbar
+      })
+    )
+
+    this.configUnsubscribers.push(
+      configManager.subscribe(ConfigKeys.SelectionAssistantRemeberWinSize, (isRemeberWinSize: boolean) => {
+        this.isRemeberWinSize = isRemeberWinSize
+        //when off, reset the last action window size to default
+        if (!this.isRemeberWinSize) {
+          this.lastActionWindowSize = {
+            width: this.ACTION_WINDOW_WIDTH,
+            height: this.ACTION_WINDOW_HEIGHT
+          }
+        }
+      })
+    )
+
+    this.configUnsubscribers.push(
+      configManager.subscribe(ConfigKeys.SelectionAssistantFilterMode, (filterMode: string) => {
+        this.filterMode = filterMode
+        this.setHookGlobalFilterMode(this.filterMode, this.filterList)
+      })
+    )
+
+    this.configUnsubscribers.push(
+      configManager.subscribe(ConfigKeys.SelectionAssistantFilterList, (filterList: string[]) => {
+        this.filterList = filterList
+        this.setHookGlobalFilterMode(this.filterMode, this.filterList)
+      })
+    )
+  }
+
+  /** 解除所有配置订阅（stop 时调用，防止订阅累积） */
+  private unsubscribeConfig(): void {
+    for (const unsub of this.configUnsubscribers.splice(0)) {
+      try {
+        unsub()
+      } catch {
+        /* 单个解绑失败不影响其余 */
       }
-    })
-
-    configManager.subscribe(ConfigKeys.SelectionAssistantFilterMode, (filterMode: string) => {
-      this.filterMode = filterMode
-      this.setHookGlobalFilterMode(this.filterMode, this.filterList)
-    })
-
-    configManager.subscribe(ConfigKeys.SelectionAssistantFilterList, (filterList: string[]) => {
-      this.filterList = filterList
-      this.setHookGlobalFilterMode(this.filterMode, this.filterList)
-    })
+    }
   }
 
   /**
@@ -387,6 +412,9 @@ export class SelectionService {
     this.toolbarWindow = null
 
     this.closePreloadedActionWindows()
+
+    // 解除配置订阅，防止反复开关时订阅累积
+    this.unsubscribeConfig()
 
     this.started = false
     this.logInfo('SelectionService Stopped', true)
@@ -1229,6 +1257,8 @@ export class SelectionService {
         actionWindow.destroy()
       }
     }
+    // 清空队列，避免 stop 后队列仍持有已销毁窗口、再 start 时报错或重复 destroy
+    this.preloadedActionWindows = []
   }
 
   /**

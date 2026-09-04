@@ -897,8 +897,19 @@ export class CdpBrowserController {
       params.quality = options.quality
     }
 
-    const result = (await dbg.sendCommand('Page.captureScreenshot', params)) as { data: string }
-    return result.data
+    // 与 open/execute/fetch 一致：截图也加超时保护，避免页面挂起时 MCP 调用永久阻塞
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+    try {
+      const result = (await Promise.race([
+        dbg.sendCommand('Page.captureScreenshot', params),
+        new Promise<never>((_, reject) => {
+          timeoutHandle = setTimeout(() => reject(new Error('Screenshot timed out')), 30000)
+        })
+      ])) as { data: string }
+      return result.data
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle)
+    }
   }
 
   /**

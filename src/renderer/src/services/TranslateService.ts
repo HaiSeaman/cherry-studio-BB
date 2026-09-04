@@ -6,7 +6,7 @@ import type {
 } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
-import { readyToAbort } from '@renderer/utils/abortController'
+import { readyToAbort, abortCompletion } from '@renderer/utils/abortController'
 import { isAbortError } from '@renderer/utils/error'
 import { NoOutputGeneratedError } from 'ai'
 
@@ -72,6 +72,11 @@ export const translateText = async (
     // dismiss no output generated error. it will be thrown when aborted.
     if (!NoOutputGeneratedError.isInstance(e)) {
       throw e
+    }
+  } finally {
+    // 请求结束（成功/失败/中止）后必须注销 abort 注册，否则 abortMap 条目永久残留（内存泄漏）
+    if (abortKey) {
+      abortCompletion(abortKey)
     }
   }
 

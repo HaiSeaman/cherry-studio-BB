@@ -49,6 +49,9 @@ const Chat: FC<Props> = (props) => {
   const mainRef = React.useRef<HTMLDivElement>(null)
   const contentSearchRef = React.useRef<ContentSearchRef>(null)
   const [filterIncludeUser, setFilterIncludeUser] = useState(false)
+  // 首次消息列表更新完成标志：必须用 ref 才能在渲染间持久（普通局部变量每次渲染重置，
+  // 定时器回调修改的只是旧闭包中的副本 → 后续静默搜索永远不触发）
+  const firstUpdateCompletedRef = React.useRef(false)
 
   const { setTimeoutTimer } = useTimer()
 
@@ -134,19 +137,18 @@ const Chat: FC<Props> = (props) => {
     })
   }
 
-  let firstUpdateCompleted = false
   const firstUpdateOrNoFirstUpdateHandler = debounce(() => {
     contentSearchRef.current?.silentSearch()
   }, 10)
 
   const messagesComponentUpdateHandler = () => {
-    if (firstUpdateCompleted) {
+    if (firstUpdateCompletedRef.current) {
       firstUpdateOrNoFirstUpdateHandler()
     }
   }
 
   const messagesComponentFirstUpdateHandler = () => {
-    setTimeoutTimer('messagesComponentFirstUpdateHandler', () => (firstUpdateCompleted = true), 300)
+    setTimeoutTimer('messagesComponentFirstUpdateHandler', () => (firstUpdateCompletedRef.current = true), 300)
     firstUpdateOrNoFirstUpdateHandler()
   }
 
