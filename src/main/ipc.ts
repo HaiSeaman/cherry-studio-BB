@@ -37,6 +37,7 @@ import appService from './services/AppService'
 import automationService from './services/AutomationService'
 import BackupManager from './services/BackupManager'
 import { syncStorage } from './services/CherrySyncStorage'
+import { clipboardService } from './services/ClipboardService'
 import { configManager } from './services/ConfigManager'
 import DxtService from './services/DxtService'
 import { ExportService } from './services/ExportService'
@@ -638,6 +639,8 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.MusicWidget_SetSize, (_, width: number, height: number) =>
     windowService.setMusicWidgetSize(width, height)
   )
+  ipcMain.handle(IpcChannel.MusicWidget_ToggleMaximize, () => windowService.toggleMusicWidgetMaximize())
+  ipcMain.handle(IpcChannel.MusicWidget_IsMaximized, () => windowService.getMusicWidget()?.isMaximized() ?? false)
   ipcMain.handle(IpcChannel.MusicWidget_IsVisible, () => windowService.getMusicWidget()?.isVisible() ?? false)
   ipcMain.handle(IpcChannel.MusicWidget_OpenMain, () => {
     windowService.showMainWindow()
@@ -653,10 +656,28 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
     windowService.getMusicWidget()?.webContents.send(IpcChannel.MusicWidget_OnMsg, msg)
   })
 
-  // 主题 token 广播：主窗口渲染层主题变化 → 转发给桌面挂件（跟随主程序配色）
+  // 主题 token 广播：主窗口渲染层主题变化 → 缓存最新一份 + 转发给桌面挂件（跟随主程序配色）
+  // 缓存用于挂件（重新）创建时直接补发：不再依赖主窗口的推送时机，
+  // 避免主窗口在后台（rAF 被系统节流）时挂件收不到主题、一直显示默认绿色
   ipcMain.on(IpcChannel.Theme_FromRenderer, (_event, tokens: unknown) => {
+    windowService.setWidgetThemeTokens(tokens)
     windowService.getMusicWidget()?.webContents.send(IpcChannel.Theme_ToWidget, tokens)
   })
+  ipcMain.handle(IpcChannel.Theme_RequestCachedTokens, () => windowService.getWidgetThemeTokens())
+
+  // 剪贴板挂件：历史所有权在主进程 ClipboardService，挂件端纯展示
+  ipcMain.handle(IpcChannel.Clipboard_GetHistory, () => clipboardService.getHistory())
+  ipcMain.handle(IpcChannel.Clipboard_CopyItem, (_, id: string) => clipboardService.copyItem(id))
+  ipcMain.handle(IpcChannel.Clipboard_SetPinned, (_, id: string, pinned: boolean) =>
+    clipboardService.setPinned(id, pinned)
+  )
+  ipcMain.handle(IpcChannel.Clipboard_SetFav, (_, id: string, fav: boolean) => clipboardService.setFav(id, fav))
+  ipcMain.handle(IpcChannel.Clipboard_DeleteItem, (_, id: string) => clipboardService.deleteItem(id))
+  ipcMain.handle(IpcChannel.Clipboard_ClearUnfav, () => clipboardService.clearUnfav())
+  ipcMain.handle(IpcChannel.Clipboard_GetLimits, () => clipboardService.getLimits())
+  ipcMain.handle(IpcChannel.Clipboard_SetLimits, (_, maxItems: number, maxDays: number) =>
+    clipboardService.setLimits(maxItems, maxDays)
+  )
   ipcMain.handle(IpcChannel.MiniWindow_ConsumeScreenshot, () => screenshotService.consumePendingScreenshot())
   ipcMain.handle(IpcChannel.MiniWindow_ReadClipboardImage, () => {
     const image = clipboard.readImage()

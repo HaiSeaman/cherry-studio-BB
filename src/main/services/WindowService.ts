@@ -92,10 +92,21 @@ class WidgetWindowController {
     this.get()?.setResizable(!locked)
   }
 
-  /** 切换视图时按 per-view 记忆尺寸调整窗口内容区（useContentSize:true，语义一致） */
+  /** 切换视图时按 per-view 记忆尺寸调整窗口内容区（useContentSize:true，语义一致）；
+   * 最大化状态下先还原（§7.3：避免系统最大化态与 per-view 尺寸互相污染） */
   setSize(width: number, height: number): void {
     const win = this.get()
-    if (win) win.setContentSize(width, height)
+    if (!win) return
+    if (win.isMaximized()) win.unmaximize()
+    win.setContentSize(width, height)
+  }
+
+  /** 顶栏"最大化"按钮：系统 maximize/unmaximize 切换（自动铺满工作区并记忆还原位置） */
+  toggleMaximize(): void {
+    const win = this.get()
+    if (!win) return
+    if (win.isMaximized()) win.unmaximize()
+    else win.maximize()
   }
 
   private create(): BrowserWindow {
@@ -120,7 +131,8 @@ class WidgetWindowController {
       skipTaskbar: true,
       resizable: true,
       minimizable: false,
-      maximizable: false,
+      // 顶栏"最大化"按钮需要系统 maximize/unmaximize（自动铺满工作区并记忆还原位置）
+      maximizable: true,
       fullscreenable: false,
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
@@ -135,10 +147,13 @@ class WidgetWindowController {
     this.win.setAlwaysOnTop(true, 'screen-saver')
     // 挂件应常驻所有工作区并覆盖全屏应用/游戏，与 miniWindow 一致
     this.win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-
     this.win.on('ready-to-show', () => {
       this.win?.show()
-      // 通知主窗口渲染层重推当前主题 token，让新建的挂件跟随主程序配色
+      // 先把主进程缓存的最新主题 token 直接发给挂件（不依赖主窗口推送时机，
+      // 避免主窗口在后台 rAF 被节流时挂件收不到主题、一直显示默认绿色）
+      const cached = windowService.getWidgetThemeTokens()
+      if (cached) this.win?.webContents.send(IpcChannel.Theme_ToWidget, cached)
+      // 再通知主窗口渲染层重推一次，确保缓存过期（如用户中途换主题）时也能刷新
       windowService.getMainWindow()?.webContents.send(IpcChannel.Theme_RequestPush)
     })
     this.win.on('closed', () => {
@@ -805,12 +820,26 @@ export class WindowService {
     return this.musicWidget.get()
   }
 
+  /** 主进程缓存的最新挂件主题 token：主窗口每次推送时更新，挂件创建时直接补发 */
+  private widgetThemeTokens: unknown = null
+  public setWidgetThemeTokens(tokens: unknown): void {
+    this.widgetThemeTokens = tokens
+  }
+  public getWidgetThemeTokens(): unknown {
+    return this.widgetThemeTokens
+  }
+
   public showMusicWidget(): void {
     this.musicWidget.show()
   }
 
   public toggleMusicWidget(): void {
     this.musicWidget.toggle()
+  }
+
+  /** 顶栏"最大化"按钮：系统 maximize/unmaximize 切换 */
+  public toggleMusicWidgetMaximize(): void {
+    this.musicWidget.toggleMaximize()
   }
 
   public closeMusicWidget(): void {

@@ -1,7 +1,7 @@
-import { Button, Input, Radio, Space, message } from 'antd'
+import { loadSyncState, type SyncConfigDto,syncOnce } from '@renderer/services/SyncAdapter'
+import { Button, Input, message,Radio, Space } from 'antd'
 import { useState } from 'react'
 import styled from 'styled-components'
-import { loadSyncState, syncOnce, type SyncConfigDto } from '@renderer/services/SyncAdapter'
 
 const STORAGE_KEY = 'rk-cross-device-sync'
 

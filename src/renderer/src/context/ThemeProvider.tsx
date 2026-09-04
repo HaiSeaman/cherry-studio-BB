@@ -86,8 +86,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       if (tokens.primary) window.api.themeTokens.push(tokens)
     }
     const raf = window.requestAnimationFrame(pushThemeTokens)
+    // 兜底：主窗口在后台时 rAF 会被系统完全暂停，token 推送（含主进程缓存更新）就会丢，
+    // 挂件只能显示默认绿色。setTimeout 后台仅被降频、不会被无限挂起，保证缓存最终写入
+    const rafFallback = window.setTimeout(pushThemeTokens, 300)
     const reqPush = window.electron.ipcRenderer.on(IpcChannel.Theme_RequestPush, () => {
       window.requestAnimationFrame(pushThemeTokens)
+      window.setTimeout(pushThemeTokens, 300)
     })
 
     // main 进程的主题事件：渲染进程以 themeId 为准，仅重放当前主题属性
@@ -102,6 +106,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     })
     return () => {
       window.cancelAnimationFrame(raf)
+      window.clearTimeout(rafFallback)
       reqPush()
       themeUpdated()
     }

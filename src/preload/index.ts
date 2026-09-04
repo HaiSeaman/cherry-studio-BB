@@ -11,6 +11,7 @@ import type { LogLevel, LogSourceWithContext } from '@shared/config/logger'
 import type { FileChangeEvent, WebviewKeyEvent } from '@shared/config/types'
 import type { MCPServerLogEntry } from '@shared/config/types'
 import type { ExternalAppInfo } from '@shared/externalApp/types'
+import type { ClipboardItem, ClipboardLimits } from '@shared/IpcChannel'
 import { IpcChannel } from '@shared/IpcChannel'
 import type { Notification } from '@types'
 import type {
@@ -277,6 +278,10 @@ const api = {
     /** 切换视图时按 per-view 记忆尺寸调整窗口内容区 */
     setSize: (width: number, height: number): Promise<void> =>
       ipcRenderer.invoke(IpcChannel.MusicWidget_SetSize, width, height),
+    /** 最大化/还原切换（无边框窗口，顶栏按钮触发） */
+    toggleMaximize: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_ToggleMaximize),
+    /** 当前是否处于最大化（顶栏按钮图标状态） */
+    isMaximized: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.MusicWidget_IsMaximized),
     isVisible: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.MusicWidget_IsVisible),
     openMain: (): Promise<void> => ipcRenderer.invoke(IpcChannel.MusicWidget_OpenMain),
     // ---- 播放状态/命令消息桥（主进程中转） ----
@@ -299,6 +304,30 @@ const api = {
     decrypt: (encryptedData: string, iv: string, secretKey: string) =>
       ipcRenderer.invoke(IpcChannel.Aes_Decrypt, encryptedData, iv, secretKey)
   },
+  clipboard: {
+    /** 挂件剪贴板视图打开时拉取全量历史（收藏/固定区在前） */
+    getHistory: (): Promise<ClipboardItem[]> => ipcRenderer.invoke(IpcChannel.Clipboard_GetHistory),
+    /** 订阅历史变更（主进程推全量列表） */
+    onUpdate: (callback: (items: ClipboardItem[]) => void): (() => void) => {
+      const listener = (_: Electron.IpcRendererEvent, items: ClipboardItem[]) => callback(items)
+      ipcRenderer.on(IpcChannel.Clipboard_OnUpdate, listener)
+      return () => ipcRenderer.removeListener(IpcChannel.Clipboard_OnUpdate, listener)
+    },
+    /** 把条目写回系统剪贴板（点击条目 = 复制，用户手动 Ctrl+V） */
+    copyItem: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannel.Clipboard_CopyItem, id),
+    setPinned: (id: string, pinned: boolean): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.Clipboard_SetPinned, id, pinned),
+    /** 收藏/取消收藏（需求1：收藏的消息永不被清空删除） */
+    setFav: (id: string, fav: boolean): Promise<void> => ipcRenderer.invoke(IpcChannel.Clipboard_SetFav, id, fav),
+    deleteItem: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannel.Clipboard_DeleteItem, id),
+    /** 清空所有未收藏条目（需求3：收藏的保留；固定但未收藏的也会被清掉） */
+    clearUnfav: (): Promise<number> => ipcRenderer.invoke(IpcChannel.Clipboard_ClearUnfav),
+    /** 读取容量限制（需求4） */
+    getLimits: (): Promise<ClipboardLimits> => ipcRenderer.invoke(IpcChannel.Clipboard_GetLimits),
+    /** 设置容量限制（条数 + 天数）并立即生效 */
+    setLimits: (maxItems: number, maxDays: number): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.Clipboard_SetLimits, maxItems, maxDays)
+  },
   themeTokens: {
     /** 主窗口渲染层调用：把当前主题的关键 CSS 变量 token 发送到主进程，由主进程转发给两个挂件 */
     push: (tokens: Record<string, string>): void => {
@@ -309,6 +338,10 @@ const api = {
       const listener = (_: Electron.IpcRendererEvent, tokens: Record<string, string>) => callback(tokens)
       ipcRenderer.on(IpcChannel.Theme_ToWidget, listener)
       return () => ipcRenderer.removeListener(IpcChannel.Theme_ToWidget, listener)
+    },
+    /** 挂件窗口调用：主动拉取主进程缓存的最新主题 token（应用启动即跟随，不依赖主窗口推送时机） */
+    pullCached: (): Promise<Record<string, string> | null> => {
+      return invoke(IpcChannel.Theme_RequestCachedTokens)
     }
   },
   mcp: {

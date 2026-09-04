@@ -32,6 +32,7 @@ import { registerShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { versionService } from './services/VersionService'
 import { windowService } from './services/WindowService'
+import { clipboardService } from './services/ClipboardService'
 import { initWebviewHotkeys } from './services/WebviewService'
 import { extractRtkBinaries } from './utils/rtk'
 
@@ -155,6 +156,10 @@ if (!app.requestSingleInstanceLock()) {
     if (configManager.getMusicWidgetLaunchOnBoot() || configManager.getStickyWidgetLaunchOnBoot()) {
       windowService.showMusicWidget()
     }
+
+    // 剪贴板历史监听：主进程常驻（不依赖挂件窗口开关），窗口随时呼出历史都是全的
+    clipboardService.init()
+    app.on('will-quit', () => clipboardService.stop())
 
     new TrayService()
 

@@ -2,7 +2,7 @@ import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import type { Message } from '@renderer/types/newMessage'
 import { MessageBlockType } from '@renderer/types/newMessage'
-import { remove, takeRight, isEmpty } from 'lodash'
+import { isEmpty,remove, takeRight } from 'lodash'
 
 /**
  * Filters out messages of type '@' or 'clear' and messages without main text content.

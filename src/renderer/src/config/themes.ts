@@ -3,7 +3,7 @@
  * mode 决定 theme-mode 属性与 antd 算法；color 用于 antd token 与选择器色块。
  * 完整色板在 assets/styles/color.css 的 [theme-id] / [theme-mode] 分支中定义。
  */
-export type ThemeId = 'oasis' | 'sky' | 'pink' | 'butter' | 'slate' | 'deepblue'
+export type ThemeId = 'oasis' | 'sky' | 'pink' | 'butter' | 'ivory' | 'mist' | 'slate' | 'deepblue'
 
 export interface ThemeInfo {
   id: ThemeId
@@ -36,6 +36,20 @@ export const THEMES: ThemeInfo[] = [
     mode: 'light',
     color: '#C9973F',
     gradient: 'linear-gradient(135deg,#E0BC6F,#C9973F)'
+  },
+  {
+    id: 'ivory',
+    name: '米白',
+    mode: 'light',
+    color: '#B08D57',
+    gradient: 'linear-gradient(135deg,#C9AC7C,#B08D57)'
+  },
+  {
+    id: 'mist',
+    name: '白灰',
+    mode: 'light',
+    color: '#6E8B9E',
+    gradient: 'linear-gradient(135deg,#93AEBF,#6E8B9E)'
   },
   {
     id: 'slate',

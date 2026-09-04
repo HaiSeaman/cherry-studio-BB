@@ -248,6 +248,120 @@
   --acrylic-mask: rgba(250, 246, 236, 0.35);
 }
 
+/* ===== 米白（护眼浅色：暖米底 + 驼金强调，低饱和不刺眼） ===== */
+[theme-mode='light'][theme-id='ivory'] {
+  --color-white-soft: #f2ede1;
+  --color-white-mute: #eae3d3;
+
+  --color-black: #3b362b;
+  --color-black-soft: #4a4436;
+  --color-black-mute: #5b5342;
+
+  --color-gray-1: #7d735f;
+  --color-gray-2: #a69c86;
+  --color-gray-3: #cfc5ae;
+
+  --color-text-1: #3b362b;
+  --color-text-2: #7d735f;
+  --color-text-3: #a69c86;
+
+  --color-background: #faf7f0;
+  --color-background-soft: #f2ede1;
+  --color-background-mute: #e9e2d2;
+  --color-background-opacity: rgba(250, 247, 240, 0.72);
+
+  --color-primary: #b08d57;
+  --color-primary-soft: #b08d5799;
+  --color-primary-mute: #b08d5733;
+
+  --color-text-secondary: rgba(59, 54, 43, 0.75);
+  --color-icon: #7d735f;
+  --color-icon-white: #3b362b;
+  --color-border: #e9e2d2;
+  --color-border-soft: rgba(233, 226, 210, 0.6);
+  --color-border-mute: rgba(233, 226, 210, 0.4);
+  --color-link: #96743d;
+  --color-code-background: #f2ede1;
+  --color-inline-code-background: rgba(176, 141, 87, 0.1);
+  --color-inline-code-text: #b05a50;
+  --color-frame-border: #e9e2d2;
+  --color-group-background: #ffffff;
+
+  --color-reference: #f1ead8;
+  --color-reference-text: #3b362b;
+  --color-reference-background: #fbf8f0;
+
+  --color-list-item: #ffffff;
+  --color-list-item-hover: #f2ede1;
+
+  --navbar-background-mac: rgba(250, 247, 240, 0.55);
+  --navbar-background: rgba(250, 247, 240, 0.6);
+
+  --chat-background-user: rgba(176, 141, 87, 0.12);
+
+  --acrylic-1: #efe7d2;
+  --acrylic-2: #f7f1e3;
+  --acrylic-3: #fcf9f2;
+  --acrylic-mask: rgba(250, 247, 240, 0.35);
+}
+
+/* ===== 白灰（护眼浅色：冷灰白底 + 雾青灰强调，素净自然） ===== */
+[theme-mode='light'][theme-id='mist'] {
+  --color-white-soft: #eff1f3;
+  --color-white-mute: #e6e9ec;
+
+  --color-black: #33383f;
+  --color-black-soft: #40464e;
+  --color-black-mute: #4d545d;
+
+  --color-gray-1: #6b7480;
+  --color-gray-2: #98a1ab;
+  --color-gray-3: #c3cad1;
+
+  --color-text-1: #33383f;
+  --color-text-2: #6b7480;
+  --color-text-3: #98a1ab;
+
+  --color-background: #f7f8f9;
+  --color-background-soft: #eff1f3;
+  --color-background-mute: #e4e7ea;
+  --color-background-opacity: rgba(247, 248, 249, 0.72);
+
+  --color-primary: #6e8b9e;
+  --color-primary-soft: #6e8b9e99;
+  --color-primary-mute: #6e8b9e33;
+
+  --color-text-secondary: rgba(51, 56, 63, 0.75);
+  --color-icon: #6b7480;
+  --color-icon-white: #33383f;
+  --color-border: #e4e7ea;
+  --color-border-soft: rgba(228, 231, 234, 0.6);
+  --color-border-mute: rgba(228, 231, 234, 0.4);
+  --color-link: #5a7688;
+  --color-code-background: #eff1f3;
+  --color-inline-code-background: rgba(110, 139, 158, 0.09);
+  --color-inline-code-text: #b05a50;
+  --color-frame-border: #e4e7ea;
+  --color-group-background: #ffffff;
+
+  --color-reference: #e7ecf0;
+  --color-reference-text: #33383f;
+  --color-reference-background: #f3f5f7;
+
+  --color-list-item: #ffffff;
+  --color-list-item-hover: #eff1f3;
+
+  --navbar-background-mac: rgba(247, 248, 249, 0.55);
+  --navbar-background: rgba(247, 248, 249, 0.6);
+
+  --chat-background-user: rgba(110, 139, 158, 0.1);
+
+  --acrylic-1: #e2e7eb;
+  --acrylic-2: #eef1f3;
+  --acrylic-3: #f8fafb;
+  --acrylic-mask: rgba(247, 248, 249, 0.35);
+}
+
 /* ===== 深灰暮色（默认深色，低亮不刺眼） ===== */
 [theme-mode='dark'][theme-id='slate'] {
   --color-white: #ffffff;

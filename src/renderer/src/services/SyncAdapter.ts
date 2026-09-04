@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+
 import { db } from '../databases'
 import type { Habit, HabitRecord } from '../pages/habits/types'
 import type { HubAlarm, HubDayNote, HubNote, HubTodo } from '../pages/notes/types'

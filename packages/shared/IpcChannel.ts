@@ -84,6 +84,22 @@ export enum IpcChannel {
   Theme_FromRenderer = 'theme:from-renderer',
   Theme_ToWidget = 'theme:to-widget',
   Theme_RequestPush = 'theme:request-push',
+  /** 挂件端主动拉取主进程缓存的最新主题 token（应用启动即跟随，不依赖主窗口推送时机） */
+  Theme_RequestCachedTokens = 'theme:request-cached-tokens',
+  // ---- 剪贴板挂件（ClipboardService 持有历史，挂件端纯展示） ----
+  Clipboard_GetHistory = 'clipboard:get-history',
+  Clipboard_OnUpdate = 'clipboard:on-update',
+  Clipboard_CopyItem = 'clipboard:copy-item',
+  Clipboard_SetPinned = 'clipboard:set-pinned',
+  Clipboard_SetFav = 'clipboard:set-fav',
+  Clipboard_DeleteItem = 'clipboard:delete-item',
+  /** 清空所有未收藏的条目（收藏的永不被清理；含固定但未收藏的） */
+  Clipboard_ClearUnfav = 'clipboard:clear-unfav',
+  Clipboard_GetLimits = 'clipboard:get-limits',
+  Clipboard_SetLimits = 'clipboard:set-limits',
+  /** 挂件窗口最大化切换（无边框窗口无系统标题栏，由顶栏按钮触发） */
+  MusicWidget_ToggleMaximize = 'music-widget:toggle-maximize',
+  MusicWidget_IsMaximized = 'music-widget:is-maximized',
 
   // Mcp
   Mcp_AddServer = 'mcp:add-server',
@@ -284,4 +300,31 @@ export enum IpcChannel {
 
   // CherryAI
   Cherryai_GetSignature = 'cherryai:get-signature'
+}
+
+/** 剪贴板条目：文本/色号/富文本(HTML/RTF)/图片/文件路径（主进程 ClipboardService 持有，挂件端纯展示） */
+export type ClipboardItem = {
+  id: string
+  type: 'text' | 'color' | 'html' | 'rtf' | 'image' | 'files'
+  ts: number
+  pinned: boolean
+  /** 收藏：被【清空】保护的标志（收藏的消息永不被清空删除） */
+  fav: boolean
+  fingerprint: string
+  text?: string
+  html?: string
+  rtf?: string
+  /** 预览缩略图（240px） */
+  thumbPath?: string
+  /** 图片原件（完整保留，需求5：点击复制回原图） */
+  imageFile?: string
+  imageW?: number
+  imageH?: number
+  paths?: string[]
+}
+
+/** 历史记录容量限制（需求4）：条数与天数双上限；收藏条目永不参与清理 */
+export type ClipboardLimits = {
+  maxItems: number
+  maxDays: number
 }

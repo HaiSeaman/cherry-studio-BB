@@ -155,3 +155,14 @@ Desktop.ini
 $RECYCLE.BIN/
 .directory
 *.local
+
+# ---------- electron-builder 自动更新元数据 ----------
+*.blockmap
+latest.yml
+latest-mac.yml
+latest-linux.yml
+
+# ---------- 剪贴板挂件运行时数据（防误置于项目目录） ----------
+clipboard_history.db
+clipboard_images/
+clipboard_error.log

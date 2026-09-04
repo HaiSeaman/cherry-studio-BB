@@ -997,3 +997,332 @@ body {
 .input-bar input::placeholder {
   color: var(--text-3);
 }
+
+/* ================= 剪贴板视图 ================= */
+.clip {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  color: var(--text);
+}
+
+.clip-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 10px;
+  padding: 5px 10px;
+  color: var(--text-3);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.clip-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.clip-search input::placeholder {
+  color: var(--text-3);
+}
+
+.clip-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clip-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.clip-empty-sub {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.clip-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.clip-item:hover {
+  border-color: var(--accent);
+}
+
+.clip-item-icon {
+  color: var(--accent);
+  display: flex;
+  margin-top: 2px;
+}
+
+.clip-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.clip-item-text {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clip-item-degraded {
+  color: var(--text-3);
+}
+
+.clip-item-thumb {
+  max-width: 100%;
+  max-height: 110px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.clip-item-acts {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.clip-item:hover .clip-item-acts {
+  display: flex;
+}
+
+.clip-item-acts button {
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 5px;
+  display: flex;
+}
+
+.clip-item-acts button:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.clip-item-acts button.active {
+  color: var(--accent);
+}
+
+.clip-copied {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #fff;
+  background: var(--accent-strong);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.clip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  font-size: 11px;
+  color: var(--text-2);
+  border-top: 1px solid var(--border);
+}
+
+.clip-clear {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.clip-clear:hover:not(:disabled) {
+  color: var(--accent-strong);
+}
+
+.clip-clear:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ================= 剪贴板视图：收藏/时间戳/色块/模态框/设置 ================= */
+.clip-item-color {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.clip-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.clip-item-time {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  align-self: center;
+  margin-left: 2px;
+}
+
+.clip-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clip-opt {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 3px 7px;
+  border-radius: 6px;
+}
+
+.clip-opt:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.clip-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.clip-modal-card {
+  width: min(300px, calc(100% - 28px));
+  max-height: calc(100% - 28px);
+  overflow-y: auto;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 10px 32px var(--accent-soft);
+  box-sizing: border-box;
+}
+
+.clip-modal-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.clip-modal-close {
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.clip-modal-text {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+
+.clip-modal-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.clip-btn {
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.clip-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.clip-btn-danger {
+  color: #fff;
+  background: var(--accent-strong);
+  border-color: transparent;
+}
+
+.clip-limits-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.clip-limits-row label {
+  flex: 1 1 110px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.clip-limits-row input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+}

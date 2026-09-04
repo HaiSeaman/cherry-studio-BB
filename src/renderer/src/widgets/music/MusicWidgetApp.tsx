@@ -1,6 +1,9 @@
 import {
+  Clipboard as ClipboardIcon,
   ExternalLink,
   Lock,
+  Maximize2,
+  Minimize2,
   Minus,
   Music2,
   Pin,
@@ -14,26 +17,29 @@ import {
 import { type FC, useEffect, useRef, useState } from 'react'
 
 import type { RadioStation } from '../../pages/music/types'
+import ClipboardView from './ClipboardView'
 import FmRadioView from './FmRadioView'
 import LocalPlayerView from './LocalPlayerView'
 import NotesView, { flushPendingDraft, TodosView } from './NotesTodosView'
 import type { WidgetPlayerState } from './protocol'
 import { emitPosition, onHostMessage, sendCmd } from './transport'
 
-type View = 'local' | 'fm' | 'notes' | 'todos'
+type View = 'clipboard' | 'local' | 'fm' | 'notes' | 'todos'
 
 const VIEW_STORAGE_KEY = 'musicWidgetView'
-const VIEWS: View[] = ['local', 'fm', 'notes', 'todos']
+const VIEWS: View[] = ['clipboard', 'local', 'fm', 'notes', 'todos']
 const isView = (v: unknown): v is View => typeof v === 'string' && (VIEWS as string[]).includes(v)
 
 /** 各视图默认窗口内容尺寸（挂件窗口 useContentSize:true，与 setContentSize 语义一致） */
 const VIEW_DEFAULT_SIZE: Record<View, { w: number; h: number }> = {
+  clipboard: { w: 340, h: 460 },
   local: { w: 380, h: 220 },
   fm: { w: 380, h: 220 },
   notes: { w: 320, h: 480 },
   todos: { w: 320, h: 440 }
 }
 const VIEW_META: Record<View, { icon: React.ReactNode; title: string }> = {
+  clipboard: { icon: <ClipboardIcon size={13} />, title: '剪贴板' },
   local: { icon: <Music2 size={13} />, title: '本地音乐' },
   fm: { icon: <Radio size={13} />, title: 'FM 电台' },
   notes: { icon: <StickyNote size={13} />, title: '便签' },
@@ -114,6 +120,13 @@ const MusicWidgetApp: FC = () => {
     []
   )
 
+  // 最大化状态：按钮点击后 / 切视图触发还原（主进程 setSize 守卫）后都向主进程回查，避免图标漂移
+  const [maximized, setMaximized] = useState(false)
+  const syncMaximized = () => void window.api.musicWidget.isMaximized().then(setMaximized)
+  const toggleMaximize = () => {
+    void window.api.musicWidget.toggleMaximize().then(syncMaximized)
+  }
+
   const switchView = (v: View) => {
     setView(v)
     localStorage.setItem(VIEW_STORAGE_KEY, v)
@@ -121,6 +134,7 @@ const MusicWidgetApp: FC = () => {
     const s = readViewSize(v)
     lastAutoResize.current = Date.now()
     void window.api.musicWidget.setSize(Math.round(s.w), Math.round(s.h))
+    syncMaximized()
   }
 
   // 手动调整窗口尺寸 → 防抖回存到当前视图（忽略程序化 setSize 引发的事件）
@@ -173,6 +187,13 @@ const MusicWidgetApp: FC = () => {
         <div className="btns">
           <button
             type="button"
+            title={maximized ? '还原' : '最大化'}
+            className={maximized ? 'active' : ''}
+            onClick={toggleMaximize}>
+            {maximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+          <button
+            type="button"
             title={pinned ? '取消置顶' : '置顶'}
             className={pinned ? 'active' : ''}
             onClick={() => {
@@ -204,6 +225,9 @@ const MusicWidgetApp: FC = () => {
       </header>
 
       <main className="body">
+        <div className={`view-panel ${view === 'clipboard' ? '' : 'hidden'}`}>
+          <ClipboardView />
+        </div>
         <div className={`view-panel ${view === 'local' ? '' : 'hidden'}`}>
           {!connected ? <Disconnected /> : <LocalPlayerView state={state} />}
         </div>

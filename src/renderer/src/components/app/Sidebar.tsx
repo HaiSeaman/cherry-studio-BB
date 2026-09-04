@@ -1,3 +1,4 @@
+import { DragDropContext, Draggable, Droppable,type DropResult } from '@hello-pangea/dnd'
 import EmojiAvatar from '@renderer/components/Avatar/EmojiAvatar'
 import { isLinux, isMac, isWin } from '@renderer/config/constant'
 import { UserAvatar } from '@renderer/config/env'
@@ -8,6 +9,8 @@ import { useMinapps } from '@renderer/hooks/useMinapps'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { getSidebarIconLabel } from '@renderer/i18n/label'
+import { useAppDispatch } from '@renderer/store'
+import { setSidebarIcons } from '@renderer/store/settings'
 import type { SidebarIcon } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -82,13 +85,6 @@ const Sidebar: FC = () => {
           <StyledLink onClick={() => void to('/settings/provider')}>
             <Icon className={pathname.startsWith('/settings') && !minappShow ? 'active' : ''}>
               <Settings size={20} className="icon" />
-            </Icon>
-          </StyledLink>
-        </Tooltip>
-        <Tooltip title={'桌面助手'} mouseEnterDelay={0.8} placement="right">
-          <StyledLink onClick={() => void window.api.musicWidget.toggle()}>
-            <Icon>
-              <LayoutGrid size={20} className="icon" />
             </Icon>
           </StyledLink>
         </Tooltip>
@@ -192,6 +188,7 @@ const MainMenus: FC = () => {
   const { sidebarIcons } = useSettings()
   const { minappShow } = useRuntime()
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
 
   // 生成中禁止切换（modelGenerating 拒绝）：静默拦截，弹窗保持打开，不产生未处理拒绝
   const to = async (path: string) => {
@@ -223,25 +220,67 @@ const MainMenus: FC = () => {
     knowledge: '/knowledge'
   }
 
-  // 右侧导航栏下段（从上往下）：顺序以「显示设置→侧边栏设置」的拖拽排序为准，
-  // 聊天（assistants）固定在底部（迁移 216 已把持久化顺序归一化为设计顺序）
-  const renderOrder: SidebarIcon[] = [
-    ...(sidebarIcons?.visible ?? []).filter((icon) => icon !== 'assistants' && icon in pathMap),
-    'assistants'
-  ]
-  return renderOrder.map((icon) => {
-    const path = pathMap[icon]
-    const isActive = path === '/' ? isRoute(path) : isRoutes(path)
+  // 右侧导航栏下段顺序：完全跟随「显示设置→侧边栏设置」持久化的 visible 顺序，
+  // 且支持在侧边栏上直接按住拖动换位（拖完写回 setSidebarIcons，与设置页共享同一份配置）
+  const renderOrder: SidebarIcon[] = (sidebarIcons?.visible ?? []).filter((icon) => icon in pathMap)
 
-    return (
-      <Tooltip key={icon} title={getSidebarIconLabel(icon)} mouseEnterDelay={0.8} placement="right">
-        <StyledLink onClick={() => void to(path)}>
-          <Icon className={isActive}>{iconMap[icon]}</Icon>
-        </StyledLink>
-      </Tooltip>
-    )
-  })
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination } = result
+    if (!destination || (destination.index === source.index && destination.droppableId === source.droppableId)) return
+    const list = [...renderOrder]
+    const [removed] = list.splice(source.index, 1)
+    list.splice(destination.index, 0, removed)
+    dispatch(setSidebarIcons({ visible: list }))
+  }
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Droppable droppableId="sidebar-main-menus" direction="vertical">
+        {(provided) => (
+          <SortableMenuList ref={provided.innerRef} {...provided.droppableProps}>
+            {renderOrder.map((icon, index) => {
+              const path = pathMap[icon]
+              const isActive = path === '/' ? isRoute(path) : isRoutes(path)
+              return (
+                <Draggable key={icon} draggableId={icon} index={index}>
+                  {(dragProvided, dragSnapshot) => (
+                    <SortableItem
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      {...dragProvided.dragHandleProps}
+                      $dragging={dragSnapshot.isDragging}>
+                      <Tooltip title={getSidebarIconLabel(icon)} mouseEnterDelay={0.8} placement="right">
+                        <StyledLink onClick={() => void to(path)}>
+                          <Icon className={isActive}>{iconMap[icon]}</Icon>
+                        </StyledLink>
+                      </Tooltip>
+                    </SortableItem>
+                  )}
+                </Draggable>
+              )
+            })}
+            {provided.placeholder}
+          </SortableMenuList>
+        )}
+      </Droppable>
+    </DragDropContext>
+  )
 }
+
+/** 可拖拽排序的菜单容器：与外层 Menus 保持一致的竖排间距 */
+const SortableMenuList = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  -webkit-app-region: none;
+`
+
+/** 单个可拖拽项：整块作为拖拽把手；拖动中提升层级并给个轻微缩放反馈 */
+const SortableItem = styled.div<{ $dragging?: boolean }>`
+  -webkit-app-region: none;
+  ${(p) => (p.$dragging ? 'z-index: 10; transform: scale(1.06);' : '')}
+`
 
 const Container = styled.div<{ $isFullscreen: boolean }>`
   position: relative;

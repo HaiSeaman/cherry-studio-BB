@@ -1,6 +1,6 @@
-import WebDav from './WebDav'
-import S3Storage from './S3Storage'
 import type { S3Config, WebDavConfig } from '../../renderer/src/types'
+import S3Storage from './S3Storage'
+import WebDav from './WebDav'
 
 export type SyncChannel = 's3' | 'webdav'
 
