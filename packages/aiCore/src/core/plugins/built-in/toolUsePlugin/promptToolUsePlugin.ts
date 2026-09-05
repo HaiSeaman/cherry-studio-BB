@@ -456,6 +456,10 @@ export const createPromptToolUsePlugin = (
                 )
 
                 await streamEventManager.handleRecursiveCall(controller, recursiveParams, context)
+
+                // 工具分支也必须清空 textBuffer，否则同流后续 finish-step 会带着残留文本
+                // 重新解析出旧工具调用，导致工具被重复执行
+                textBuffer = ''
                 return
               }
             }

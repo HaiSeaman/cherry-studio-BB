@@ -177,6 +177,7 @@ const IptvPage = () => {
       )}
 
       <Body>
+        {/* 1. 左栏：全部频道与我的收藏分组（占一成） */}
         {!maximized && (
           <SidebarPane>
             <GroupSidebar
@@ -189,6 +190,27 @@ const IptvPage = () => {
           </SidebarPane>
         )}
 
+        {/* 2. 中栏：超大核心播放器（占八成，居中对齐，最大化时占满窗口） */}
+        <PlayerPane $maximized={maximized}>
+          <PlayerArea
+            volume={settings.volume}
+            muted={false}
+            maximized={maximized}
+            onVolume={(v) => dispatch(setVolume(v))}
+            onToggleMaximize={() => setMaximized((m) => !m)}
+            onToggleMute={() => {
+              // 音量 0 视为静音：静音前保存当前音量，恢复时取回（避免污染）
+              if (settings.volume > 0) {
+                dispatch(setLastVolumeBeforeMute(settings.volume))
+                dispatch(setVolume(0))
+              } else {
+                dispatch(setVolume(settings.lastVolumeBeforeMute || 80))
+              }
+            }}
+          />
+        </PlayerPane>
+
+        {/* 3. 右栏：电视台播放列表（移至最右边，占一成） */}
         {!maximized && (
           <ListPane>
             {loading ? (
@@ -210,25 +232,6 @@ const IptvPage = () => {
             )}
           </ListPane>
         )}
-
-        <PlayerPane $maximized={maximized}>
-          <PlayerArea
-            volume={settings.volume}
-            muted={false}
-            maximized={maximized}
-            onVolume={(v) => dispatch(setVolume(v))}
-            onToggleMaximize={() => setMaximized((m) => !m)}
-            onToggleMute={() => {
-              // 音量 0 视为静音：静音前保存当前音量，恢复时取回（避免污染）
-              if (settings.volume > 0) {
-                dispatch(setLastVolumeBeforeMute(settings.volume))
-                dispatch(setVolume(0))
-              } else {
-                dispatch(setVolume(settings.lastVolumeBeforeMute || 80))
-              }
-            }}
-          />
-        </PlayerPane>
       </Body>
 
       <SettingsModal
@@ -353,27 +356,18 @@ const Body = styled.div`
 `
 
 const SidebarPane = styled.div`
-  flex: none;
-  width: 168px;
+  flex: 1;
+  min-width: 170px;
+  max-width: 240px;
   min-height: 0;
   overflow-y: auto;
   border-right: 1px solid var(--color-border-soft);
 `
 
-const ListPane = styled.div`
-  flex: none;
-  width: 288px;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-right: 1px solid var(--color-border-soft);
-`
-
-/** 播放器面板：flex 容器让 PlayerArea 撑满全高（悬浮剧院卡）；最大化时铺满内容区 */
+/** 播放器面板：占八成（1:8:1 居中视觉），最大化时铺满全部空间 */
 const PlayerPane = styled.div<{ $maximized?: boolean }>`
-  flex: 1;
-  min-width: 360px;
+  flex: 8;
+  min-width: 0;
   min-height: 0;
   display: flex;
   padding: 12px;
@@ -382,9 +376,22 @@ const PlayerPane = styled.div<{ $maximized?: boolean }>`
   ${(p) =>
     p.$maximized &&
     css`
+      flex: 1;
       padding: 0;
       min-width: 0;
     `}
+`
+
+/** 电视台播放列表：移至最右侧，占一成多 */
+const ListPane = styled.div`
+  flex: 1.2;
+  min-width: 250px;
+  max-width: 350px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--color-border-soft);
 `
 
 /* ---------------- 空态 ---------------- */

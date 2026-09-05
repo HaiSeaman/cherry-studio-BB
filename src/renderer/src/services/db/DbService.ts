@@ -157,7 +157,6 @@ class DbService implements MessageDataSource {
 
     if (!existingBlock) {
       logger.warn(`Block ${blockId} not found in state, defaulting to Dexie`)
-      return this.dexieSource.updateSingleBlock(blockId, updates)
     }
 
     return this.dexieSource.updateSingleBlock(blockId, updates)

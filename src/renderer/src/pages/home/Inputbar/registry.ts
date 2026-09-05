@@ -29,18 +29,6 @@ const inputbarRegistry = new Map<InputbarScope, InputbarScopeConfig>([
       enableQuickPanel: true,
       enableDragDrop: true
     }
-  ],
-  [
-    'mini-window',
-    {
-      minRows: 1,
-      maxRows: 3,
-      showTokenCount: false,
-      showTools: true,
-      toolsCollapsible: false,
-      enableQuickPanel: true,
-      enableDragDrop: false
-    }
   ]
 ])
 

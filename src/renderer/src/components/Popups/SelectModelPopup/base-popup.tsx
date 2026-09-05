@@ -626,17 +626,23 @@ const PinIconWrapper = styled.div.attrs({ className: 'pin-icon' })<{ $isPinned?:
 
 const TopViewKey = 'SelectModelPopup'
 
+// 为每次 createModelPopup 生成独立的 TopViewKey，避免多个弹窗共用同一 id 时
+// TopView.show 去重导致第二个弹窗 Promise 永不 resolve。
+// （SelectModelPopup 与 SelectChatModelPopup 等共用 base-popup 工厂，必须各自独立 key）
+let popupKeyCounter = 0
+
 export const createModelPopup = <TProps extends object, TResult>(
   Component: React.ComponentType<TProps & { resolve: (value: TResult | undefined) => void }>
 ) => {
+  const popupKey = `${TopViewKey}_${(popupKeyCounter++).toString()}`
   return class {
     static hide() {
-      TopView.hide(TopViewKey)
+      TopView.hide(popupKey)
     }
     static show(params: Omit<TProps, 'resolve'>) {
       return new Promise<TResult | undefined>((resolve) => {
         const props = { ...params, resolve } as TProps & { resolve: (value: TResult | undefined) => void }
-        TopView.show(<Component {...props} />, TopViewKey)
+        TopView.show(<Component {...props} />, popupKey)
       })
     }
   }

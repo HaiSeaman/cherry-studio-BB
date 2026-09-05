@@ -344,7 +344,11 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   ipcMain.handle(IpcChannel.App_IsNotEmptyDir, async (_, path: string) => {
-    return fs.readdirSync(path).length > 0
+    try {
+      return (await fs.promises.readdir(path)).length > 0
+    } catch {
+      return false
+    }
   })
 
   // Copy user data to new location
@@ -353,7 +357,14 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
       await fs.promises.cp(oldPath, newPath, {
         recursive: true,
         filter: (src) => {
-          if (occupiedDirs.some((dir) => src.startsWith(path.resolve(dir)))) {
+          // 判断 src 是否在 occupiedDirs 内：用 path.relative 判定，
+          // 避免 startsWith 前缀误伤 /A/foo2 属于 /A/foo 的场景
+          if (
+            occupiedDirs.some((dir) => {
+              const rel = path.relative(path.resolve(dir), src)
+              return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))
+            })
+          ) {
             return false
           }
           return true

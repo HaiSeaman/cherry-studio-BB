@@ -58,8 +58,14 @@ const NaturalYearStats: FC<Props> = ({ habits, allRecords, today }) => {
       habit
         ? heat.cells.map((c) => {
             const isToday = c.date === today
-            const background = c.state === 'done' ? habit.color : c.state === 'skip' ? habit.color : mx.soft
-            const opacity = c.state === 'skip' ? 0.22 : 1
+            const isFuture = c.state === 'future'
+            const background =
+              c.state === 'done' || c.state === 'skip'
+                ? habit.color
+                : isFuture
+                  ? 'transparent'
+                  : mx.soft
+            const opacity = c.state === 'skip' ? 0.22 : isFuture ? 0.35 : 1
             const outline = isToday ? `1px solid ${mx.text2}` : undefined
             return {
               key: c.date,

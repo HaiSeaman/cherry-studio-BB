@@ -108,7 +108,7 @@ export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, o
 
         {state.status === 'idle' && (
           <Overlay>
-            <BigState>从左侧选择频道，开始观看</BigState>
+            <BigState>从右侧播放列表选择频道，开始观看</BigState>
           </Overlay>
         )}
         {state.status === 'connecting' && (

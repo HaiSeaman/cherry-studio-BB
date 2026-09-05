@@ -99,39 +99,34 @@ npm install @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google
 
 ## 使用示例
 
-### 基础用法
+### 基础用法（createExecutor 实例调用）
 
 ```typescript
-import { AiCore } from '@cherrystudio/ai-core'
+import { createExecutor } from '@cherrystudio/ai-core'
 
-// 创建 OpenAI executor
-const executor = AiCore.create('openai', {
-  apiKey: 'your-api-key'
+// 创建执行器（支持配置插件与全局选项）
+const executor = createExecutor({
+  plugins: []
 })
 
 // 流式生成
-const result = await executor.streamText('gpt-4', {
+const result = await executor.streamText('gpt-4o', {
   messages: [{ role: 'user', content: 'Hello!' }]
 })
 
 // 非流式生成
-const response = await executor.generateText('gpt-4', {
+const response = await executor.generateText('gpt-4o', {
   messages: [{ role: 'user', content: 'Hello!' }]
 })
 ```
 
-### 便捷函数
+### 函数式直接调用
 
 ```typescript
-import { createOpenAIExecutor } from '@cherrystudio/ai-core'
+import { streamText, generateText } from '@cherrystudio/ai-core'
 
-// 快速创建 OpenAI executor
-const executor = createOpenAIExecutor({
-  apiKey: 'your-api-key'
-})
-
-// 使用 executor
-const result = await executor.streamText('gpt-4', {
+// 直接调用，适合无状态一次性请求
+const stream = await streamText('gpt-4o', {
   messages: [{ role: 'user', content: 'Hello!' }]
 })
 ```

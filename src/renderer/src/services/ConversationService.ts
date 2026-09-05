@@ -1,7 +1,7 @@
 import { loggerService } from '@logger'
 import { convertMessagesToSdkMessages } from '@renderer/aiCore/prepareParams'
 import type { Assistant, Message } from '@renderer/types'
-import { filterAdjacentUserMessaegs, filterLastAssistantMessage } from '@renderer/utils/messageUtils/filters'
+import { filterAdjacentUserMessages, filterLastAssistantMessage } from '@renderer/utils/messageUtils/filters'
 import type { ModelMessage } from 'ai'
 import { findLast, takeRight } from 'lodash'
 
@@ -27,7 +27,7 @@ export class ConversationService {
     // Run the error-only filter before trimming trailing assistant responses so the pair is removed together.
     const withoutErrorOnlyPairs = filterErrorOnlyMessagesWithRelated(usefulMessages)
     const withoutTrailingAssistant = filterLastAssistantMessage(withoutErrorOnlyPairs)
-    const withoutAdjacentUsers = filterAdjacentUserMessaegs(withoutTrailingAssistant)
+    const withoutAdjacentUsers = filterAdjacentUserMessages(withoutTrailingAssistant)
     const limitedByContext = takeRight(withoutAdjacentUsers, contextCount + 2)
     const contextClearFiltered = filterAfterContextClearMessages(limitedByContext)
     const nonEmptyMessages = filterEmptyMessages(contextClearFiltered)

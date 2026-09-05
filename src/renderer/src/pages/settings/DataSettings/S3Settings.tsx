@@ -12,9 +12,10 @@ import { setS3Partial } from '@renderer/store/settings'
 import type { S3Config } from '@renderer/types'
 import { Button, Input, Switch, Tooltip } from 'antd'
 import type { FC } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
+import { BACKUP_MAX_KEEP_OPTIONS, BACKUP_SYNC_INTERVAL_OPTIONS } from './backupOptions'
 import { SyncStatus } from './SyncStatus'
 
 const S3Settings: FC = () => {
@@ -43,6 +44,19 @@ const S3Settings: FC = () => {
 
   const [syncInterval, setSyncInterval] = useState<number>(s3SyncIntervalInit)
   const [maxBackups, setMaxBackups] = useState<number>(s3MaxBackupsInit)
+
+  // 外部状态变化时（如另一窗口修改、云同步覆盖、重置默认），同步回填本地副本，避免表单与 store 永久漂移
+  useEffect(() => {
+    setEndpoint(s3.endpoint)
+    setRegion(s3.region)
+    setBucket(s3.bucket)
+    setAccessKeyId(s3.accessKeyId)
+    setSecretAccessKey(s3.secretAccessKey)
+    setRoot(s3.root)
+    setSkipBackupFile(s3.skipBackupFile ?? false)
+    setSyncInterval(s3.syncInterval ?? 0)
+    setMaxBackups(s3.maxBackups ?? 5)
+  }, [s3])
 
   const dispatch = useAppDispatch()
   const { theme } = useTheme()
@@ -200,18 +214,7 @@ const S3Settings: FC = () => {
           value={syncInterval}
           onChange={onSyncIntervalChange}
           disabled={!endpoint || !accessKeyId || !secretAccessKey}
-          options={[
-            { label: '关闭', value: 0 },
-            { label: '每 1 分钟', value: 1 },
-            { label: '每 5 分钟', value: 5 },
-            { label: '每 15 分钟', value: 15 },
-            { label: '每 30 分钟', value: 30 },
-            { label: '每 1 小时', value: 60 },
-            { label: '每 2 小时', value: 120 },
-            { label: '每 6 小时', value: 360 },
-            { label: '每 12 小时', value: 720 },
-            { label: '每 24 小时', value: 1440 }
-          ]}
+          options={BACKUP_SYNC_INTERVAL_OPTIONS}
         />
       </SettingRow>
       <SettingDivider />
@@ -222,15 +225,7 @@ const S3Settings: FC = () => {
           value={maxBackups}
           onChange={onMaxBackupsChange}
           disabled={!endpoint || !accessKeyId || !secretAccessKey}
-          options={[
-            { label: '不限', value: 0 },
-            { label: '1', value: 1 },
-            { label: '3', value: 3 },
-            { label: '5', value: 5 },
-            { label: '10', value: 10 },
-            { label: '20', value: 20 },
-            { label: '50', value: 50 }
-          ]}
+          options={BACKUP_MAX_KEEP_OPTIONS}
         />
       </SettingRow>
       <SettingDivider />

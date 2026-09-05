@@ -19,12 +19,16 @@ import Playlist from './Playlist'
 
 const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'weba', 'webm']
 
+// 模块级空数组常量：避免 useLiveQuery 首次返回 undefined 时每渲染新建 []，
+// 导致下方 visibleTracks 的 useMemo 因依赖引用漂移而失效（与 NaturalYearStats EMPTY_SETS 同款）
+const EMPTY_TRACKS: MusicTrack[] = []
+
 /**
  * 本地音乐播放器（左栏卡片）：工具行 + 播放列表 + 播放舱
  */
 const LocalMusicPlayer: FC = () => {
   const allTracks = useLiveQuery(async () => (await db.music_tracks.orderBy('order').toArray()) ?? [], [], [])
-  const tracks = allTracks ?? []
+  const tracks = allTracks ?? EMPTY_TRACKS
 
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')

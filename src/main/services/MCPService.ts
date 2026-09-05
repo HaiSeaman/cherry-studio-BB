@@ -608,6 +608,10 @@ class McpService {
             getServerLogger(server).debug(`OAuth flow completed`)
 
             const newTransport = await initTransport()
+            // 关闭旧的 transport（stdio 子进程 / SSE / HTTP 流），避免 OAuth 重连后残留连接
+            await transport.close().catch(() => {
+              getServerLogger(server).debug(`Failed to close old transport during OAuth reconnect`)
+            })
             // Try to connect again
             await client.connect(newTransport)
 
@@ -913,8 +917,7 @@ class McpService {
     const client = await this.initClient(server)
     try {
       const { tools } = await client.listTools()
-      const serverTools: MCPTool[] = []
-      tools.map((tool: SDKTool) => {
+      const serverTools: MCPTool[] = tools.map((tool: SDKTool) => {
         const serverTool: MCPTool = {
           ...tool,
           inputSchema: MCPToolInputSchema.parse(tool.inputSchema),
@@ -924,8 +927,8 @@ class McpService {
           serverName: server.name,
           type: 'mcp'
         }
-        serverTools.push(serverTool)
         getServerLogger(server).debug(`Listing tools`, { tool: serverTool })
+        return serverTool
       })
       return serverTools
     } catch (error: unknown) {

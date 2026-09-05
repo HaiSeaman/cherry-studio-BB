@@ -272,6 +272,8 @@ export function useScrollToLine(editorViewRef: React.MutableRefObject<EditorView
       }
 
       setTimeout(() => {
+        // 视图可能已卸载（EditorView 销毁后 dom 不连接）：安全退出避免对已销毁视图操作
+        if (!view.dom.isConnected) return
         const fallbackElement = findLineElement(view, targetLine.from)
         if (fallbackElement) {
           highlightLine(view, fallbackElement)

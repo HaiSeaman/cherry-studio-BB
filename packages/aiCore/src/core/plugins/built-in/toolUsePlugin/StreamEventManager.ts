@@ -111,7 +111,6 @@ export class StreamEventManager {
     recursiveParams: Partial<TParams>,
     context: AiRequestContext<TParams, StreamTextResult>
   ): Promise<void> {
-    // try {
     // 重置工具执行状态，准备处理新的步骤
     context.hasExecutedToolsInCurrentStep = false
 
@@ -122,9 +121,6 @@ export class StreamEventManager {
     } else {
       console.warn('[MCP Prompt] No fullstream found in recursive result:', recursiveResult)
     }
-    // } catch (error) {
-    //   this.handleRecursiveCallError(controller, error, stepId)
-    // }
   }
 
   /**
@@ -143,6 +139,11 @@ export class StreamEventManager {
         }
 
         if (value.type === 'finish') {
+          // 转发 finish 事件而不是直接 break：递归流携带的 totalUsage 是整次
+          // 递归对话的权威用量，丢弃会导致 usage 永久丢失。
+          // 外层 promptToolUsePlugin 的 finish 分支会再对 accumulatedUsage 做覆盖，
+          // 而 accumulateUsage 会把递归轮的 step usage 并入，两处不冲突。
+          controller.enqueue(value)
           break
         }
 

@@ -18,7 +18,7 @@ const WarnTooltip = ({
 }: WarnTooltipProps) => {
   return (
     <Tooltip {...rest}>
-      <AlertTriangle size={iconSize} color={iconColor} style={{ ...iconStyle }} role="img" aria-label="Information" />
+      <AlertTriangle size={iconSize} color={iconColor} style={{ ...iconStyle }} role="img" aria-label="Warning" />
     </Tooltip>
   )
 }

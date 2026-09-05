@@ -89,7 +89,12 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   // 若按引用重置，用户向上翻页加载的历史会被反复清掉、滚动位置跳动。
   // 注意：只重置「已加载组数」，展示内容始终从最新 messages 派生——
   // 否则流式回复会永远停留在创建时的空快照（blocks: []），生成内容一个字都不显示。
-  const messagesKey = useMemo(() => messages.map((m) => m.id).join(','), [messages])
+  // 消息只追加不替换中间项，故用 length+末尾 id 作 O(1) 的集合指纹，
+  // 避免流式期间每 tick 对整组消息 id 做 O(n) join。
+  const messagesKey = useMemo(
+    () => (messages.length ? `${messages.length}:${messages[messages.length - 1]?.id ?? ''}` : '0'),
+    [messages]
+  )
   const lastResetRef = useRef<{ key: string; displayCount: number }>({ key: '', displayCount: -1 })
   const [loadedGroups, setLoadedGroups] = useState(displayCount)
 

@@ -149,15 +149,18 @@ export async function transformMessagesAndFetch(
   try {
     const { modelMessages, uiMessages } = await ConversationService.prepareMessagesForModel(messages, assistant)
 
-    // replace prompt variables
-    assistant.prompt = await replacePromptVariables(assistant.prompt, assistant.model?.name)
+    // replace prompt variables in a copy to avoid mutating store state
+    const effectiveAssistant = {
+      ...assistant,
+      prompt: await replacePromptVariables(assistant.prompt, assistant.model?.name)
+    }
 
     // 专用图像生成模型直接走 fetchImageGeneration
-    const model = assistant.model || getDefaultModel()
+    const model = effectiveAssistant.model || getDefaultModel()
     if (isDedicatedImageGenerationModel(model)) {
       await fetchImageGeneration({
         messages: uiMessages,
-        assistant,
+        assistant: effectiveAssistant,
         onChunkReceived,
         signal: request.options.signal
       })
@@ -166,7 +169,7 @@ export async function transformMessagesAndFetch(
 
     await fetchChatCompletion({
       messages: modelMessages,
-      assistant: assistant,
+      assistant: effectiveAssistant,
       topicId: request.topicId,
       allowedTools: request.allowedTools,
       requestOptions: request.options,
@@ -192,15 +195,16 @@ export async function fetchChatCompletion({
   uiMessages,
   allowedTools
 }: FetchChatCompletionParams) {
-  logger.info('fetchChatCompletion called with detailed context', {
+  logger.info('fetchChatCompletion called with context', {
     messageCount: messages?.length || 0,
-    prompt: prompt,
+    promptLength: prompt?.length || 0,
     assistantId: assistant.id,
     topicId,
     hasTopicId: !!topicId,
     modelId: assistant.model?.id,
     modelName: assistant.model?.name
   })
+  logger.debug('fetchChatCompletion prompt', { prompt })
 
   // Get base provider and apply API key rotation
   // NOTE: Shallow copy is intentional. Provider objects are not mutated by downstream code.
@@ -717,8 +721,18 @@ export async function checkApi(provider: Provider, model: Model, timeout = 15000
 
   if (isEmbeddingModel(model)) {
     logger.info('checkApi: embedding model detected, calling getEmbeddingDimensions', { modelId: model.id })
-    const timerPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-    await Promise.race([ai.getEmbeddingDimensions(model), timerPromise])
+    // 超时计时器必须在主请求完成后清理，避免 timer 句柄泄漏
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        ai.getEmbeddingDimensions(model),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Timeout')), timeout)
+        })
+      ])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   } else {
     const abortId = crypto.randomUUID()
     const signal = readyToAbort(abortId)

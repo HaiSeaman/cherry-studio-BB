@@ -6,6 +6,7 @@ import styled from 'styled-components'
 import FmRadio from '../music/components/FmRadio'
 import LocalMusicPlayer from '../music/components/LocalMusicPlayer'
 import AlarmPanel from './components/AlarmPanel'
+import { AlarmRingingBanner } from './components/AlarmRingingBanner'
 import CalendarPanel from './components/CalendarPanel'
 import { mx } from './components/mx'
 import NotesPanel from './components/NotesPanel'
@@ -19,10 +20,13 @@ import { useAlarmEngine } from './services/alarmScheduler'
  */
 const NotesPage: FC = () => {
   const alarms = useLiveQuery(async () => (await db.hub_alarms.toArray()) ?? [], [], [])
-  const { ringing } = useAlarmEngine(alarms ?? [])
+  const { ringing, stopRinging } = useAlarmEngine(alarms ?? [])
 
   return (
     <Container>
+      {/* 全局绝对置顶响铃通知条：z-index 99999 永不被任何四宫格内容遮挡，带呼吸动画与键盘 Esc/空格秒关 */}
+      <AlarmRingingBanner ringing={ringing} onStop={stopRinging} />
+
       <MainArea>
         <NotesCell>
           {/* 上半：便签编辑器；下半：待办事项（完整功能页，随容器自适应滚动） */}

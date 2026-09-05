@@ -59,6 +59,9 @@ export const useDebouncedRender = (
   const debouncedFunctionRef = useRef<ReturnType<typeof debounce> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  // 组件卸载标记：进行中的异步渲染（await renderFunction）无法被防抖 cancel 取消，
+  // 完成后若组件已卸载则跳过 setState，避免卸载后更新
+  const mountedRef = useRef(true)
 
   // 包装渲染函数，添加容器检查和错误处理
   const wrappedRenderFunction = useCallback(
@@ -78,14 +81,16 @@ export const useDebouncedRender = (
 
         await renderFunction(content, containerRef.current)
 
+        if (!mountedRef.current) return
         // 渲染成功，确保清除错误状态
         setError(null)
       } catch (error) {
+        if (!mountedRef.current) return
         const errorMessage = error instanceof Error ? error.message : 'Unknown rendering error'
         logger.error(errorMessage)
         setError(errorMessage)
       } finally {
-        setIsLoading(false)
+        if (mountedRef.current) setIsLoading(false)
       }
     },
     [renderFunction, shouldRender]
@@ -149,6 +154,7 @@ export const useDebouncedRender = (
 
   useEffect(() => {
     return () => {
+      mountedRef.current = false
       if (debouncedFunctionRef.current) {
         debouncedFunctionRef.current.cancel()
       }

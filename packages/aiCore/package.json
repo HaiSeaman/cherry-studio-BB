@@ -80,6 +80,20 @@
       "import": "./dist/provider/index.mjs",
       "require": "./dist/provider/index.js",
       "default": "./dist/provider/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "react-native": "./dist/core/index.js",
+      "import": "./dist/core/index.mjs",
+      "require": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
+    },
+    "./core/plugins": {
+      "types": "./dist/core/plugins/index.d.ts",
+      "react-native": "./dist/core/plugins/index.js",
+      "import": "./dist/core/plugins/index.mjs",
+      "require": "./dist/core/plugins/index.js",
+      "default": "./dist/core/plugins/index.js"
     }
   }
 }

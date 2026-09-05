@@ -75,16 +75,6 @@ export class RuntimeExecutor<
     })
   }
 
-  private createConfigureContextPlugin() {
-    return definePlugin({
-      name: '_internal_configureContext',
-      configureContext: async () => {
-        // Placeholder for future context configuration
-        // Previously set executor and baseProvider, now handled by registry
-      }
-    })
-  }
-
   // === 高阶重载：直接使用模型 ===
 
   /**
@@ -95,9 +85,7 @@ export class RuntimeExecutor<
 
     // 根据 model 类型决定插件配置
     if (typeof model === 'string') {
-      this.pluginEngine.usePlugins([this.createResolveModelPlugin(), this.createConfigureContextPlugin()])
-    } else {
-      this.pluginEngine.usePlugins([this.createConfigureContextPlugin()])
+      this.pluginEngine.usePlugins([this.createResolveModelPlugin()])
     }
 
     return this.pluginEngine.executeStreamWithPlugins(
@@ -126,9 +114,7 @@ export class RuntimeExecutor<
 
     // 根据 model 类型决定插件配置
     if (typeof model === 'string') {
-      this.pluginEngine.usePlugins([this.createResolveModelPlugin(), this.createConfigureContextPlugin()])
-    } else {
-      this.pluginEngine.usePlugins([this.createConfigureContextPlugin()])
+      this.pluginEngine.usePlugins([this.createResolveModelPlugin()])
     }
 
     return this.pluginEngine.executeWithPlugins<Parameters<typeof _generateText>[0], ReturnType<typeof _generateText>>(
@@ -147,9 +133,7 @@ export class RuntimeExecutor<
 
       // 根据 model 类型决定插件配置
       if (typeof model === 'string') {
-        this.pluginEngine.usePlugins([this.createResolveImageModelPlugin(), this.createConfigureContextPlugin()])
-      } else {
-        this.pluginEngine.usePlugins([this.createConfigureContextPlugin()])
+        this.pluginEngine.usePlugins([this.createResolveImageModelPlugin()])
       }
 
       return this.pluginEngine.executeImageWithPlugins('generateImage', params, (resolvedModel, transformedParams) =>

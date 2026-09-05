@@ -8,7 +8,7 @@ import type {
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd'
 import { droppableReorder } from '@renderer/utils'
 import type { HTMLAttributes, Key } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useId } from 'react'
 
 interface Props<T> {
   list: T[]
@@ -58,9 +58,11 @@ function DraggableList<T>({
     [itemKey]
   )
 
+  const defaultDroppableId = useId()
+
   return (
     <DragDropContext onDragStart={onDragStart} onDragEnd={_onDragEnd}>
-      <Droppable droppableId="droppable" {...droppableProps}>
+      <Droppable droppableId={droppableProps?.droppableId ?? defaultDroppableId} {...droppableProps}>
         {(provided) => (
           <div {...provided.droppableProps} ref={provided.innerRef} style={style}>
             <div {...listProps} className="draggable-list-container">

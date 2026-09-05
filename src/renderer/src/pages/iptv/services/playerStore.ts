@@ -241,7 +241,7 @@ class IptvPlayerStore {
     const next = onRetryError(this.state.retry, this.autoReconnect)
     if (next.failed) {
       this.destroyEngines()
-      this.patch({ status: 'failed', errorMsg: `${msg}，已重试 ${this.state.retry.attempt} 次仍失败`, retry: next })
+      this.patch({ status: 'failed', errorMsg: `${msg}，已重试 ${next.attempt} 次仍失败`, retry: next })
       return
     }
     this.patch({ status: 'connecting', errorMsg: '', retry: next })

@@ -1169,8 +1169,8 @@ export const cloneMessagesToNewTopicThunk =
       // 5. Update Database (Atomic Transaction)
       await db.transaction('rw', db.topics, db.message_blocks, db.files, async () => {
         // Update the NEW topic with the cloned messages
-        // Assumes topic entry was added by caller, so we UPDATE.
-        await db.topics.put({ id: newTopic.id, messages: clonedMessages })
+        // 用 update 只写 messages 字段，避免 put 整行覆盖丢失 name/type/updatedAt 等字段
+        await db.topics.update(newTopic.id, { messages: clonedMessages })
 
         // Add the NEW blocks
         if (clonedBlocks.length > 0) {

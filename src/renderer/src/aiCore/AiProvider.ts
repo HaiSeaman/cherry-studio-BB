@@ -1,7 +1,8 @@
 import { createExecutor } from '@cherrystudio/ai-core'
-import type { generateImageResult } from '@cherrystudio/ai-core/core/runtime/types'
+import type { generateImageResult } from '@cherrystudio/ai-core/core'
 import { loggerService } from '@logger'
 import { isGeminiImageModelId } from '@renderer/config/models'
+import { getRotatedApiKey } from '@renderer/services/ApiService'
 import type { Assistant, EditImageParams, GenerateImageParams, Model, Provider } from '@renderer/types'
 import type { StreamTextParams } from '@renderer/types/aiCoreTypes'
 import { getLowerBaseModelName } from '@renderer/utils'
@@ -533,38 +534,6 @@ export default class AiProvider {
   }
 
   public getApiKey(): string {
-    const apiKey = this.actualProvider.apiKey
-    if (!apiKey || apiKey.trim() === '') {
-      return ''
-    }
-
-    const keys = apiKey
-      .split(',')
-      .map((key) => key.trim())
-      .filter(Boolean)
-
-    if (keys.length === 0) {
-      return ''
-    }
-
-    if (keys.length === 1) {
-      return keys[0]
-    }
-
-    // Multi-key rotation
-    const keyName = `provider:${this.actualProvider.id}:last_used_key`
-    const lastUsedKey = window.keyv.get(keyName)
-
-    if (!lastUsedKey) {
-      window.keyv.set(keyName, keys[0])
-      return keys[0]
-    }
-
-    const currentIndex = keys.indexOf(lastUsedKey)
-    const nextIndex = (currentIndex + 1) % keys.length
-    const nextKey = keys[nextIndex]
-    window.keyv.set(keyName, nextKey)
-
-    return nextKey
+    return getRotatedApiKey(this.actualProvider)
   }
 }

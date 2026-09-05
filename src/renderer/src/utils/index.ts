@@ -6,12 +6,16 @@ import { isEqual } from 'lodash'
 const logger = loggerService.withContext('Utils')
 
 /**
- * 异步执行一个函数。
- * @param {() => void} fn 要执行的函数
- * @returns {Promise<void>} 执行结果
+ * 安全异步执行一个函数，带有错误捕获与日志保护。
+ * @param {() => Promise<void>} fn 要执行的异步函数
+ * @returns {Promise<void>}
  */
 export const runAsyncFunction = async (fn: () => Promise<void>): Promise<void> => {
-  await fn()
+  try {
+    await fn()
+  } catch (error) {
+    logger.error('Unhandled error in runAsyncFunction:', error)
+  }
 }
 
 /**

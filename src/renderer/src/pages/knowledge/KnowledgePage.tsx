@@ -345,7 +345,7 @@ const KnowledgePage: FC = () => {
                         e?.stopPropagation()
                         void removeBase(b)
                       }}>
-                      <button className="del-btn" onClick={(e) => e.stopPropagation()} title="删除知识库">
+                      <button type="button" className="del-btn" onClick={(e) => e.stopPropagation()} title="删除知识库">
                         <Trash2 size={13} />
                       </button>
                     </Popconfirm>
@@ -623,7 +623,7 @@ const KnowledgePage: FC = () => {
                       cancelText="取消"
                       okButtonProps={{ danger: true }}
                       onConfirm={() => void removeFile(f)}>
-                      <button className="del-btn" title="删除文件">
+                      <button type="button" className="del-btn" title="删除文件">
                         <Trash2 size={13} />
                       </button>
                     </Popconfirm>

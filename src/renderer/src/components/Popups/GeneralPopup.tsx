@@ -13,22 +13,28 @@ interface Props extends ShowParams {
   resolve: (data: any) => void
 }
 
-const PopupContainer: React.FC<Props> = ({ content, resolve, ...rest }) => {
+const PopupContainer: React.FC<Props> = ({ content, resolve, onOk: restOnOk, onCancel: restOnCancel, ...rest }) => {
   const [open, setOpen] = useState(true)
 
-  const onOk = () => {
+  const onOk: NonNullable<ModalProps['onOk']> = (e) => {
     setOpen(false)
+    // 调用方传入的 onOk 不应被默认关闭逻辑覆盖
+    restOnOk?.(e)
   }
 
-  const onCancel = () => {
+  const onCancel: NonNullable<ModalProps['onCancel']> = (e) => {
     setOpen(false)
+    // 调用方传入的 onCancel 不应被默认关闭逻辑覆盖
+    restOnCancel?.(e)
   }
 
   const onClose = () => {
     resolve({})
   }
 
-  GeneralPopup.hide = onCancel
+  GeneralPopup.hide = () => {
+    setOpen(false)
+  }
 
   return (
     <Modal

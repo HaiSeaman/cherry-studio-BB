@@ -16,12 +16,27 @@ import ThinkingServer from './sequentialthinking'
 
 const logger = loggerService.withContext('MCPFactory')
 
+// 生命周期较长的进程级单例（构造器会注册 app/nativeTheme 等进程级监听器，
+// 每次 new 都会累积监听器导致泄漏，故必须单例化复用）。
+const browserServerSingleton = new BrowserServer()
+
+// 打印 envs 时脱敏密钥，避免 API Key 落盘日志
+function redactEnvs(envs: Record<string, string>): Record<string, string> {
+  const redacted: Record<string, string> = {}
+  for (const [key, value] of Object.entries(envs)) {
+    redacted[key] = /KEY|TOKEN|SECRET|PASSWORD|API/i.test(key) && value ? '***' : value
+  }
+  return redacted
+}
+
 export function createInMemoryMCPServer(
   name: BuiltinMCPServerName,
   args: string[] = [],
   envs: Record<string, string> = {}
 ): Server {
-  logger.debug(`[MCP] Creating in-memory MCP server: ${name} with args: ${args} and envs: ${JSON.stringify(envs)}`)
+  logger.debug(
+    `[MCP] Creating in-memory MCP server: ${name} with args: ${args} and envs: ${JSON.stringify(redactEnvs(envs))}`
+  )
   switch (name) {
     case BuiltinMCPServerNames.memory: {
       const envPath = envs.MEMORY_FILE_PATH
@@ -48,7 +63,7 @@ export function createInMemoryMCPServer(
       return new DiDiMcpServer(apiKey).server
     }
     case BuiltinMCPServerNames.browser: {
-      return new BrowserServer().server
+      return browserServerSingleton.server
     }
     case BuiltinMCPServerNames.hub: {
       return new HubServer().server

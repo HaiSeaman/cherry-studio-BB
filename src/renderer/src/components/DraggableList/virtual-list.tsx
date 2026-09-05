@@ -9,7 +9,7 @@ import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd'
 import Scrollbar from '@renderer/components/Scrollbar'
 import { droppableReorder } from '@renderer/utils'
 import { type ScrollToOptions, useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
-import { type Key, memo, useCallback, useImperativeHandle, useRef } from 'react'
+import { type Key, memo, useCallback, useId, useImperativeHandle, useRef } from 'react'
 
 export interface DraggableVirtualListRef {
   measure: () => void
@@ -124,13 +124,15 @@ function DraggableVirtualList<T>({
     [virtualizer]
   )
 
+  const defaultDroppableId = useId()
+
   return (
     <div
       className={`${className} draggable-virtual-list`}
       style={{ height: '100%', display: 'flex', flexDirection: 'column', ...style }}>
       <DragDropContext onDragStart={onDragStart} onDragEnd={_onDragEnd}>
         <Droppable
-          droppableId="droppable"
+          droppableId={droppableProps?.droppableId ?? defaultDroppableId}
           mode="virtual"
           renderClone={(provided, _snapshot, rubric) => {
             const item = list[rubric.source.index]

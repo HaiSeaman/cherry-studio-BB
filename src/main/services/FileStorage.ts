@@ -23,6 +23,20 @@ import { app, dialog, net, shell } from 'electron'
 import * as fs from 'fs'
 import { writeFileSync } from 'fs'
 import { readFile } from 'fs/promises'
+
+const COMMON_RIPGREP_EXCLUDES = [
+  '-g', '!**/node_modules/**',
+  '-g', '!**/.git/**',
+  '-g', '!**/.idea/**',
+  '-g', '!**/.vscode/**',
+  '-g', '!**/.DS_Store',
+  '-g', '!**/dist/**',
+  '-g', '!**/build/**',
+  '-g', '!**/.next/**',
+  '-g', '!**/.nuxt/**',
+  '-g', '!**/coverage/**',
+  '-g', '!**/.cache/**'
+]
 import { isBinaryFile } from 'isbinaryfile'
 import * as path from 'path'
 import WordExtractor from 'word-extractor'
@@ -200,15 +214,14 @@ class FileStorage {
     const fileSize = stats.size
 
     const files = await fs.promises.readdir(this.storageDir)
+    // 源文件哈希只算一次，避免对每个同尺寸候选重复做全文件 MD5（K 个候选 = K 次哈希）
+    const originalHash = await this.getFileHash(filePath)
     for (const file of files) {
       const storedFilePath = path.join(this.storageDir, file)
       const storedStats = fs.statSync(storedFilePath)
 
       if (storedStats.size === fileSize) {
-        const [originalHash, storedHash] = await Promise.all([
-          this.getFileHash(filePath),
-          this.getFileHash(storedFilePath)
-        ])
+        const storedHash = await this.getFileHash(storedFilePath)
 
         if (originalHash === storedHash) {
           const ext = path.extname(file)
@@ -977,17 +990,7 @@ class FileStorage {
       }
 
       // Exclude common hidden directories and large directories
-      args.push('-g', '!**/node_modules/**')
-      args.push('-g', '!**/.git/**')
-      args.push('-g', '!**/.idea/**')
-      args.push('-g', '!**/.vscode/**')
-      args.push('-g', '!**/.DS_Store')
-      args.push('-g', '!**/dist/**')
-      args.push('-g', '!**/build/**')
-      args.push('-g', '!**/.next/**')
-      args.push('-g', '!**/.nuxt/**')
-      args.push('-g', '!**/coverage/**')
-      args.push('-g', '!**/.cache/**')
+      args.push(...COMMON_RIPGREP_EXCLUDES)
 
       // Handle max depth
       if (!options.recursive) {
@@ -1264,17 +1267,7 @@ class FileStorage {
     }
 
     // Exclude common hidden directories and large directories
-    args.push('-g', '!**/node_modules/**')
-    args.push('-g', '!**/.git/**')
-    args.push('-g', '!**/.idea/**')
-    args.push('-g', '!**/.vscode/**')
-    args.push('-g', '!**/.DS_Store')
-    args.push('-g', '!**/dist/**')
-    args.push('-g', '!**/build/**')
-    args.push('-g', '!**/.next/**')
-    args.push('-g', '!**/.nuxt/**')
-    args.push('-g', '!**/coverage/**')
-    args.push('-g', '!**/.cache/**')
+    args.push(...COMMON_RIPGREP_EXCLUDES)
 
     // Handle max depth
     if (!options.recursive) {

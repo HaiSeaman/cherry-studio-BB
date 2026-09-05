@@ -2,7 +2,7 @@ import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import type { Message } from '@renderer/types/newMessage'
 import { MessageBlockType } from '@renderer/types/newMessage'
-import { isEmpty, remove, takeRight } from 'lodash'
+import { isEmpty, takeRight } from 'lodash'
 
 /**
  * Filters out messages of type '@' or 'clear' and messages without main text content.
@@ -99,8 +99,8 @@ export function getGroupedMessages(messages: Message[]): { [key: string]: (Messa
  * Only remain one message in a group. Either useful or fallback to the first message in the group.
  */
 export function filterUsefulMessages(messages: Message[]): Message[] {
-  const _messages = [...messages]
   const groupedMessages = getGroupedMessages(messages)
+  const removeIds = new Set<string>()
 
   Object.entries(groupedMessages).forEach(([key, groupedMsgs]) => {
     if (key.startsWith('assistant')) {
@@ -109,20 +109,21 @@ export function filterUsefulMessages(messages: Message[]): Message[] {
         // Remove all messages in the group except the useful one
         groupedMsgs.forEach((m) => {
           if (m.id !== usefulMessage.id) {
-            remove(_messages, (o) => o.id === m.id)
+            removeIds.add(m.id)
           }
         })
       } else if (groupedMsgs.length > 0) {
         // Keep only the first message if none are marked useful
         const messagesToRemove = groupedMsgs.slice(1)
         messagesToRemove.forEach((m) => {
-          remove(_messages, (o) => o.id === m.id)
+          removeIds.add(m.id)
         })
       }
     }
   })
 
-  return _messages
+  // 一次 O(n) filter 代替原循环内嵌套 remove() 的 O(n²) 遍历
+  return messages.filter((m) => !removeIds.has(m.id))
 }
 
 export function filterLastAssistantMessage(messages: Message[]): Message[] {
@@ -134,12 +135,17 @@ export function filterLastAssistantMessage(messages: Message[]): Message[] {
   return _messages
 }
 
-export function filterAdjacentUserMessaegs(messages: Message[]): Message[] {
+export function filterAdjacentUserMessages(messages: Message[]): Message[] {
   // Filter adjacent user messages, keeping only the last one
   return messages.filter((message, index, origin) => {
     return !(message.role === 'user' && index + 1 < origin.length && origin[index + 1].role === 'user')
   })
 }
+
+/**
+ * @deprecated 拼写兼容别名，请使用 filterAdjacentUserMessages
+ */
+export const filterAdjacentUserMessaegs = filterAdjacentUserMessages
 
 /**
  * Filters out assistant messages that only contain ErrorBlocks and their associated user messages.

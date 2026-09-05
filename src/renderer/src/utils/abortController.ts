@@ -15,6 +15,10 @@ export const removeAbortController = (id: string, abortFn: () => void) => {
     if (index !== -1) {
       callbackArr.splice(index, 1)
     }
+    // 数组清空后移除该 key，避免长会话残留空数组槽位导致内存泄漏
+    if (callbackArr.length === 0) {
+      abortMap.delete(id)
+    }
   } else {
     abortMap.delete(id)
   }

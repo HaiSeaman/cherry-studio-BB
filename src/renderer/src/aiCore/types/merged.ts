@@ -2,9 +2,7 @@
  * Application-Level Provider Type Merge Point
  */
 
-import type { RuntimeConfig } from '@cherrystudio/ai-core/core'
-import type { ModelConfig } from '@cherrystudio/ai-core/core/models/types'
-import type { RuntimeExecutor } from '@cherrystudio/ai-core/core/runtime'
+import type { ModelConfig, RuntimeConfig, RuntimeExecutor } from '@cherrystudio/ai-core/core'
 import type {
   ExtensionConfigToIdResolutionMap,
   ExtensionToSettingsMap,

@@ -60,8 +60,13 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
   // 结束时走全局调度器：响铃 + 系统通知 + 后台唤起主窗口（与闹钟同一引擎）
   const cd = useCountdown(() => alarmScheduler.fireExternal(timerLabel, timerSound))
 
-  const stopAllRinging = () => {
+  const stopAllRinging = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    e?.preventDefault()
     alarmScheduler.stopRinging()
+    if (ringing?.fromTimer) {
+      cd.reset()
+    }
   }
 
   // ---- 定时闹钟 ----
@@ -147,6 +152,21 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
           {`${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 · ${WEEKDAYS[now.getDay()]}`}
         </ClockDate>
       </ClockRow>
+
+      {anyRinging && (
+        <CardRingingBar role="alert">
+          <div className="alert-badge">
+            <span className="dot-pulse" />
+            <span className="alert-text">
+              🔔 {ringing?.fromTimer ? '倒计时到期' : '闹钟响铃中'}
+              {ringing?.label ? ` · ${ringing.label}` : ''}
+            </span>
+          </div>
+          <CardStopBtn type="button" onClick={stopAllRinging} title="点击立即关闭闹钟">
+            🔕 关闭闹钟
+          </CardStopBtn>
+        </CardRingingBar>
+      )}
 
       <MXTabs
         value={tab}
@@ -274,10 +294,6 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
             )}
           </AlarmList>
         </AlarmBody>
-      )}
-
-      {anyRinging && (
-        <StopBtn onClick={stopAllRinging}>🔕 停止响铃{ringing?.label ? ` · ${ringing.label}` : ''}</StopBtn>
       )}
 
       <VolumeRow>
@@ -600,20 +616,81 @@ const DelBtn = styled.button`
   }
 `
 
-const StopBtn = styled.button`
+const CardRingingBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: rgba(239, 83, 80, 0.08);
+  border: 1px solid rgba(239, 83, 80, 0.28);
+  box-shadow: 0 2px 8px rgba(239, 83, 80, 0.08);
+  flex-shrink: 0;
+
+  .alert-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .dot-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: ${mx.danger};
+    box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.7);
+    animation: ${keyframes`
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 6px rgba(239, 83, 80, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(239, 83, 80, 0);
+      }
+    `} 1.5s infinite;
+    ${reduceMotion}
+    flex-shrink: 0;
+  }
+
+  .alert-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: ${mx.danger};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`
+
+const CardStopBtn = styled.button`
   border: none;
-  border-radius: 999px;
-  padding: 8px 16px;
-  font-size: 13px;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #fff;
-  background: ${mx.danger};
+  background: linear-gradient(135deg, #ef5350, #e53935);
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(239, 83, 80, 0.4);
-  animation: ${keyframes`
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.03); }
-  `} 1s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.28);
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  &:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.36);
+  }
+
+  &:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 1px 4px rgba(229, 57, 53, 0.2);
+  }
+
   ${reduceMotion}
 `
 
