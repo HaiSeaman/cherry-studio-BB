@@ -1,4 +1,4 @@
-import { DragDropContext, Draggable, Droppable,type DropResult } from '@hello-pangea/dnd'
+import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd'
 import EmojiAvatar from '@renderer/components/Avatar/EmojiAvatar'
 import { isLinux, isMac, isWin } from '@renderer/config/constant'
 import { UserAvatar } from '@renderer/config/env'
@@ -24,6 +24,7 @@ import {
   Settings,
   Square,
   StickyNote,
+  Tv,
   X
 } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
@@ -209,7 +210,8 @@ const MainMenus: FC = () => {
     minapp: <LayoutGrid size={18} className="icon" />,
     notes: <StickyNote size={18} className="icon" />,
     habits: <CalendarCheck2 size={18} className="icon" />,
-    knowledge: <BookOpen size={18} className="icon" />
+    knowledge: <BookOpen size={18} className="icon" />,
+    iptv: <Tv size={18} className="icon" />
   }
 
   const pathMap = {
@@ -217,7 +219,8 @@ const MainMenus: FC = () => {
     minapp: '/apps',
     notes: '/notes',
     habits: '/habits',
-    knowledge: '/knowledge'
+    knowledge: '/knowledge',
+    iptv: '/iptv'
   }
 
   // 右侧导航栏下段顺序：完全跟随「显示设置→侧边栏设置」持久化的 visible 顺序，

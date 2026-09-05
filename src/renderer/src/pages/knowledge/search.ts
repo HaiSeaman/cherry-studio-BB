@@ -1,3 +1,4 @@
+import { loggerService } from '@logger'
 import { db } from '@renderer/databases'
 import MiniSearch from 'minisearch'
 
@@ -6,6 +7,8 @@ import { assertDimensions } from './embedding'
 import { makeModel, makeRerankModel } from './KnowledgeService'
 import { cosine, rrfScore, tokenizeZh } from './retriever'
 import type { KBChunk, KBFile, KBHit, KnowledgeBase } from './types'
+
+const logger = loggerService.withContext('pages/knowledge/search')
 
 // 每个库一份内存索引/块缓存（文件变更后经 invalidateIndex 失效）。
 // ponytail: 单库级缓存，5 万块以内够用；若规模暴涨再按需分批加载。
@@ -70,7 +73,7 @@ export async function searchKnowledge(
       .slice(0, topK * 2)
       .map((x) => x.id)
   } catch (error) {
-    console.warn('知识库向量检索失败，降级为关键词检索：', error)
+    logger.warn('知识库向量检索失败，降级为关键词检索：', error as Error)
   }
 
   // 融合（候选池放大 2 倍，为重排预留精排空间）
@@ -115,7 +118,7 @@ export async function searchKnowledge(
       }
     } catch (error) {
       // 重排失败不阻断检索，降级为融合结果（与向量路降级策略一致）
-      console.warn('知识库重排失败，降级为 RRF 融合结果：', error)
+      logger.warn('知识库重排失败，降级为 RRF 融合结果：', error as Error)
     }
   }
 

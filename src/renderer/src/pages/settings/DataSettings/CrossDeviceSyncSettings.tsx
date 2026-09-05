@@ -1,5 +1,5 @@
-import { loadSyncState, type SyncConfigDto,syncOnce } from '@renderer/services/SyncAdapter'
-import { Button, Input, message,Radio, Space } from 'antd'
+import { loadSyncState, type SyncConfigDto, syncOnce } from '@renderer/services/SyncAdapter'
+import { Button, Input, message, Radio, Space } from 'antd'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -18,8 +18,12 @@ function loadConfig(): SavedConfig {
 
 const CrossDeviceSyncSettings = () => {
   const [config, setConfig] = useState<SavedConfig>(loadConfig)
-  const [s3, setS3] = useState<Record<string, string>>(config.s3 ?? { endpoint: '', accessKeyId: '', secretAccessKey: '', bucket: '', region: 'auto' })
-  const [wd, setWd] = useState<Record<string, string>>(config.webdav ?? { webdavHost: '', webdavUser: '', webdavPass: '' })
+  const [s3, setS3] = useState<Record<string, string>>(
+    config.s3 ?? { endpoint: '', accessKeyId: '', secretAccessKey: '', bucket: '', region: 'auto' }
+  )
+  const [wd, setWd] = useState<Record<string, string>>(
+    config.webdav ?? { webdavHost: '', webdavUser: '', webdavPass: '' }
+  )
   const [syncing, setSyncing] = useState(false)
   const [status, setStatus] = useState('')
   const [lastSync, setLastSync] = useState('')
@@ -46,7 +50,9 @@ const CrossDeviceSyncSettings = () => {
     const result = await syncOnce({ channel: config.channel, s3, webdav: wd } as SyncConfigDto)
     setStatus(`${new Date().toLocaleString()} · ${result.message}`)
     setSyncing(false)
-    loadSyncState().then((s) => s.lastSyncAt && setLastSync(new Date(Number(s.lastSyncAt)).toLocaleString()))
+    loadSyncState()
+      .then((s) => s.lastSyncAt && setLastSync(new Date(Number(s.lastSyncAt)).toLocaleString()))
+      .catch(() => {})
   }
 
   return (
@@ -59,8 +65,7 @@ const CrossDeviceSyncSettings = () => {
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Radio.Group
           value={config.channel}
-          onChange={(e) => setConfig((p) => ({ ...p, channel: e.target.value as SavedConfig['channel'] }))}
-        >
+          onChange={(e) => setConfig((p) => ({ ...p, channel: e.target.value as SavedConfig['channel'] }))}>
           <Radio value="none">关闭</Radio>
           <Radio value="s3">S3 / 兼容对象存储</Radio>
           <Radio value="webdav">WebDAV（如坚果云）</Radio>
@@ -70,18 +75,52 @@ const CrossDeviceSyncSettings = () => {
           <>
             {config.channel === 's3' && (
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Input placeholder="Endpoint（https://s3.example.com）" value={s3.endpoint ?? ''} onChange={(e) => setField('s3', 'endpoint', e.target.value)} />
-                <Input placeholder="Access Key" value={s3.accessKeyId ?? ''} onChange={(e) => setField('s3', 'accessKeyId', e.target.value)} />
-                <Input placeholder="Secret Key" type="password" value={s3.secretAccessKey ?? ''} onChange={(e) => setField('s3', 'secretAccessKey', e.target.value)} />
-                <Input placeholder="Bucket" value={s3.bucket ?? ''} onChange={(e) => setField('s3', 'bucket', e.target.value)} />
-                <Input placeholder="Region（默认 auto）" value={s3.region ?? 'auto'} onChange={(e) => setField('s3', 'region', e.target.value)} />
+                <Input
+                  placeholder="Endpoint（https://s3.example.com）"
+                  value={s3.endpoint ?? ''}
+                  onChange={(e) => setField('s3', 'endpoint', e.target.value)}
+                />
+                <Input
+                  placeholder="Access Key"
+                  value={s3.accessKeyId ?? ''}
+                  onChange={(e) => setField('s3', 'accessKeyId', e.target.value)}
+                />
+                <Input
+                  placeholder="Secret Key"
+                  type="password"
+                  value={s3.secretAccessKey ?? ''}
+                  onChange={(e) => setField('s3', 'secretAccessKey', e.target.value)}
+                />
+                <Input
+                  placeholder="Bucket"
+                  value={s3.bucket ?? ''}
+                  onChange={(e) => setField('s3', 'bucket', e.target.value)}
+                />
+                <Input
+                  placeholder="Region（默认 auto）"
+                  value={s3.region ?? 'auto'}
+                  onChange={(e) => setField('s3', 'region', e.target.value)}
+                />
               </Space>
             )}
             {config.channel === 'webdav' && (
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Input placeholder="服务器地址（https://dav.example.com）" value={wd.webdavHost ?? ''} onChange={(e) => setField('webdav', 'webdavHost', e.target.value)} />
-                <Input placeholder="用户名" value={wd.webdavUser ?? ''} onChange={(e) => setField('webdav', 'webdavUser', e.target.value)} />
-                <Input placeholder="密码 / 应用密码" type="password" value={wd.webdavPass ?? ''} onChange={(e) => setField('webdav', 'webdavPass', e.target.value)} />
+                <Input
+                  placeholder="服务器地址（https://dav.example.com）"
+                  value={wd.webdavHost ?? ''}
+                  onChange={(e) => setField('webdav', 'webdavHost', e.target.value)}
+                />
+                <Input
+                  placeholder="用户名"
+                  value={wd.webdavUser ?? ''}
+                  onChange={(e) => setField('webdav', 'webdavUser', e.target.value)}
+                />
+                <Input
+                  placeholder="密码 / 应用密码"
+                  type="password"
+                  value={wd.webdavPass ?? ''}
+                  onChange={(e) => setField('webdav', 'webdavPass', e.target.value)}
+                />
               </Space>
             )}
             <Space>

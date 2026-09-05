@@ -126,7 +126,7 @@ CLAUDE.local.md
 AGENTS.override.md
 subagent/
 .workbuddy
-
+.dsh-notes
 
 # ---------- 本地数据与运行时目录 ----------
 local/

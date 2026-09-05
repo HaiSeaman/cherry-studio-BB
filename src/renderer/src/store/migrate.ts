@@ -23,6 +23,10 @@ export const migrate = async (state: any) => {
       if (!icons.visible.includes('knowledge') && !(icons.disabled ?? []).includes('knowledge')) {
         icons.visible.push('knowledge')
       }
+      // 新增电视（IPTV）入口默认补入（同上：显式禁用的不强行加回）
+      if (!icons.visible.includes('iptv') && !(icons.disabled ?? []).includes('iptv')) {
+        icons.visible.push('iptv')
+      }
     }
     if (Array.isArray(icons.disabled)) {
       icons.disabled = icons.disabled.filter((i: string) => !DEPRECATED_SIDEBAR_ICONS.includes(i))

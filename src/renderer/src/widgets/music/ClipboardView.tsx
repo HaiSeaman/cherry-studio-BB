@@ -17,14 +17,18 @@ import type { ReactNode } from 'react'
 import { type FC, useEffect, useMemo, useRef, useState } from 'react'
 
 /** 图片缩略图的 file:// URL（Windows 反斜杠转正斜杠 + 中文路径编码，webSecurity:false 允许 file://） */
-const thumbUrl = (p: string): string =>
-  'file:///' + encodeURI(p.replace(/\\/g, '/')).replace(/#/g, '%23')
+const thumbUrl = (p: string): string => 'file:///' + encodeURI(p.replace(/\\/g, '/')).replace(/#/g, '%23')
 
 const fileBaseName = (p: string): string => p.split(/[\\/]/).pop() || p
 
 /** HTML → 纯文本预览（轻量正则，与主进程 stripHtmlText 同构） */
 const htmlPreview = (html: string): string =>
-  html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
+  html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
 
 /** HTML → 可读纯文本（详情用）：保留换行/段落/列表结构，便于完整阅读与选中复制 */
 const htmlToText = (html: string): string =>
@@ -54,7 +58,10 @@ const fmtTime = (ts: number): string => {
 const matchKeyword = (item: ClipboardItem, kw: string): boolean => {
   if (!kw) return true
   if (item.type === 'text' || item.type === 'color') return (item.text ?? '').toLowerCase().includes(kw)
-  if (item.type === 'html') return htmlPreview(item.html ?? '').toLowerCase().includes(kw)
+  if (item.type === 'html')
+    return htmlPreview(item.html ?? '')
+      .toLowerCase()
+      .includes(kw)
   if (item.type === 'rtf') return false // 与图片一致：无可搜索文本，有关键词即隐藏
   if (item.type === 'files') return (item.paths ?? []).some((p) => p.toLowerCase().includes(kw))
   return false
@@ -128,7 +135,11 @@ const DetailBody: FC<{ item: ClipboardItem }> = ({ item }) => {
       return <div className="clip-detail-text">{preview || '富文本（无文字内容）'}</div>
     }
     case 'rtf':
-      return <div className="clip-detail-text clip-detail-hint">该条目为 RTF 富文本格式，暂不支持直接预览，请点击列表项进行复制。</div>
+      return (
+        <div className="clip-detail-text clip-detail-hint">
+          该条目为 RTF 富文本格式，暂不支持直接预览，请点击列表项进行复制。
+        </div>
+      )
     case 'image': {
       // 优先展示原件（完整保留），原件缺失时回退缩略图
       const src = item.imageFile && item.imageFile !== '' ? item.imageFile : item.thumbPath
@@ -186,10 +197,7 @@ const ClipboardView: FC = () => {
   )
 
   const kw = keyword.trim().toLowerCase()
-  const visible = useMemo(
-    () => items.filter((i) => (!favOnly || i.fav) && matchKeyword(i, kw)),
-    [items, kw, favOnly]
-  )
+  const visible = useMemo(() => items.filter((i) => (!favOnly || i.fav) && matchKeyword(i, kw)), [items, kw, favOnly])
   const favCount = items.filter((i) => i.fav).length
   const pinnedCount = items.filter((i) => i.pinned).length
 
@@ -246,7 +254,11 @@ const ClipboardView: FC = () => {
           </div>
         ) : (
           visible.map((item) => (
-            <div key={item.id} className="clip-item" onClick={() => onCopy(item)} onDoubleClick={() => onDoubleClickItem(item)}>
+            <div
+              key={item.id}
+              className="clip-item"
+              onClick={() => onCopy(item)}
+              onDoubleClick={() => onDoubleClickItem(item)}>
               <span className="clip-item-icon">{TYPE_ICON[item.type]}</span>
               <span className="clip-item-body">
                 <ItemBody item={item} />
@@ -291,7 +303,8 @@ const ClipboardView: FC = () => {
 
       <div className="clip-footer">
         <span>
-          共 {items.length} 条{` · ★${favCount}`}{pinnedCount > 0 ? ` · 钉${pinnedCount}` : ''}
+          共 {items.length} 条{` · ★${favCount}`}
+          {pinnedCount > 0 ? ` · 钉${pinnedCount}` : ''}
         </span>
         <span className="clip-footer-actions">
           <button
@@ -302,7 +315,11 @@ const ClipboardView: FC = () => {
             {favOnly ? <Star size={12} /> : <Eye size={12} />}
             {favOnly ? '全部' : '收藏夹'}
           </button>
-          <button type="button" title="历史容量设置（条数/天数）" className="clip-opt" onClick={() => setShowSettings(true)}>
+          <button
+            type="button"
+            title="历史容量设置（条数/天数）"
+            className="clip-opt"
+            onClick={() => setShowSettings(true)}>
             <Settings2 size={12} />
             上限
           </button>
@@ -320,8 +337,7 @@ const ClipboardView: FC = () => {
             <div className="clip-modal-title">确认清空？</div>
             <div className="clip-modal-text">
               将删除所有<b>未收藏且未固定</b>的消息。
-              <br />
-              ★ 收藏与<b>置顶</b>的消息<b>不会</b>被删除。
+              <br />★ 收藏与<b>置顶</b>的消息<b>不会</b>被删除。
             </div>
             <div className="clip-modal-acts">
               <button type="button" className="clip-btn" onClick={() => setConfirmClear(false)}>

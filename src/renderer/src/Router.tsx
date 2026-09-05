@@ -18,6 +18,7 @@ const MinAppsPage = lazy(() => import('./pages/minapps/MinAppsPage'))
 const NotesPage = lazy(() => import('./pages/notes/NotesPage'))
 const HabitsPage = lazy(() => import('./pages/habits/HabitsPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
+const IptvPage = lazy(() => import('./pages/iptv/IptvPage'))
 
 const Router: FC = () => {
   const { onboardingCompleted, completeOnboarding } = useOnboardingState()
@@ -33,6 +34,7 @@ const Router: FC = () => {
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/habits" element={<HabitsPage />} />
             <Route path="/knowledge" element={<KnowledgePage />} />
+            <Route path="/iptv" element={<IptvPage />} />
             <Route path="/settings/*" element={<SettingsPage />} />
             <Route path="/launchpad" element={<LaunchpadPage />} />
           </Routes>

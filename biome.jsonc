@@ -42,6 +42,7 @@
       "!.github/**",
       "!.husky/**",
       "!.vscode/**",
+      "!.reasonix/**",
       "!*.yaml",
       "!*.yml",
       "!*.mjs",

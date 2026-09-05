@@ -6,7 +6,7 @@ import type {
 } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
-import { readyToAbort, abortCompletion } from '@renderer/utils/abortController'
+import { abortCompletion, readyToAbort } from '@renderer/utils/abortController'
 import { isAbortError } from '@renderer/utils/error'
 import { NoOutputGeneratedError } from 'ai'
 

@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie'
 
 import { db } from '../databases'
 import type { Habit, HabitRecord } from '../pages/habits/types'
-import type { HubAlarm, HubDayNote, HubNote, HubTodo } from '../pages/notes/types'
+import type { HubAlarm, HubNote, HubTodo } from '../pages/notes/types'
 
 /**
  * 跨设备同步适配器（电脑端）
@@ -34,15 +34,84 @@ export const SYNC_FILES = {
 } as const
 
 // ---------- DTO（与手机端 schema 对齐） ----------
-export type SyncNoteDto = { syncId: string; content: string; status: string; createdAt: number; updatedAt: number; deleted: boolean }
-export type SyncTodoDto = { syncId: string; text: string; done: boolean; completedAt?: number | null; status: string; createdAt: number; updatedAt: number; deleted: boolean }
-export type SyncDayNoteDto = { syncId: string; date: string; content: string; createdAt: number; updatedAt: number; deleted: boolean }
-export type SyncHabitDto = { syncId: string; name: string; icon: string; color: string; order: number; frequencyType: string; timesPerWeek?: number | null; daysOfWeek?: number[] | null; archived: boolean; createdAt: number; updatedAt: number; deleted: boolean }
-export type SyncHabitRecordDto = { syncId: string; habitSyncId: string; date: string; status: string; count?: number | null; createdAt: number; updatedAt: number; deleted: boolean }
-export type SyncAlarmDto = { syncId: string; h: number; m: number; s: number; enabled: boolean; label: string; sound?: string | null; date?: string | null; lastTriggerKey?: string | null; createdAt: number; updatedAt: number; deleted: boolean }
+export type SyncNoteDto = {
+  syncId: string
+  content: string
+  status: string
+  createdAt: number
+  updatedAt: number
+  deleted: boolean
+}
+export type SyncTodoDto = {
+  syncId: string
+  text: string
+  done: boolean
+  completedAt?: number | null
+  status: string
+  createdAt: number
+  updatedAt: number
+  deleted: boolean
+}
+export type SyncDayNoteDto = {
+  syncId: string
+  date: string
+  content: string
+  createdAt: number
+  updatedAt: number
+  deleted: boolean
+}
+export type SyncHabitDto = {
+  syncId: string
+  name: string
+  icon: string
+  color: string
+  order: number
+  frequencyType: string
+  timesPerWeek?: number | null
+  daysOfWeek?: number[] | null
+  archived: boolean
+  createdAt: number
+  updatedAt: number
+  deleted: boolean
+}
+export type SyncHabitRecordDto = {
+  syncId: string
+  habitSyncId: string
+  date: string
+  status: string
+  count?: number | null
+  createdAt: number
+  updatedAt: number
+  deleted: boolean
+}
+export type SyncAlarmDto = {
+  syncId: string
+  h: number
+  m: number
+  s: number
+  enabled: boolean
+  label: string
+  sound?: string | null
+  date?: string | null
+  lastTriggerKey?: string | null
+  createdAt: number
+  updatedAt: number
+  deleted: boolean
+}
 
-export type SyncBundle = { notes: SyncNoteDto[]; todos: SyncTodoDto[]; dayNotes: SyncDayNoteDto[]; habits: SyncHabitDto[]; habitRecords: SyncHabitRecordDto[]; alarms: SyncAlarmDto[] }
-export type SyncConfigDto = { channel: 'none' | 's3' | 'webdav'; s3?: Record<string, unknown>; webdav?: Record<string, unknown> }
+export type SyncBundle = {
+  notes: SyncNoteDto[]
+  todos: SyncTodoDto[]
+  dayNotes: SyncDayNoteDto[]
+  habits: SyncHabitDto[]
+  habitRecords: SyncHabitRecordDto[]
+  alarms: SyncAlarmDto[]
+}
+export type SyncConfigDto = {
+  channel: 'none' | 's3' | 'webdav'
+  s3?: Record<string, unknown>
+  webdav?: Record<string, unknown>
+}
 export type SyncResult = { ok: boolean; message: string }
 
 const mappings = syncDb.table<SyncMapping>('mappings')
@@ -72,11 +141,23 @@ function dedupeByKey<T>(list: T[], key: (t: T) => string, updatedAt: (t: T) => n
 
 // ---------- 映射工具 ----------
 async function mappingFor(table: string, syncUuid: string): Promise<SyncMapping | undefined> {
-  return mappings.where('syncUuid').equals(syncUuid).and((m) => m.table === table).first()
+  return mappings
+    .where('syncUuid')
+    .equals(syncUuid)
+    .and((m) => m.table === table)
+    .first()
 }
 
-async function lazyUuid(table: string, localId: string | number, fallbackUpdatedAt: number): Promise<{ syncUuid: string; updatedAt: number }> {
-  const existing = await mappings.where('table').equals(table).and((m) => String(m.localId) === String(localId)).first()
+async function lazyUuid(
+  table: string,
+  localId: string | number,
+  fallbackUpdatedAt: number
+): Promise<{ syncUuid: string; updatedAt: number }> {
+  const existing = await mappings
+    .where('table')
+    .equals(table)
+    .and((m) => String(m.localId) === String(localId))
+    .first()
   if (existing) return { syncUuid: existing.syncUuid, updatedAt: existing.updatedAt }
   const syncUuid = crypto.randomUUID()
   await mappings.add({ table, syncUuid, localId, updatedAt: fallbackUpdatedAt })
@@ -97,7 +178,11 @@ async function bindUuid(table: string, syncUuid: string, localId: string | numbe
     }
     return
   }
-  const byLocal = await mappings.where('table').equals(table).and((m) => String(m.localId) === String(localId)).first()
+  const byLocal = await mappings
+    .where('table')
+    .equals(table)
+    .and((m) => String(m.localId) === String(localId))
+    .first()
   if (byLocal && byLocal.syncUuid !== syncUuid) {
     // 该本地行已绑定其它 syncUuid（syncId 罕见更替）：以新 uuid 为准
     byLocal.syncUuid = syncUuid
@@ -113,39 +198,97 @@ export async function exportAll(): Promise<SyncBundle> {
   const now = Date.now()
 
   const notes: SyncNoteDto[] = []
-  for (const r of (await db.hub_notes.toArray()) as HubNote[]) {
+  for (const r of await db.hub_notes.toArray()) {
     const { syncUuid, updatedAt } = await lazyUuid('hub_notes', r.id!, r.updatedAt ?? now)
-    notes.push({ syncId: syncUuid, content: r.content, status: r.status, createdAt: r.createdAt ?? now, updatedAt, deleted: r.status === 'trashed' })
+    notes.push({
+      syncId: syncUuid,
+      content: r.content,
+      status: r.status,
+      createdAt: r.createdAt ?? now,
+      updatedAt,
+      deleted: r.status === 'trashed'
+    })
   }
 
   const todos: SyncTodoDto[] = []
-  for (const r of (await db.hub_todos.toArray()) as HubTodo[]) {
+  for (const r of await db.hub_todos.toArray()) {
     const { syncUuid, updatedAt } = await lazyUuid('hub_todos', r.id!, r.updatedAt ?? now)
-    todos.push({ syncId: syncUuid, text: r.text, done: r.done, completedAt: r.completedAt ?? null, status: r.status, createdAt: r.createdAt ?? now, updatedAt, deleted: r.status === 'trashed' })
+    todos.push({
+      syncId: syncUuid,
+      text: r.text,
+      done: r.done,
+      completedAt: r.completedAt ?? null,
+      status: r.status,
+      createdAt: r.createdAt ?? now,
+      updatedAt,
+      deleted: r.status === 'trashed'
+    })
   }
 
   const dayNotes: SyncDayNoteDto[] = []
-  for (const r of (await db.hub_day_notes.toArray()) as HubDayNote[]) {
+  for (const r of await db.hub_day_notes.toArray()) {
     const { syncUuid } = await lazyUuid('hub_day_notes', r.id!, r.createdAt ?? now) // 表无 updatedAt，以 createdAt 稳定
-    dayNotes.push({ syncId: syncUuid, date: r.date, content: r.content, createdAt: r.createdAt ?? now, updatedAt: r.createdAt ?? now, deleted: false })
+    dayNotes.push({
+      syncId: syncUuid,
+      date: r.date,
+      content: r.content,
+      createdAt: r.createdAt ?? now,
+      updatedAt: r.createdAt ?? now,
+      deleted: false
+    })
   }
 
   const habits: SyncHabitDto[] = []
-  for (const r of (await db.habits.toArray()) as Habit[]) {
+  for (const r of await db.habits.toArray()) {
     const syncId = r.id // habits.id 本身是 UUID，直接复用
-    habits.push({ syncId, name: r.name, icon: r.icon, color: r.color, order: r.order ?? 0, frequencyType: r.frequencyType ?? 'daily', timesPerWeek: r.timesPerWeek ?? null, daysOfWeek: r.daysOfWeek ?? null, archived: r.archived ?? false, createdAt: r.createdAt ?? now, updatedAt: r.createdAt ?? now, deleted: r.archived ?? false })
+    habits.push({
+      syncId,
+      name: r.name,
+      icon: r.icon,
+      color: r.color,
+      order: r.order ?? 0,
+      frequencyType: r.frequencyType ?? 'daily',
+      timesPerWeek: r.timesPerWeek ?? null,
+      daysOfWeek: r.daysOfWeek ?? null,
+      archived: r.archived ?? false,
+      createdAt: r.createdAt ?? now,
+      updatedAt: r.createdAt ?? now,
+      deleted: r.archived ?? false
+    })
   }
 
   const habitRecords: SyncHabitRecordDto[] = []
-  for (const r of (await db.habit_records.toArray()) as HabitRecord[]) {
+  for (const r of await db.habit_records.toArray()) {
     const syncId = `${r.habitId}:${r.date}` // 复合主键派生稳定 syncId
-    habitRecords.push({ syncId, habitSyncId: r.habitId, date: r.date, status: r.status, count: r.count ?? null, createdAt: r.createdAt ?? now, updatedAt: r.createdAt ?? now, deleted: false })
+    habitRecords.push({
+      syncId,
+      habitSyncId: r.habitId,
+      date: r.date,
+      status: r.status,
+      count: r.count ?? null,
+      createdAt: r.createdAt ?? now,
+      updatedAt: r.createdAt ?? now,
+      deleted: false
+    })
   }
 
   const alarms: SyncAlarmDto[] = []
-  for (const r of (await db.hub_alarms.toArray()) as HubAlarm[]) {
+  for (const r of await db.hub_alarms.toArray()) {
     const { syncUuid, updatedAt } = await lazyUuid('hub_alarms', r.id!, now) // 表无 createdAt/updatedAt，由映射固化
-    alarms.push({ syncId: syncUuid, h: r.h, m: r.m, s: r.s, enabled: r.enabled, label: r.label, sound: r.sound ?? null, date: r.date ?? null, lastTriggerKey: r.lastTriggerKey ?? null, createdAt: updatedAt, updatedAt, deleted: false })
+    alarms.push({
+      syncId: syncUuid,
+      h: r.h,
+      m: r.m,
+      s: r.s,
+      enabled: r.enabled,
+      label: r.label,
+      sound: r.sound ?? null,
+      date: r.date ?? null,
+      lastTriggerKey: r.lastTriggerKey ?? null,
+      createdAt: updatedAt,
+      updatedAt,
+      deleted: false
+    })
   }
 
   return { notes, todos, dayNotes, habits, habitRecords, alarms }
@@ -156,25 +299,39 @@ export async function importAll(remote: SyncBundle): Promise<void> {
   const now = Date.now()
 
   // 便签
-  const localNotes = (await db.hub_notes.toArray()) as HubNote[]
+  const localNotes = await db.hub_notes.toArray()
   const localNoteDtos: SyncNoteDto[] = []
   for (const r of localNotes) {
     const uuid = await lazyUuid('hub_notes', r.id!, r.updatedAt ?? now)
-    localNoteDtos.push({ syncId: uuid.syncUuid, content: r.content, status: r.status, createdAt: r.createdAt ?? now, updatedAt: r.updatedAt ?? now, deleted: r.status === 'trashed' })
+    localNoteDtos.push({
+      syncId: uuid.syncUuid,
+      content: r.content,
+      status: r.status,
+      createdAt: r.createdAt ?? now,
+      updatedAt: r.updatedAt ?? now,
+      deleted: r.status === 'trashed'
+    })
   }
-  const mergedNotes = lastWriteWins(localNoteDtos, remote.notes, (t) => t.syncId, (t) => t.updatedAt)
+  const mergedNotes = lastWriteWins(
+    localNoteDtos,
+    remote.notes,
+    (t) => t.syncId,
+    (t) => t.updatedAt
+  )
   for (const dto of mergedNotes) {
     const existing = await mappingFor('hub_notes', dto.syncId)
     if (dto.deleted) {
       if (existing) {
         const row = await db.hub_notes.get(existing.localId as number)
-        if (row) await db.hub_notes.update(row.id!, { status: 'trashed', updatedAt: dto.updatedAt })
+        if (row) await db.hub_notes.update(row.id, { status: 'trashed', updatedAt: dto.updatedAt })
       }
       continue
     }
     const row: HubNote = {
       content: dto.content,
-      status: (['active', 'archived', 'trashed'] as const).includes(dto.status as never) ? (dto.status as HubNote['status']) : 'active',
+      status: (['active', 'archived', 'trashed'] as const).includes(dto.status as never)
+        ? (dto.status as HubNote['status'])
+        : 'active',
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt
     }
@@ -188,19 +345,33 @@ export async function importAll(remote: SyncBundle): Promise<void> {
   }
 
   // 待办（结构同便签）
-  const localTodos = (await db.hub_todos.toArray()) as HubTodo[]
+  const localTodos = await db.hub_todos.toArray()
   const localTodoDtos: SyncTodoDto[] = []
   for (const r of localTodos) {
     const uuid = await lazyUuid('hub_todos', r.id!, r.updatedAt ?? now)
-    localTodoDtos.push({ syncId: uuid.syncUuid, text: r.text, done: r.done, completedAt: r.completedAt ?? null, status: r.status, createdAt: r.createdAt ?? now, updatedAt: r.updatedAt ?? now, deleted: r.status === 'trashed' })
+    localTodoDtos.push({
+      syncId: uuid.syncUuid,
+      text: r.text,
+      done: r.done,
+      completedAt: r.completedAt ?? null,
+      status: r.status,
+      createdAt: r.createdAt ?? now,
+      updatedAt: r.updatedAt ?? now,
+      deleted: r.status === 'trashed'
+    })
   }
-  const mergedTodos = lastWriteWins(localTodoDtos, remote.todos, (t) => t.syncId, (t) => t.updatedAt)
+  const mergedTodos = lastWriteWins(
+    localTodoDtos,
+    remote.todos,
+    (t) => t.syncId,
+    (t) => t.updatedAt
+  )
   for (const dto of mergedTodos) {
     const existing = await mappingFor('hub_todos', dto.syncId)
     if (dto.deleted) {
       if (existing) {
         const row = await db.hub_todos.get(existing.localId as number)
-        if (row) await db.hub_todos.update(row.id!, { status: 'trashed', updatedAt: dto.updatedAt })
+        if (row) await db.hub_todos.update(row.id, { status: 'trashed', updatedAt: dto.updatedAt })
       }
       continue
     }
@@ -208,7 +379,9 @@ export async function importAll(remote: SyncBundle): Promise<void> {
       text: dto.text,
       done: dto.done,
       completedAt: dto.completedAt ?? undefined,
-      status: (['active', 'archived', 'trashed'] as const).includes(dto.status as never) ? (dto.status as HubTodo['status']) : 'active',
+      status: (['active', 'archived', 'trashed'] as const).includes(dto.status as never)
+        ? (dto.status as HubTodo['status'])
+        : 'active',
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt
     }
@@ -222,7 +395,7 @@ export async function importAll(remote: SyncBundle): Promise<void> {
   }
 
   // 每日笔记：one per date，按日期合并
-  const localDay = (await db.hub_day_notes.toArray()) as HubDayNote[]
+  const localDay = await db.hub_day_notes.toArray()
   const localDayDto: SyncDayNoteDto[] = localDay.map((r) => ({
     syncId: `day:${r.date}`,
     date: r.date,
@@ -231,7 +404,16 @@ export async function importAll(remote: SyncBundle): Promise<void> {
     updatedAt: r.createdAt ?? now,
     deleted: false
   }))
-  const mergedDay = dedupeByKey(lastWriteWins(localDayDto, remote.dayNotes, (t) => t.date, (t) => t.updatedAt), (t) => t.date, (t) => t.updatedAt)
+  const mergedDay = dedupeByKey(
+    lastWriteWins(
+      localDayDto,
+      remote.dayNotes,
+      (t) => t.date,
+      (t) => t.updatedAt
+    ),
+    (t) => t.date,
+    (t) => t.updatedAt
+  )
   for (const dto of mergedDay) {
     const existingRow = localDay.find((r) => r.date === dto.date)
     if (dto.deleted) {
@@ -239,14 +421,14 @@ export async function importAll(remote: SyncBundle): Promise<void> {
       continue
     }
     if (existingRow) {
-      await db.hub_day_notes.update(existingRow.id!, { content: dto.content })
+      await db.hub_day_notes.update(existingRow.id, { content: dto.content })
     } else {
       await db.hub_day_notes.add({ date: dto.date, content: dto.content, createdAt: dto.createdAt })
     }
   }
 
   // 习惯（id 即 UUID，直接匹配）
-  const localHabits = (await db.habits.toArray()) as Habit[]
+  const localHabits = await db.habits.toArray()
   const localHabitDtos: SyncHabitDto[] = localHabits.map((r) => ({
     syncId: r.id,
     name: r.name,
@@ -261,7 +443,12 @@ export async function importAll(remote: SyncBundle): Promise<void> {
     updatedAt: r.createdAt ?? now,
     deleted: r.archived ?? false
   }))
-  const mergedHabits = lastWriteWins(localHabitDtos, remote.habits, (t) => t.syncId, (t) => t.updatedAt)
+  const mergedHabits = lastWriteWins(
+    localHabitDtos,
+    remote.habits,
+    (t) => t.syncId,
+    (t) => t.updatedAt
+  )
   for (const dto of mergedHabits) {
     if (dto.deleted) {
       const row = localHabits.find((h) => h.id === dto.syncId)
@@ -269,13 +456,24 @@ export async function importAll(remote: SyncBundle): Promise<void> {
       continue
     }
     const existing = localHabits.find((h) => h.id === dto.syncId)
-    const row: Habit = { id: dto.syncId, name: dto.name, icon: dto.icon, color: dto.color, order: dto.order, frequencyType: dto.frequencyType as Habit['frequencyType'], timesPerWeek: dto.timesPerWeek ?? undefined, daysOfWeek: dto.daysOfWeek ?? undefined, archived: dto.archived, createdAt: dto.createdAt }
+    const row: Habit = {
+      id: dto.syncId,
+      name: dto.name,
+      icon: dto.icon,
+      color: dto.color,
+      order: dto.order,
+      frequencyType: dto.frequencyType as Habit['frequencyType'],
+      timesPerWeek: dto.timesPerWeek ?? undefined,
+      daysOfWeek: dto.daysOfWeek ?? undefined,
+      archived: dto.archived,
+      createdAt: dto.createdAt
+    }
     if (existing) await db.habits.put(row)
     else await db.habits.add(row)
   }
 
   // 打卡记录（复合主键 [habitId+date]，按 habitSyncId+date 去重合并）
-  const localRecords = (await db.habit_records.toArray()) as HabitRecord[]
+  const localRecords = await db.habit_records.toArray()
   const localRecordDtos: SyncHabitRecordDto[] = localRecords.map((r) => ({
     syncId: `${r.habitId}:${r.date}`,
     habitSyncId: r.habitId,
@@ -286,7 +484,16 @@ export async function importAll(remote: SyncBundle): Promise<void> {
     updatedAt: r.createdAt ?? now,
     deleted: false
   }))
-  const mergedRecords = dedupeByKey(lastWriteWins(localRecordDtos, remote.habitRecords, (t) => t.syncId, (t) => t.updatedAt), (t) => `${t.habitSyncId}:${t.date}`, (t) => t.updatedAt)
+  const mergedRecords = dedupeByKey(
+    lastWriteWins(
+      localRecordDtos,
+      remote.habitRecords,
+      (t) => t.syncId,
+      (t) => t.updatedAt
+    ),
+    (t) => `${t.habitSyncId}:${t.date}`,
+    (t) => t.updatedAt
+  )
   for (const dto of mergedRecords) {
     if (dto.deleted) {
       const row = localRecords.find((r) => r.habitId === dto.habitSyncId && r.date === dto.date)
@@ -294,29 +501,63 @@ export async function importAll(remote: SyncBundle): Promise<void> {
       continue
     }
     const existing = localRecords.find((r) => r.habitId === dto.habitSyncId && r.date === dto.date)
-    const row: HabitRecord = { habitId: dto.habitSyncId, date: dto.date, status: dto.status === 'done' ? 'done' : 'skip', count: dto.count ?? undefined, createdAt: dto.createdAt }
+    const row: HabitRecord = {
+      habitId: dto.habitSyncId,
+      date: dto.date,
+      status: dto.status === 'done' ? 'done' : 'skip',
+      count: dto.count ?? undefined,
+      createdAt: dto.createdAt
+    }
     if (existing) await db.habit_records.put(row)
     else await db.habit_records.add(row)
   }
 
   // 闹钟（映射固化 syncUuid ↔ id）
-  const localAlarms = (await db.hub_alarms.toArray()) as HubAlarm[]
+  const localAlarms = await db.hub_alarms.toArray()
   const localAlarmDtos: SyncAlarmDto[] = []
   for (const r of localAlarms) {
     const { syncUuid, updatedAt } = await lazyUuid('hub_alarms', r.id!, now)
-    localAlarmDtos.push({ syncId: syncUuid, h: r.h, m: r.m, s: r.s, enabled: r.enabled, label: r.label, sound: r.sound ?? null, date: r.date ?? null, lastTriggerKey: r.lastTriggerKey ?? null, createdAt: updatedAt, updatedAt, deleted: false })
+    localAlarmDtos.push({
+      syncId: syncUuid,
+      h: r.h,
+      m: r.m,
+      s: r.s,
+      enabled: r.enabled,
+      label: r.label,
+      sound: r.sound ?? null,
+      date: r.date ?? null,
+      lastTriggerKey: r.lastTriggerKey ?? null,
+      createdAt: updatedAt,
+      updatedAt,
+      deleted: false
+    })
   }
-  const mergedAlarms = lastWriteWins(localAlarmDtos, remote.alarms, (t) => t.syncId, (t) => t.updatedAt)
+  const mergedAlarms = lastWriteWins(
+    localAlarmDtos,
+    remote.alarms,
+    (t) => t.syncId,
+    (t) => t.updatedAt
+  )
   for (const dto of mergedAlarms) {
     const existing = await mappingFor('hub_alarms', dto.syncId)
     if (dto.deleted) {
       if (existing) {
         const row = await db.hub_alarms.get(existing.localId as number)
-        if (row) await db.hub_alarms.delete(row.id!)
+        if (row) await db.hub_alarms.delete(row.id)
       }
       continue
     }
-    const row: HubAlarm = { h: dto.h, m: dto.m, s: dto.s, enabled: dto.enabled, triggered: false, label: dto.label, sound: dto.sound ?? '', date: dto.date ?? undefined, lastTriggerKey: dto.lastTriggerKey ?? undefined }
+    const row: HubAlarm = {
+      h: dto.h,
+      m: dto.m,
+      s: dto.s,
+      enabled: dto.enabled,
+      triggered: false,
+      label: dto.label,
+      sound: dto.sound ?? '',
+      date: dto.date ?? undefined,
+      lastTriggerKey: dto.lastTriggerKey ?? undefined
+    }
     if (existing) {
       row.id = existing.localId as number
       await db.hub_alarms.put(row)
@@ -331,7 +572,16 @@ export async function importAll(remote: SyncBundle): Promise<void> {
 
 // ---------- 传输（经 window.api.sync，主进程 CherrySyncStorage） ----------
 function syncApi() {
-  return (window as unknown as { api: { sync: { getFile: (c: string, cfg: unknown, k: string) => Promise<{ ok: boolean; data?: string; error?: string }>; putFile: (c: string, cfg: unknown, k: string, v: string) => Promise<{ ok: boolean; error?: string }> } } }).api.sync
+  return (
+    window as unknown as {
+      api: {
+        sync: {
+          getFile: (c: string, cfg: unknown, k: string) => Promise<{ ok: boolean; data?: string; error?: string }>
+          putFile: (c: string, cfg: unknown, k: string, v: string) => Promise<{ ok: boolean; error?: string }>
+        }
+      }
+    }
+  ).api.sync
 }
 
 function filesOf(bundle: SyncBundle): Array<[string, string]> {

@@ -21,6 +21,7 @@ import { useDispatch, useSelector, useStore } from 'react-redux'
 import { FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, REHYDRATE } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 
+import iptvSettings from '../pages/iptv/store/iptvSettingsSlice'
 import musicSettings from '../pages/music/store/musicSettingsSlice'
 import hubSettings from '../pages/notes/store/hubSettingsSlice'
 import paint from '../pages/paint/store/paintSlice'
@@ -62,6 +63,7 @@ const rootReducer = combineReducers({
   paint,
   musicSettings,
   hubSettings,
+  iptvSettings,
   translate,
   toolPermissions
 })

@@ -21,6 +21,7 @@ import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMes
 import { Dexie, type EntityTable, type Table } from 'dexie'
 
 import type { Habit, HabitRecord } from '../pages/habits/types'
+import type { IptvChannel, IptvFavorite, IptvHistory, IptvPlaylist } from '../pages/iptv/types'
 import type { KBChunk, KBFile, KnowledgeBase } from '../pages/knowledge/types'
 import type { MusicTrack, RadioStation } from '../pages/music/types'
 import type { HubActivity, HubAlarm, HubDayNote, HubNote, HubNoteSnapshot, HubTodo } from '../pages/notes/types'
@@ -55,6 +56,11 @@ export const db = new Dexie('CherryStudio', {
   kb_files: EntityTable<KBFile, 'id'>
   kb_chunks: EntityTable<KBChunk, 'id'>
   kb_search_index: EntityTable<{ base_id: string; payload: string; updated_at: string }, 'base_id'>
+  // IPTV Tab（播放列表/频道缓存/收藏快照/最近观看快照）
+  iptv_playlists: EntityTable<IptvPlaylist, 'id'>
+  iptv_channels: EntityTable<IptvChannel, 'id'>
+  iptv_favorites: EntityTable<IptvFavorite, 'url'>
+  iptv_history: EntityTable<IptvHistory, 'url'>
 }
 
 db.version(1).stores({
@@ -209,5 +215,14 @@ db.version(14)
     kb_search_index: '&base_id'
   })
   .upgrade((tx) => upgradeToV14(tx))
+
+// --- NEW VERSION 15：IPTV Tab 四张表（播放列表/频道缓存/收藏快照/最近观看快照），无存量数据迁移 ---
+// favorites/history 以 url 为主键：与播放列表生命周期解耦（更新列表=清空重建频道表，收藏不受影响）
+db.version(15).stores({
+  iptv_playlists: '++id, &url', // &url 唯一索引：防重复添加同一源
+  iptv_channels: '++id, playlistId', // 搜索/分组走内存过滤，name/group/tvgId 无需索引
+  iptv_favorites: 'url, addedAt',
+  iptv_history: 'url, playedAt'
+})
 
 export default db

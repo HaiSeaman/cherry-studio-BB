@@ -99,7 +99,15 @@ class ClipboardService {
         if (paths) {
           const fp = 'f|' + paths.join('|')
           cheap = fp
-          make = () => ({ id: randomUUID(), type: 'files', ts: Date.now(), pinned: false, fav: false, fingerprint: fp, paths })
+          make = () => ({
+            id: randomUUID(),
+            type: 'files',
+            ts: Date.now(),
+            pinned: false,
+            fav: false,
+            fingerprint: fp,
+            paths
+          })
         }
       }
       // 2) 图片（需求5：完整保留原图 → PNG 原件落盘，见 capture）
@@ -116,8 +124,14 @@ class ClipboardService {
             this.pendingImage = { image, size, png }
           }
           make = () => ({
-            id: randomUUID(), type: 'image', ts: Date.now(), pinned: false, fav: false, fingerprint: fp,
-            imageW: size.width, imageH: size.height
+            id: randomUUID(),
+            type: 'image',
+            ts: Date.now(),
+            pinned: false,
+            fav: false,
+            fingerprint: fp,
+            imageW: size.width,
+            imageH: size.height
           })
         }
       }
@@ -127,8 +141,13 @@ class ClipboardService {
         if (html) {
           cheap = 'h|' + html
           make = () => ({
-            id: randomUUID(), type: 'html', ts: Date.now(), pinned: false, fav: false,
-            fingerprint: 'h|' + html, html
+            id: randomUUID(),
+            type: 'html',
+            ts: Date.now(),
+            pinned: false,
+            fav: false,
+            fingerprint: 'h|' + html,
+            html
           })
         }
       }
@@ -138,8 +157,13 @@ class ClipboardService {
         if (rtf) {
           cheap = 'r|' + rtf
           make = () => ({
-            id: randomUUID(), type: 'rtf', ts: Date.now(), pinned: false, fav: false,
-            fingerprint: 'r|' + rtf, rtf
+            id: randomUUID(),
+            type: 'rtf',
+            ts: Date.now(),
+            pinned: false,
+            fav: false,
+            fingerprint: 'r|' + rtf,
+            rtf
           })
         }
       }
@@ -152,14 +176,24 @@ class ClipboardService {
           if (color) {
             cheap = 'c|' + color
             make = () => ({
-              id: randomUUID(), type: 'color', ts: Date.now(), pinned: false, fav: false,
-              fingerprint: 'c|' + color, text: color
+              id: randomUUID(),
+              type: 'color',
+              ts: Date.now(),
+              pinned: false,
+              fav: false,
+              fingerprint: 'c|' + color,
+              text: color
             })
           } else {
             cheap = 't|' + clipped
             make = () => ({
-              id: randomUUID(), type: 'text', ts: Date.now(), pinned: false, fav: false,
-              fingerprint: 't|' + clipped, text: clipped
+              id: randomUUID(),
+              type: 'text',
+              ts: Date.now(),
+              pinned: false,
+              fav: false,
+              fingerprint: 't|' + clipped,
+              text: clipped
             })
           }
         }

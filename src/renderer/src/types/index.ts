@@ -474,7 +474,7 @@ export type TranslateLanguage = {
   emoji: string
 }
 
-export type SidebarIcon = 'assistants' | 'minapp' | 'notes' | 'habits' | 'knowledge'
+export type SidebarIcon = 'assistants' | 'minapp' | 'notes' | 'habits' | 'knowledge' | 'iptv'
 
 export type ExternalToolResult = {
   mcpTools?: MCPTool[]

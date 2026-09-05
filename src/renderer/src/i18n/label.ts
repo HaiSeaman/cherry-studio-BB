@@ -131,7 +131,8 @@ const sidebarIconKeyMap = {
   minapp: '小程序',
   notes: '效率助手',
   habits: '打卡',
-  knowledge: '知识库'
+  knowledge: '知识库',
+  iptv: '电视'
 } as const
 
 export const getSidebarIconLabel = (key: string): string => {

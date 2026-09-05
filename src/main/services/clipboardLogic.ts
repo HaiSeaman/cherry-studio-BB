@@ -15,13 +15,16 @@ const isProtected = (i: ClipboardItem): boolean => i.fav || i.pinned
 
 /** 归一化：老版本持久化数据可能缺 fav 字段（JSON 加载兜底） */
 export function normalizeItems(items: unknown[]): ClipboardItem[] {
-  return items.filter(
-    (i): i is ClipboardItem => !!i && typeof (i as ClipboardItem).id === 'string' && typeof (i as ClipboardItem).fingerprint === 'string'
-  ).map((i) => ({
-    ...i,
-    pinned: !!i.pinned,
-    fav: !!i.fav
-  }))
+  return items
+    .filter(
+      (i): i is ClipboardItem =>
+        !!i && typeof (i as ClipboardItem).id === 'string' && typeof (i as ClipboardItem).fingerprint === 'string'
+    )
+    .map((i) => ({
+      ...i,
+      pinned: !!i.pinned,
+      fav: !!i.fav
+    }))
 }
 
 /** 展示排序：收藏/固定区在前（组内按 ts 倒序），其余按 ts 倒序 */
@@ -32,7 +35,10 @@ export function sortForDisplay(items: ClipboardItem[]): ClipboardItem[] {
 }
 
 /** 条数修剪（需求4）：超过 limit 时淘汰最旧的非收藏非固定条目；返回被删条目 */
-export function pruneByCount(items: ClipboardItem[], limit: number): { items: ClipboardItem[]; evicted: ClipboardItem[] } {
+export function pruneByCount(
+  items: ClipboardItem[],
+  limit: number
+): { items: ClipboardItem[]; evicted: ClipboardItem[] } {
   const evicted: ClipboardItem[] = []
   const nonProtected = items.filter((i) => !isProtected(i))
   if (nonProtected.length > limit) {
@@ -67,16 +73,18 @@ export function upsertAndEvict(
 }
 
 /** 清空/清理保留集合：收藏与置顶的条目一律保留（需求3：永不清理），其余返回待删除 */
-export function partitionProtected(
-  items: ClipboardItem[]
-): { keep: ClipboardItem[]; removed: ClipboardItem[] } {
+export function partitionProtected(items: ClipboardItem[]): { keep: ClipboardItem[]; removed: ClipboardItem[] } {
   const keep = items.filter(isProtected)
   const keepIds = new Set(keep.map((i) => i.id))
   return { keep, removed: items.filter((i) => !keepIds.has(i.id)) }
 }
 
 /** 天数修剪（需求4）：删除超过 maxDays 天且未收藏未固定条目；返回被删条目 */
-export function pruneByTime(items: ClipboardItem[], now: number, maxDays: number): { items: ClipboardItem[]; evicted: ClipboardItem[] } {
+export function pruneByTime(
+  items: ClipboardItem[],
+  now: number,
+  maxDays: number
+): { items: ClipboardItem[]; evicted: ClipboardItem[] } {
   const cutoff = now - maxDays * 24 * 60 * 60 * 1000
   const evicted = items.filter((i) => !isProtected(i) && i.ts < cutoff)
   const evictedIds = new Set(evicted.map((i) => i.id))
@@ -97,7 +105,14 @@ export function detectColor(text: string): string | null {
 /** HTML → 纯文本预览（轻量正则去标签+实体；不引入 DOM 依赖） */
 export function stripHtmlText(html: string): string {
   const text = (html || '').replace(/<[^>]+>/g, ' ').replace(/<!--[\s\S]*?-->/g, ' ')
-  const entities: Record<string, string> = { '&nbsp;': ' ', '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" }
+  const entities: Record<string, string> = {
+    '&nbsp;': ' ',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&amp;': '&',
+    '&quot;': '"',
+    '&#39;': "'"
+  }
   return text
     .replace(/&(?:nbsp|lt|gt|amp|quot|#39);/g, (m) => entities[m] ?? ' ')
     .replace(/\s+/g, ' ')
@@ -110,7 +125,11 @@ export function stripHtmlText(html: string): string {
  */
 export function parseFileNameW(buf: Buffer | null): string[] | null {
   if (!buf || buf.length < 2) return null
-  const text = buf.toString('utf16le').replace(/\0+$/, '')
+  let text = buf.toString('utf16le')
+  // 去除尾部空字符：用 charCodeAt 判断而非正则，规避 no-control-regex 误报
+  let end = text.length
+  while (end > 0 && text.charCodeAt(end - 1) === 0) end--
+  text = text.slice(0, end)
   const paths = text
     .split('\0')
     .map((p) => p.trim())

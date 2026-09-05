@@ -461,7 +461,9 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.Backup_CheckS3Connection, backupManager.checkS3Connection.bind(backupManager))
 
   // 跨设备同步：表级 JSON 文件柜（cherry-rk-sync/）
-  ipcMain.handle(IpcChannel.Sync_PutFile, (_e, channel, config, key, content) => syncStorage.putFile(channel, config, key, content))
+  ipcMain.handle(IpcChannel.Sync_PutFile, (_e, channel, config, key, content) =>
+    syncStorage.putFile(channel, config, key, content)
+  )
   ipcMain.handle(IpcChannel.Sync_GetFile, (_e, channel, config, key) => syncStorage.getFile(channel, config, key))
   ipcMain.handle(IpcChannel.Sync_DeleteFile, (_e, channel, config, key) => syncStorage.deleteFile(channel, config, key))
 
