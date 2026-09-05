@@ -15,7 +15,7 @@ class AlarmScheduler {
   private alarms: HubAlarm[] = []
   private lastCheckDate = ''
   private currentRinging: RingingInfo | null = null
-  /** 同一 tick 内多个闹钟到期（90 秒补触发窗口内可能同时命中多个）：排队，停止当前后逐个响 */
+  /** 同一 tick 内多个闹钟到期（90 秒补触发窗口内可能同时命中多个）：排队依次响；用户点「关闭闹钟」时整批清空 */
   private ringQueue: HubAlarm[] = []
   private listeners = new Set<() => void>()
   private timer: ReturnType<typeof setInterval> | null = null
@@ -41,9 +41,10 @@ class AlarmScheduler {
   stopRinging(): void {
     alarmSounds.stop()
     this.currentRinging = null
+    // 用户点「关闭闹钟」= 要求安静：同批排队的闹钟一并清空，不再接力响下一个
+    // （否则点一次只是换下一个接着响，两个关闭按钮看起来都毫无反应）
+    this.ringQueue = []
     this.emit()
-    // 同批到期的闹钟还有排队：继续响下一个
-    this.ringNext()
   }
 
   /** 倒计时结束等外部触发 */
@@ -53,7 +54,11 @@ class AlarmScheduler {
 
   private startRinging(info: RingingInfo, title: string, body: string): void {
     this.currentRinging = info
-    alarmSounds.start(info.sound || 'default')
+    try {
+      alarmSounds.start(info.sound || 'default')
+    } catch {
+      // 无音频设备/Context 创建失败等环境异常：横幅照常显示，不影响停止流程
+    }
     try {
       new Notification(title, { body, silent: true })
     } catch {
@@ -91,7 +96,11 @@ class AlarmScheduler {
           void db.hub_alarms.update(a.id, { triggered: true, lastTriggerKey: a.lastTriggerKey })
         }
       }
-      // 当前无闹钟在响 → 立即响第一个；其余排队，停止当前后逐个响（修复：只响第一个其余静默失效）
+      // 立即把触发标记合并进内存，不等页面 liveQuery 回流：
+      // 否则页面未刷新/已卸载时，同一闹钟在 90 秒窗口内每秒重复入队，关闭后立刻又响
+      const firedById = new Map(result.toFire.filter((a) => a.id != null).map((a) => [a.id, a]))
+      this.alarms = this.alarms.map((a) => (a.id != null ? (firedById.get(a.id) ?? a) : a))
+      // 当前无闹钟在响 → 立即响第一个；其余排队（用户点关闭时整批清空）
       this.ringQueue.push(...result.toFire)
       if (!this.currentRinging) this.ringNext()
     }

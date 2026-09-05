@@ -31,6 +31,7 @@
 11. [测试计划](#11-测试计划)
 12. [已知限制与后续迭代（V1.5+）](#12-已知限制与后续迭代v15)
 13. [风险清单与规避](#13-风险清单与规避)
+14. [1.9.2 版本变更记录（满版布局 + 本地播放器）](#14-192-版本变更记录满版布局--本地播放器)
 
 ---
 
@@ -703,6 +704,43 @@ http://example.com/cctv5.mp4
 
 ---
 
+## 14. 1.9.2 版本变更记录（满版布局 + 本地播放器）
+
+> 1.9.2 对本计划 V1 架构做了三类演进：布局满版化、本地视频播放器融合、健壮性加固。以下为与上文各章节的差异对照，冲突处以本章为准。
+
+### 14.1 布局（对照 §4.1）
+
+- 原三栏 flex 比例（1 : 8 : 1.2 + 播放器 12px 内边距浮卡）**废弃**，改为**满版贴边**：页面容器声明 `width: 100%`（`#root` 为横向 flex，缺此声明整页会被内容宽度收缩成窄条——1.9.1 及之前「播放器显小」的根因）
+- 三栏 **1:8:1 百分比制**：左右栏默认各 10%，`ResizeHandle` 拖拽手柄把 px 位移换算成占比，redux-persist 持久化（`sidebarPercent` / `listPercent`，6~30 夹取）；CSS 侧左栏 `min-width:170px`、右栏 `min-width:220px` 兜底，播放器 `min-width:320px`
+- 播放器外壳去圆角/阴影（知识库式平铺），页面内最大化模式保留
+
+### 14.2 本地视频播放器（新增模块）
+
+- **数据层**：Dexie **version 16** 新表 `iptv_locals`（`++id, &path`，path 唯一去重；`positionSec`/`durationSec` 断点字段）——与频道/收藏表隔离，本地视频不混入 IPTV 历史
+- **服务层**：`services/localMediaService.ts`——`localFileUrl`（file:// 逐段编码）、`isVideoFile` / `VIDEO_EXTENSIONS`、`isLocalUrl`、`hasResumePoint`、`nextLocalIndex` / `stepIndex`（连播策略纯函数）、`clampRate`
+- **内核**（`playerStore`）：file:// 强制 native 引擎（防 `.flv` 误路由 mpegts 直播语义）；本地文件失败**不自动重连**（立即 failed，重试留给手动）；`loadedmetadata` 后一次性 seek 断点；`setOnEnded` 连播回调；`setPlaybackRate`（非法值忽略）；倍速经 `defaultPlaybackRate` 防换源重置
+- **UI**：右栏「电视台 / 本地视频」双 Tab；`LocalVideoList`（虚拟列表）+ `PlayerControls` 腾讯视频式控制条（进度条 / 时间 / 上下曲 / 倍速菜单 / 播放模式 / 旋转 / 截图 / 画中画）；拖拽入窗自动播放（Electron 41 必须经 `window.api.file.getPathForFile` 取路径，`File.path` 已移除）
+- **旋转实现**：旋转状态在 `PlayerArea`（会话级），对单例 video 施加 `rotate(deg) scale(s)`；90°/270° 时 `s = min(h/w, w/h)` 适配，ResizeObserver 跟随舞台尺寸，换 URL 自动复位
+- **截图**：canvas 导出原始画面（不含 CSS 旋转）
+
+### 14.3 状态层（对照 §6.1）
+
+- `iptvSettingsSlice` 新增：`localPlayMode`（order/loopOne/shuffle）、`localRate`（0.25-4）；两侧栏占比字段 `sidebarPercent` / `listPercent`（百分比制，废弃 1.9.1 短暂存在的 px 制 `sidebarWidth` / `listWidth`）
+- 新增 `mergeDefaults` reducer 并在 `store/index.ts` 的 persistStore 回调 dispatch：**redux-persist 装回老存档会整体替换切片，新增字段缺失（undefined）由此补默认值**——与 shortcuts 同套路。本切片未来新增字段必须依赖此机制（1.9.2 曾因缺失此步导致电视页崩溃：`MODE_META[undefined].icon`）
+
+### 14.4 健壮性加固
+
+- 拖拽手柄监听器：卸载时经 `cleanupRef` 拆除（防拖动中途卸载泄漏）
+- 进度条拖动：拖动中走本地 `seekValue`（不被 timeupdate 抢回），`onChangeComplete` 才真正 seek
+- 闹钟调度器（notes 模块联动修复）：`stopRinging` 整批清空 ringQueue；tick 触发标记即时合并进内存（不依赖 liveQuery 回流）；`alarmSounds.stop()` 归零 masterGain 消除余音
+
+### 14.5 测试
+
+- 新增：`localMediaService.test`（15+ 用例）、`playerStore.local.test`（file:// 引擎强制 / 不重连 / 断点 / ended / 倍速 7 用例）、`ResizeHandle.test`（拖拽增量 / 卸载防泄漏 / ref 转发 3 用例）、`PlayerControls.regress.test`（playMode 缺失 / 未知值不崩溃 2 用例）
+- 约定不变：纯函数优先 + jsdom 无 indexedDB / 媒体接口的 mock 边界（见 §11）
+
+---
+
 ## 附录 A：关键文件路径速查
 
 | 操作 | 文件 |
@@ -713,7 +751,7 @@ http://example.com/cctv5.mp4
 | 设置页图标管理 iconMap（**必改**，satisfies 约束） | `src/renderer/src/pages/settings/DisplaySettings/SidebarIconsManager.tsx` |
 | 加路由（lazy + Route 两处） | `src/renderer/src/Router.tsx` |
 | 加图标中文名 | `src/renderer/src/i18n/label.ts` |
-| 追加数据库表 | `src/renderer/src/databases/index.ts`（追加 version 15） |
+| 追加数据库表 | `src/renderer/src/databases/index.ts`（当前最高 version 16；IPTV 新表追加见 §14.2） |
 | 注册设置 slice | `src/renderer/src/store/index.ts`（追加 import + combineReducers） |
 | IPTV 业务代码 | `src/renderer/src/pages/iptv/`（全新目录） |
 

@@ -87,7 +87,8 @@ describe('abortController', () => {
       const fn = vi.fn()
       addAbortController('', fn)
       removeAbortController('', fn)
-      expect(abortMap.get('')).toEqual([])
+      // 数组清空后该 key 会被整个删除（防空数组槽位内存泄漏），不再是保留 []
+      expect(abortMap.get('')).toBeUndefined()
     })
 
     it('should handle non-existent id gracefully', () => {
@@ -109,8 +110,8 @@ describe('abortController', () => {
       // 验证所有函数被调用
       expect(fn1).toHaveBeenCalledTimes(1)
       expect(fn2).toHaveBeenCalledTimes(1)
-      // 验证清理完成 - 数组变为空但条目仍存在
-      expect(abortMap.get('test-id')).toEqual([])
+      // 验证清理完成 - 数组清空后整个 key 被删除（防空数组槽位内存泄漏）
+      expect(abortMap.get('test-id')).toBeUndefined()
     })
 
     it('should handle non-existent id gracefully', () => {

@@ -20,10 +20,7 @@ export const AlarmRingingBanner: FC<AlarmRingingBannerProps> = ({ ringing, onSto
     const handleKeyDown = (e: KeyboardEvent) => {
       // 避免在普通文本输入框打字时误触空格关闭闹钟
       const target = e.target as HTMLElement | null
-      const isInput =
-        target?.tagName === 'INPUT' ||
-        target?.tagName === 'TEXTAREA' ||
-        target?.isContentEditable
+      const isInput = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable
 
       if (e.key === 'Escape' || (e.key === ' ' && !isInput)) {
         e.preventDefault()

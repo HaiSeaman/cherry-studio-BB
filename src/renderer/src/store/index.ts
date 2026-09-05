@@ -21,7 +21,7 @@ import { useDispatch, useSelector, useStore } from 'react-redux'
 import { FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, REHYDRATE } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 
-import iptvSettings from '../pages/iptv/store/iptvSettingsSlice'
+import iptvSettings, { mergeDefaults as mergeIptvDefaults } from '../pages/iptv/store/iptvSettingsSlice'
 import musicSettings from '../pages/music/store/musicSettingsSlice'
 import hubSettings from '../pages/notes/store/hubSettingsSlice'
 import paint from '../pages/paint/store/paintSlice'
@@ -126,6 +126,8 @@ export const persistor = persistStore(store, undefined, () => {
   // initialState and hiding newly added defaults like "screenshot". Dispatch a
   // merge right after rehydration so new shortcuts appear in the settings UI.
   store.dispatch(mergeDefaults())
+  // 同理：老存档没有 iptvSettings 新增字段（如 localPlayMode），补回默认值防止读成 undefined
+  store.dispatch(mergeIptvDefaults())
 
   // Notify main process that Redux store is ready
   void window.electron?.ipcRenderer?.invoke(IpcChannel.ReduxStoreReady)

@@ -172,6 +172,8 @@ class AlarmSounds {
     const buffer = customId ? this.customBuffers.get(customId) : null
     const ctx = ensureCtx()
     ringing = true
+    // 恢复主增益（上次 stop 时为瞬时静音而归零）
+    if (masterGain) masterGain.gain.value = volumePercent / 100
     if (buffer) {
       this.playCustomLoop(ctx, buffer)
       return
@@ -202,6 +204,8 @@ class AlarmSounds {
     tickTimer = null
     if (previewTimer) clearTimeout(previewTimer)
     previewTimer = null
+    // 立即静音主增益：本周期已排期的音符（最长约 1.2s）自然播完但不再可闻，关闭即安静
+    if (masterGain) masterGain.gain.value = 0
     if (this.customSource) {
       try {
         this.customSource.stop()

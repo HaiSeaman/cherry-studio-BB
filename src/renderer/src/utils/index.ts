@@ -14,7 +14,7 @@ export const runAsyncFunction = async (fn: () => Promise<void>): Promise<void> =
   try {
     await fn()
   } catch (error) {
-    logger.error('Unhandled error in runAsyncFunction:', error)
+    logger.error('Unhandled error in runAsyncFunction:', error as Error)
   }
 }
 

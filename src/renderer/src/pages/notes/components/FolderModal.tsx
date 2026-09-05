@@ -102,7 +102,9 @@ const FolderModal: FC<FolderModalProps> = ({
                     }}>
                     确认删除
                   </button>
-                  <button type="button" onClick={() => setDeletingId(null)}>取消</button>
+                  <button type="button" onClick={() => setDeletingId(null)}>
+                    取消
+                  </button>
                 </ConfirmRow>
               ) : (
                 <RowBtns>

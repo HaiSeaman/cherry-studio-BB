@@ -3,6 +3,7 @@ import mpegts from 'mpegts.js'
 import { useSyncExternalStore } from 'react'
 
 import type { IptvChannel, IptvEngineType } from '../types'
+import { clampRate, isLocalUrl } from './localMediaService'
 import { selectEngine } from './m3uService'
 import { initialRetry, onRetryError, onRetryPlaying, type RetryState } from './retryLogic'
 
@@ -40,6 +41,9 @@ class IptvPlayerStore {
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private autoReconnect = true
   private playToken = 0 // 防竞态：切台后旧引擎的迟到错误不再触发重连
+  private startAt = 0 // 本地视频断点：loadedmetadata 后一次性 seek
+  private rate = 1 // 本地视频倍速（页面设置，跨台保持）
+  private onEndedCb: (() => void) | null = null
 
   // >100% 增益链路（懒创建）：MediaElementSource → Gain → destination。
   // ≤100% 时完全不建图，走 video.volume 原生路径零风险；MSE 流（hls/mpegts）blob: URL 无 CORS 污染，
@@ -74,9 +78,30 @@ class IptvPlayerStore {
     this.autoReconnect = v
   }
 
+  /** 本地视频倍速（0.25-4）；起播与换台时重放，直播恒为 1。非法值（含 undefined/NaN）直接忽略 */
+  setPlaybackRate(rate: number): void {
+    if (!Number.isFinite(rate)) return
+    this.rate = clampRate(rate)
+    if (isLocalUrl(this.state.current?.url)) {
+      this.video.defaultPlaybackRate = this.rate
+      this.video.playbackRate = this.rate
+    }
+  }
+
+  /** 本地视频断点续播：跳转（进度条拖动/键盘快进共用） */
+  seekTo(sec: number): void {
+    if (!Number.isFinite(sec)) return
+    this.video.currentTime = Math.max(0, sec)
+  }
+
+  /** 播完自动连播回调（页面注册；仅本地视频会触发语义） */
+  setOnEnded(cb: (() => void) | null): void {
+    this.onEndedCb = cb
+  }
+
   // ---------------- 播放控制 ----------------
 
-  play(channel: IptvChannel, autoplay = true): void {
+  play(channel: IptvChannel, autoplay = true, startAt = 0): void {
     if (this.retryTimer) {
       clearTimeout(this.retryTimer)
       this.retryTimer = null
@@ -84,10 +109,18 @@ class IptvPlayerStore {
     this.playToken += 1
     this.destroyEngines()
 
+    // 本地文件（file://）永远走 native 引擎：selectEngine 按扩展名会把 .flv/.ts 路由到直播引擎
+    // （mpegts isLive 模式），对本地文件是错误语义，这里按协议强制覆盖
+    const isLocal = isLocalUrl(channel.url)
+    const engineType = isLocal ? 'native' : selectEngine(channel.url)
+    this.startAt = Number.isFinite(startAt) && startAt > 0 ? startAt : 0
+    // defaultPlaybackRate 兜底：换 src 后 playbackRate 会被浏览器重置为 defaultPlaybackRate
+    this.video.defaultPlaybackRate = isLocal ? this.rate : 1
+
     // autoplay=false：流照常加载（重连/错误处理不变），但不自动起播，等用户点播放
     this.patch({
       current: channel,
-      engineType: selectEngine(channel.url),
+      engineType,
       status: autoplay ? 'connecting' : 'paused',
       errorMsg: '',
       retry: initialRetry
@@ -234,10 +267,28 @@ class IptvPlayerStore {
     this.video.addEventListener('error', () => {
       if (this.state.engineType === 'native') this.handleError('视频加载失败')
     })
+    // 本地视频断点续播：元数据就绪（时长可知）后一次性 seek 到 startAt
+    this.video.addEventListener('loadedmetadata', () => {
+      if (this.startAt > 0 && this.startAt < (this.video.duration || Number.POSITIVE_INFINITY)) {
+        this.video.currentTime = this.startAt
+      }
+      this.startAt = 0
+    })
+    // 播完（本地视频连播语义）：翻到暂停态（ended 不触发 pause 事件），再通知页面按模式切下一集
+    this.video.addEventListener('ended', () => {
+      this.patch({ status: 'paused' })
+      this.onEndedCb?.()
+    })
   }
 
   private handleError(msg: string): void {
     const token = this.playToken
+    // 本地文件不会"自己恢复"，重连毫无意义：直接进失败态，把重试按钮留给用户手动重载
+    if (isLocalUrl(this.state.current?.url)) {
+      this.destroyEngines()
+      this.patch({ status: 'failed', errorMsg: msg, retry: initialRetry })
+      return
+    }
     const next = onRetryError(this.state.retry, this.autoReconnect)
     if (next.failed) {
       this.destroyEngines()

@@ -38,3 +38,17 @@ export type IptvHistory = {
 
 /** 播放引擎类型（按 URL 后缀路由，见 services/playerStore.ts selectEngine） */
 export type IptvEngineType = 'hls' | 'mpegts' | 'native'
+
+/** 本地视频：path 唯一（&path 索引防重复添加），positionSec 为断点续播位置 */
+export type IptvLocalVideo = {
+  id: number
+  name: string
+  path: string
+  addedAt: number
+  lastPlayedAt: number | null
+  positionSec: number
+  durationSec: number
+}
+
+/** 本地视频播放模式（自动连播策略） */
+export type LocalPlayMode = 'order' | 'loopOne' | 'shuffle'

@@ -21,7 +21,7 @@ import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMes
 import { Dexie, type EntityTable, type Table } from 'dexie'
 
 import type { Habit, HabitRecord } from '../pages/habits/types'
-import type { IptvChannel, IptvFavorite, IptvHistory, IptvPlaylist } from '../pages/iptv/types'
+import type { IptvChannel, IptvFavorite, IptvHistory, IptvLocalVideo, IptvPlaylist } from '../pages/iptv/types'
 import type { KBChunk, KBFile, KnowledgeBase } from '../pages/knowledge/types'
 import type { MusicTrack, RadioStation } from '../pages/music/types'
 import type { HubActivity, HubAlarm, HubDayNote, HubNote, HubNoteSnapshot, HubTodo } from '../pages/notes/types'
@@ -61,6 +61,7 @@ export const db = new Dexie('CherryStudio', {
   iptv_channels: EntityTable<IptvChannel, 'id'>
   iptv_favorites: EntityTable<IptvFavorite, 'url'>
   iptv_history: EntityTable<IptvHistory, 'url'>
+  iptv_locals: EntityTable<IptvLocalVideo, 'id'>
 }
 
 db.version(1).stores({
@@ -223,6 +224,12 @@ db.version(15).stores({
   iptv_channels: '++id, playlistId', // 搜索/分组走内存过滤，name/group/tvgId 无需索引
   iptv_favorites: 'url, addedAt',
   iptv_history: 'url, playedAt'
+})
+
+// --- NEW VERSION 16：IPTV 本地视频表（本地播放器功能），无存量数据迁移 ---
+// &path 唯一索引：同一文件重复添加自动去重；断点续播字段 positionSec/durationSec 播放时回填
+db.version(16).stores({
+  iptv_locals: '++id, &path'
 })
 
 export default db

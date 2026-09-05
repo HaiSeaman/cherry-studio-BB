@@ -23,13 +23,13 @@ describe('Unclassified Utils', () => {
       expect(called).toBe(true)
     })
 
-    it('should throw error if async function fails', async () => {
-      // 验证异步函数抛出错误
+    it('should not throw if async function fails', async () => {
+      // 实现语义：失败只记日志（logger.error），不向外抛出，调用方无需 try/catch
       await expect(
         runAsyncFunction(async () => {
           throw new Error('async error')
         })
-      ).rejects.toThrow('async error')
+      ).resolves.toBeUndefined()
     })
   })
 

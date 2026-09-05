@@ -1,8 +1,11 @@
+import { message } from 'antd'
 import { Volume2, VolumeX } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import styled, { css } from 'styled-components'
+import styled from 'styled-components'
 
+import { basename, hasResumePoint } from '../services/localMediaService'
 import { iptvPlayerStore, useIptvPlayer } from '../services/playerStore'
+import type { LocalPlayMode } from '../types'
 import { Logo } from './Logo'
 import { PlayerControls } from './PlayerControls'
 
@@ -10,9 +13,22 @@ interface PlayerAreaProps {
   volume: number
   muted: boolean
   maximized: boolean
+  /** 正在播本地视频（file://）→ 控制条展开 VOD 功能集 */
+  isLocal: boolean
+  playbackRate: number
+  playMode: LocalPlayMode
   onVolume: (v: number) => void
   onToggleMute: () => void
   onToggleMaximize: () => void
+  onSeek: (sec: number) => void
+  onRate: (rate: number) => void
+  onCycleMode: () => void
+  onPrev: () => void
+  onNext: () => void
+  /** 拖入/选择本地视频（已过滤出路径，含非视频时由页面提示） */
+  onFilesDropped: (paths: string[]) => void
+  /** 本地视频播放进度节流回调（页面负责写断点） */
+  onProgress?: (currentTime: number, duration: number) => void
 }
 
 /** 引擎类型徽标文案 */
@@ -21,14 +37,33 @@ const engineLabel = (t: 'hls' | 'mpegts' | 'native') => (t === 'hls' ? 'HLS' : t
 const VOLUME_MAX = 200
 const WHEEL_STEP = 10 // 每格滚轮 ±10（0-200 全程 20 格，与 YouTube 0-100×5 手感一致）
 const OSD_HIDE_MS = 900
+const PROGRESS_SAVE_MS = 3000 // 断点落盘节流
 
 /**
  * 播放器（剧院式布局）：
  * - 视频区 flex:1 吃满剩余高度，video object-fit:contain 信箱化 → 任意窗口比例下都与左栏精确对齐
  * - 信息条 + 控制条固定底部，永不随内容滚动消失
  * - 双击视频区 = 全屏/退出全屏；滚轮 = 调音量（带 OSD 反馈）
+ * - 本地视频增强：拖文件入窗自动播放、90° 顺时针旋转、截图、画中画
  */
-export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, onToggleMaximize }: PlayerAreaProps) => {
+export const PlayerArea = ({
+  volume,
+  muted,
+  maximized,
+  isLocal,
+  playbackRate,
+  playMode,
+  onVolume,
+  onToggleMute,
+  onToggleMaximize,
+  onSeek,
+  onRate,
+  onCycleMode,
+  onPrev,
+  onNext,
+  onFilesDropped,
+  onProgress
+}: PlayerAreaProps) => {
   const state = useIptvPlayer()
   const stageRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -72,6 +107,135 @@ export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, o
     return () => el.removeEventListener('wheel', onWheel)
   }, [showOSD])
 
+  // ---------------- 播放进度（进度条/时间显示 + 断点节流上报） ----------------
+  const [progress, setProgress] = useState({ time: 0, duration: 0 })
+  const onProgressRef = useRef(onProgress)
+  onProgressRef.current = onProgress
+  const lastSaveRef = useRef(0)
+
+  useEffect(() => {
+    const v = iptvPlayerStore.video
+    const onTime = () => {
+      const duration = Number.isFinite(v.duration) ? v.duration : 0
+      setProgress({ time: v.currentTime, duration })
+      const now = Date.now()
+      // 播放中每 3 秒存一次断点（有有效时长、超过 5s、未临近片尾）；看完的视频下次从头播
+      if (duration > 0 && hasResumePoint(v.currentTime, duration) && now - lastSaveRef.current > PROGRESS_SAVE_MS) {
+        lastSaveRef.current = now
+        onProgressRef.current?.(v.currentTime, duration)
+      }
+    }
+    const onMeta = () => {
+      setProgress({ time: v.currentTime, duration: Number.isFinite(v.duration) ? v.duration : 0 })
+      lastSaveRef.current = Date.now()
+    }
+    v.addEventListener('timeupdate', onTime)
+    v.addEventListener('loadedmetadata', onMeta)
+    v.addEventListener('durationchange', onMeta)
+    return () => {
+      v.removeEventListener('timeupdate', onTime)
+      v.removeEventListener('loadedmetadata', onMeta)
+      v.removeEventListener('durationchange', onMeta)
+    }
+  }, [])
+
+  // ---------------- 画面旋转（0/90/180/270，顺时针每按一次 90°；换片自动复位） ----------------
+  const [rotation, setRotation] = useState(0)
+  const [stageSize, setStageSize] = useState({ w: 0, h: 0 })
+  const currentUrl = state.current?.url ?? ''
+
+  useEffect(() => setRotation(0), [currentUrl])
+
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect
+      if (r) setStageSize({ w: r.width, h: r.height })
+    })
+    ro.observe(stage)
+    return () => ro.disconnect()
+  }, [])
+
+  // 90°/270° 时把整个视频盒子旋转后等比缩放回舞台内（宽高互换的适配方）
+  useEffect(() => {
+    const v = iptvPlayerStore.video
+    if (rotation % 360 === 0) {
+      v.style.transform = ''
+      return
+    }
+    const { w, h } = stageSize
+    const scale = rotation % 180 === 0 || w <= 0 || h <= 0 ? 1 : Math.min(h / w, w / h)
+    v.style.transformOrigin = 'center center'
+    v.style.transform = `rotate(${rotation}deg) scale(${scale})`
+  }, [rotation, stageSize])
+
+  const rotate = useCallback(() => setRotation((r) => (r + 90) % 360), [])
+
+  // ---------------- 拖拽文件入窗（悬停高亮 + 松手交给页面去重入库并起播） ----------------
+  const [dragOver, setDragOver] = useState(false)
+  const dragDepth = useRef(0)
+  const onFilesDroppedRef = useRef(onFilesDropped)
+  onFilesDroppedRef.current = onFilesDropped
+
+  const onDragEnter = (e: React.DragEvent) => {
+    if (![...e.dataTransfer.types].includes('Files')) return
+    e.preventDefault()
+    dragDepth.current += 1
+    setDragOver(true)
+  }
+  const onDragOver = (e: React.DragEvent) => {
+    if (![...e.dataTransfer.types].includes('Files')) return
+    e.preventDefault()
+  }
+  const onDragLeave = () => {
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) setDragOver(false)
+  }
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragOver(false)
+    const paths = [...e.dataTransfer.files].map((f) => window.api.file.getPathForFile(f)).filter(Boolean)
+    if (paths.length > 0) onFilesDroppedRef.current(paths)
+  }
+
+  // ---------------- 截图 / 画中画（直接操作单例 video 元素） ----------------
+  const onSnapshot = useCallback(() => {
+    const v = iptvPlayerStore.video
+    if (!v.videoWidth || !v.videoHeight) {
+      message.warning('还没有可截图的画面')
+      return
+    }
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = v.videoWidth
+      canvas.height = v.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('no 2d context')
+      ctx.drawImage(v, 0, 0)
+      const a = document.createElement('a')
+      a.href = canvas.toDataURL('image/png')
+      // 文件名取 store 内当前名称（快照读取，回调保持零依赖）
+      a.download = `${basename(iptvPlayerStore.getSnapshot().current?.name ?? '视频截图')}-${Date.now()}.png`
+      a.click()
+    } catch {
+      message.error('截图失败：画面受保护或尚未加载')
+    }
+  }, [])
+
+  const onPip = useCallback(async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture()
+      } else {
+        await iptvPlayerStore.video.requestPictureInPicture()
+      }
+    } catch {
+      message.warning('当前状态无法开启画中画')
+    }
+  }, [])
+
   // 单例 video 元素挂到 DOM（卸载时移回文档外，引擎状态保留）
   useEffect(() => {
     const stage = stageRef.current
@@ -90,9 +254,16 @@ export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, o
   }
 
   return (
-    <Root ref={rootRef} $maximized={maximized}>
-      <Stage ref={stageRef} onDoubleClick={toggleFullscreen}>
-        {state.status === 'playing' && (
+    <Root ref={rootRef}>
+      <Stage
+        ref={stageRef}
+        $dragOver={dragOver}
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onDoubleClick={toggleFullscreen}>
+        {state.status === 'playing' && !isLocal && (
           <LiveBadge>
             <LiveDot />
             LIVE
@@ -106,24 +277,29 @@ export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, o
           </VolumeOSD>
         )}
 
+        {dragOver && <DropHint>松开鼠标，添加视频并播放</DropHint>}
+
         {state.status === 'idle' && (
           <Overlay>
-            <BigState>从右侧播放列表选择频道，开始观看</BigState>
+            <BigState>从右侧列表选择频道或视频，开始观看</BigState>
           </Overlay>
         )}
         {state.status === 'connecting' && (
           <Overlay>
             <SpinnerRing />
             <BigState>
-              {state.retry.attempt > 0
-                ? `信号中断 · ${state.retry.waitMs / 1000}s 后自动重连（${state.retry.attempt}/3）`
-                : '正在连接信号…'}
+              {isLocal
+                ? '正在打开视频…'
+                : state.retry.attempt > 0
+                  ? `信号中断 · ${state.retry.waitMs / 1000}s 后自动重连（${state.retry.attempt}/3）`
+                  : '正在连接信号…'}
             </BigState>
           </Overlay>
         )}
         {state.status === 'failed' && (
           <Overlay>
             <BigState $error>{state.errorMsg || '播放失败'}</BigState>
+            {isLocal && <BigState>该文件可能已移动/删除，或编码不受支持</BigState>}
           </Overlay>
         )}
       </Stage>
@@ -133,8 +309,8 @@ export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, o
           <>
             <Logo name={state.current.name} logo={state.current.logo} size={30} />
             <ChannelName title={state.current.name}>{state.current.name}</ChannelName>
-            {state.current.group && <GroupTag>{state.current.group}</GroupTag>}
-            <EngineTag>{engineLabel(state.engineType)}</EngineTag>
+            {state.current.group && !isLocal && <GroupTag>{state.current.group}</GroupTag>}
+            <EngineTag>{isLocal ? '本地' : engineLabel(state.engineType)}</EngineTag>
           </>
         ) : (
           <ChannelName $muted>未在播放</ChannelName>
@@ -146,12 +322,26 @@ export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, o
         volume={volume}
         muted={muted}
         maximized={maximized}
+        isLocal={isLocal}
+        currentTime={progress.time}
+        duration={progress.duration}
+        playbackRate={playbackRate}
+        playMode={playMode}
+        rotation={rotation}
         onToggle={() => iptvPlayerStore.toggle()}
         onVolume={onVolume}
         onToggleMute={onToggleMute}
         onFullscreen={toggleFullscreen}
         onToggleMaximize={onToggleMaximize}
         onRetry={() => iptvPlayerStore.retryNow()}
+        onSeek={onSeek}
+        onRate={onRate}
+        onCycleMode={onCycleMode}
+        onPrev={onPrev}
+        onNext={onNext}
+        onRotate={rotate}
+        onSnapshot={onSnapshot}
+        onPip={() => void onPip()}
       />
     </Root>
   )
@@ -159,37 +349,24 @@ export const PlayerArea = ({ volume, muted, maximized, onVolume, onToggleMute, o
 
 /* ---------------- 剧院暗色面（视频区永远是暗色，与主题无关） ---------------- */
 
-const Root = styled.div<{ $maximized?: boolean }>`
+/** 满版平铺：无圆角无阴影，与左右栏齐平拼接（知识库式满版布局） */
+const Root = styled.div`
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
-  border-radius: 12px;
   overflow: hidden;
   background: #15171c;
-  box-shadow:
-    0 16px 40px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-
-  /* 页面内最大化：去掉悬浮卡圆角，铺满内容区 */
-  ${(p) =>
-    p.$maximized &&
-    css`
-      border-radius: 0;
-      box-shadow: none;
-    `}
-
-  &:fullscreen {
-    border-radius: 0;
-    box-shadow: none;
-  }
 `
 
 /** 视频舞台：吃满剩余高度；video 信箱化适配任意窗口比例（比例修复核心） */
-const Stage = styled.div`
+const Stage = styled.div<{ $dragOver?: boolean }>`
   position: relative;
   flex: 1;
   min-height: 0;
   background: #000;
+  outline: ${(p) => (p.$dragOver ? '2px dashed var(--color-primary)' : 'none')};
+  outline-offset: -2px;
 
   video {
     display: block;
@@ -256,6 +433,21 @@ const LiveBadge = styled.div`
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.16em;
+  pointer-events: none;
+`
+
+/** 拖拽悬停提示：舞台中央的半透明引导条 */
+const DropHint = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   pointer-events: none;
 `
 
