@@ -102,19 +102,26 @@ export async function addLocalVideos(paths: string[]): Promise<number> {
   const existing = new Set((await db.iptv_locals.toArray()).map((v) => v.path))
   const fresh = paths.filter((p) => !existing.has(p))
   if (fresh.length === 0) return 0
-  const now = Date.now()
-  await db.iptv_locals.bulkAdd(
-    fresh.map((p) => ({
-      name: basename(p),
-      path: p,
-      addedAt: now,
-      lastPlayedAt: null,
-      positionSec: 0,
-      durationSec: 0
-    }))
-  )
-  return fresh.length
-}
+    const now = Date.now()
+    try {
+      await db.iptv_locals.bulkAdd(
+        fresh.map((p) => ({
+          name: basename(p),
+          path: p,
+          addedAt: now,
+          lastPlayedAt: null,
+          positionSec: 0,
+          durationSec: 0
+        }))
+      )
+    } catch (e) {
+      // 极快连拖两批的竞态：查重后到落库之间对方已写入同一 path → 唯一索引冲突。
+      // 已写入的部分保留，本次按 0 新增处理（提示"都已在列表中"）；其他错误照常抛出由入口提示
+      if ((e as { name?: string })?.name !== 'ConstraintError') throw e
+      return 0
+    }
+    return fresh.length
+  }
 
 /** 保存断点：只接受有效时长下的有限值（流媒体/加载中的 NaN 一律不写） */
 export async function saveLocalProgress(path: string, positionSec: number, durationSec: number): Promise<void> {

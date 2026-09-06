@@ -21,7 +21,6 @@ describe('PlayerControls 崩溃回归（老存档缺新字段）', () => {
       <PlayerControls
         state={baseState}
         volume={80}
-        muted={false}
         maximized={false}
         isLocal={false}
         currentTime={0}
@@ -54,7 +53,6 @@ describe('PlayerControls 崩溃回归（老存档缺新字段）', () => {
       <PlayerControls
         state={baseState}
         volume={80}
-        muted={false}
         maximized={false}
         isLocal
         currentTime={12}

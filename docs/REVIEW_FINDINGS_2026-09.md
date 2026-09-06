@@ -387,3 +387,32 @@
    - 效率助手（NotesPage）：设计全局顶层置顶 `AlarmRingingBanner`（`z-index: 99999`），支持呼吸动画与键盘 `ESC/Space` 一键秒停，彻底解决被卡片挤压、被遮挡、点击冒泡无反应的顽疾。
 
 > 补充：死文件扫描结论为「无孤立死文件」；static topviewId 死字段已清零；console.log 基本无违规。
+
+---
+
+## 七、追加审查轮（2026-09-06，v1.9.3 未提交改动 + iptv/habits 模块深审）
+
+> 范围：工作区未提交 diff（电视播放器交互 + 打卡备注/图标色板）双轴审查（规范轴/需求轴）+ iptv、habits 模块深度审计 + 死代码/依赖扫描。
+> 方法：5 路并行只读审查员 + 逐条人工核实裁决。基线：typecheck 全绿、oxlint 0/0、eslint 0、Vitest 3840 项 0 失败。
+
+### 已修（全部带锁定测试或人工源码验证）
+
+- **[P1·iptv] 重连定时器误杀自愈流**：`playerStore.ts` 重连等待期内引擎自愈出画（`playing`）后未撤销退避定时器，到点销毁重启健康流。→ `playing` 监听中清除定时器并复位重试状态；新增自愈边界测试。
+- **[P1·habits] 跨设备同步抹掉备注**：`SyncAdapter.ts` `SyncHabitDto` 无 `note` 字段，导入合并 `db.habits.put` 整行覆盖清空备注。→ DTO/导出/导入全链路补 `note`；远端未携带时回退本地值。
+- **[P2·iptv] 自动重连违背暂停意图**：暂停态断流仍自动重连并重新起播。→ 暂停态直接进失败态；新增测试。
+- **[P2·habits] 点格子读-改-写竞态**：`toggleRecord`/`setSkip` 未加事务，快速连点同格可交叉读旧状态。→ 包 `db.transaction`。
+- **[P2·habits] 备份导入不校验日期窗口**：未来/创建前日期污染漏卡与完成率口径。→ `parseHabitsBackup` 校验记录日期 ∈ [对应习惯创建日, 今天]；测试夹具改相对日期防时间漂移。
+- **[P2·iptv] 连拖视频唯一索引竞态静默拒绝**：`addLocalVideos` 查重后 `bulkAdd` 撞 `&path` 冲突未捕获。→ ConstraintError 容忍（已入库部分保留）+ `IptvPage.onFilesDropped` 兜底报错。
+- **[P3] 清理项**：`muted` 死参数链、`HeatmapGrid height` 无人传、`ChannelItem` 杂散 JSX 空格、SyncAdapter 假导出 `Table`、6 处仅内部使用的导出收回（PlayerStatus/MonthDay/YearHeatCell/YearHeatData/MonthRecords/HISTORY_LIMIT）、手写闰年表改 `new Date(y,m,0)`、两处星期数组合并为 `calendar.WEEK_DAYS_CN`、stats 内联周几计算复用 `weekdayOf`、`play`/`stop` 拆卸收敛 `teardown()`、`onProgress`/`onResizeEnd` 收紧必填、习惯保存失败静默→报错提示、导出备份 revokeObjectURL 延迟回收、recordPlay 裁剪加事务、handleError 守卫后多余可选链。
+
+### 审查确认不改（记录结论）
+
+- habits 预留字段 `frequencyType`/`timesPerWeek`/`daysOfWeek`/`count`：设计文档 §3.1 明确"未来支持频率只改 UI 不改表"，属登记在册的预留，不删。
+- `retryLogic.onRetryPlaying`：重连状态机成对 API 的一半（对 `onRetryError`），有独立测试，保留。
+- iptv 与 music 各自的 `formatTime`：语义不同（电视版 h:mm:ss 超集 + UNC 处理），非重复实现，不合并。
+- 规范轴提及的 CONTRIBUTING.md main 分支冻结条款：本 fork 自 1.7.0 起一贯直发 main，不适用上游流程约束。
+
+### 结论
+
+- 无孤儿文件、无未使用依赖（hls.js / mpegts.js / iptv-playlist-parser 均有真实消费方）。
+- 需求轴：电视单击暂停/关闭、打卡备注/图标色板扩容均忠实实现，图标 40（≥2×16）、颜色 24（≥2×10）达标。

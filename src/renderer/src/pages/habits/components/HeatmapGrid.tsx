@@ -20,18 +20,17 @@ interface Props {
   cells: HeatGridCell[]
   labels: { week: number; label: string }[]
   legend?: ReactNode
-  height?: string
 }
 
 /**
  * GitHub 风格热力网格（列=周，7 行，月份标签）——统计视图 5 档完成率热力图
  * 与「自然年统计」单习惯热力图共用同一布局。
  */
-const HeatmapGrid: FC<Props> = ({ cols, cells, labels, legend, height }) => {
+const HeatmapGrid: FC<Props> = ({ cols, cells, labels, legend }) => {
   return (
     <HeatWrap>
       <HeatScroll>
-        <HeatGrid $cols={cols} $height={height}>
+        <HeatGrid $cols={cols}>
           {labels.map((m) => (
             <HeatMonthLabel key={`m-${m.week}`} style={{ gridColumn: m.week + 1, gridRow: 1 }}>
               {m.label}
@@ -66,12 +65,12 @@ const HeatWrap = styled.div`
   min-width: 0;
 `
 
-const HeatGrid = styled.div<{ $cols: number; $height?: string }>`
+const HeatGrid = styled.div<{ $cols: number }>`
   display: grid;
   grid-template-columns: repeat(${(p) => p.$cols}, 1fr);
   grid-template-rows: 16px repeat(7, 1fr);
   gap: 3px;
-  height: ${(p) => p.$height ?? 'clamp(170px, 22vh, 240px)'};
+  height: clamp(170px, 22vh, 240px);
   /* 窄窗口防挤压：格子低于 14px 后横向滚动（滚动区由外层 HeatScroll 提供） */
   min-width: ${(p) => p.$cols * 14}px;
 `

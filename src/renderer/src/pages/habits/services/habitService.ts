@@ -5,20 +5,24 @@
 import { db } from '@renderer/databases'
 
 import type { Habit, HabitRecord } from '../types'
+import { todayISO,toISODate } from './calendar'
 
 /** 点格子：无记录→打 done；done→取消（删行）；skip→改为 done。返回新状态（撤销 toast 判断用） */
 export async function toggleRecord(habitId: string, date: string): Promise<'added' | 'removed'> {
-  const existing = await db.habit_records.get([habitId, date])
-  if (!existing) {
-    await db.habit_records.put({ habitId, date, status: 'done', createdAt: Date.now() })
+  // 事务包裹读改写：同一格子的快速连点不会交叉读到同一旧状态（读-改-写竞态）
+  return db.transaction('rw', db.habit_records, async () => {
+    const existing = await db.habit_records.get([habitId, date])
+    if (!existing) {
+      await db.habit_records.put({ habitId, date, status: 'done', createdAt: Date.now() })
+      return 'added'
+    }
+    if (existing.status === 'done') {
+      await db.habit_records.delete([habitId, date])
+      return 'removed'
+    }
+    await db.habit_records.put({ ...existing, status: 'done', createdAt: Date.now() })
     return 'added'
-  }
-  if (existing.status === 'done') {
-    await db.habit_records.delete([habitId, date])
-    return 'removed'
-  }
-  await db.habit_records.put({ ...existing, status: 'done', createdAt: Date.now() })
-  return 'added'
+  })
 }
 
 /** 恢复某格到指定原状态（撤销操作）：prev 为 null 表示撤销到"无记录" */
@@ -32,27 +36,31 @@ export async function restoreRecord(habitId: string, date: string, prev: HabitRe
 
 /** 跳过标记：skip=true 时 done 改 skip / 无记录建 skip；skip=false 时仅删 skip（不动 done） */
 export async function setSkip(habitId: string, date: string, skip: boolean): Promise<void> {
-  const existing = await db.habit_records.get([habitId, date])
-  if (skip) {
-    if (existing?.status === 'skip') return
-    await db.habit_records.put({ habitId, date, status: 'skip', createdAt: Date.now() })
-    return
-  }
-  if (existing?.status === 'skip') {
-    await db.habit_records.delete([habitId, date])
-  }
+  await db.transaction('rw', db.habit_records, async () => {
+    const existing = await db.habit_records.get([habitId, date])
+    if (skip) {
+      if (existing?.status === 'skip') return
+      await db.habit_records.put({ habitId, date, status: 'skip', createdAt: Date.now() })
+      return
+    }
+    if (existing?.status === 'skip') {
+      await db.habit_records.delete([habitId, date])
+    }
+  })
 }
 
-/** 新建习惯，返回新 id（order 排到末尾） */
-export async function addHabit(input: { name: string; icon: string; color: string }): Promise<string> {
+/** 新建习惯，返回新 id（order 排到末尾）；note 可选，空串不落库 */
+export async function addHabit(input: { name: string; icon: string; color: string; note?: string }): Promise<string> {
   const all = await db.habits.toArray()
   const maxOrder = all.reduce((max, h) => Math.max(max, h.order), 0)
   const id = crypto.randomUUID()
+  const note = input.note?.trim()
   const habit: Habit = {
     id,
     name: input.name,
     icon: input.icon,
     color: input.color,
+    ...(note ? { note } : {}),
     order: maxOrder + 1,
     archived: false,
     createdAt: Date.now(),
@@ -111,7 +119,9 @@ function isValidHabitRow(h: unknown): h is Habit {
     typeof o.color === 'string' &&
     typeof o.order === 'number' &&
     typeof o.archived === 'boolean' &&
-    typeof o.createdAt === 'number'
+    typeof o.createdAt === 'number' &&
+    // note 为可选字段：老备份没有它，新备份必须是非空字符串类型
+    (o.note === undefined || typeof o.note === 'string')
   )
 }
 
@@ -139,6 +149,16 @@ export function parseHabitsBackup(json: string): HabitsBackup {
   // 引用完整性：记录必须挂在已知的习惯上（孤儿记录会静默入库且永不显示）
   const habitIds = new Set(parsed.habits.map((h) => h.id))
   if (!parsed.records.every((r) => habitIds.has(r.habitId))) {
+    throw new Error('invalid habits backup file')
+  }
+  // 日期窗口：记录必须落在对应习惯的 [创建日, 今天] 内——
+  // 创建前的日期会让漏卡判定/完成率失真，未来日期会污染日历与统计
+  const today = todayISO()
+  const createdISOs = new Map(parsed.habits.map((h) => [h.id, toISODate(new Date(h.createdAt))]))
+  if (!parsed.records.every((r) => {
+    const created = createdISOs.get(r.habitId)
+    return !!created && r.date >= created && r.date <= today
+  })) {
     throw new Error('invalid habits backup file')
   }
   return { version: 1, exportedAt: parsed.exportedAt ?? Date.now(), habits: parsed.habits, records: parsed.records }

@@ -20,7 +20,7 @@ export function useArchivedHabits(): Habit[] {
   return useLiveQuery(async () => (await db.habits.toArray()).filter((h) => h.archived).sort(byOrder), [], [])
 }
 
-export interface MonthRecords {
+interface MonthRecords {
   byHabit: Map<string, HabitRecord[]>
 }
 

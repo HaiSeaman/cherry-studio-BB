@@ -1,4 +1,4 @@
-import Dexie, { type Table } from 'dexie'
+import Dexie from 'dexie'
 
 import { db } from '../databases'
 import type { Habit, HabitRecord } from '../pages/habits/types'
@@ -63,6 +63,8 @@ export type SyncDayNoteDto = {
 export type SyncHabitDto = {
   syncId: string
   name: string
+  /** 备注（可选）：手机端旧 schema 无此字段，缺省 null；合并时远端缺省不抹掉本地备注 */
+  note?: string | null
   icon: string
   color: string
   order: number
@@ -244,6 +246,7 @@ export async function exportAll(): Promise<SyncBundle> {
     habits.push({
       syncId,
       name: r.name,
+      note: r.note ?? null,
       icon: r.icon,
       color: r.color,
       order: r.order ?? 0,
@@ -432,6 +435,7 @@ export async function importAll(remote: SyncBundle): Promise<void> {
   const localHabitDtos: SyncHabitDto[] = localHabits.map((r) => ({
     syncId: r.id,
     name: r.name,
+    note: r.note ?? null,
     icon: r.icon,
     color: r.color,
     order: r.order ?? 0,
@@ -456,11 +460,14 @@ export async function importAll(remote: SyncBundle): Promise<void> {
       continue
     }
     const existing = localHabits.find((h) => h.id === dto.syncId)
+    // note 回退：远端（如旧版手机端 schema）没带备注时不抹掉本地已有备注；两边都有则远端（较新）为准
+    const note = dto.note ?? existing?.note
     const row: Habit = {
       id: dto.syncId,
       name: dto.name,
       icon: dto.icon,
       color: dto.color,
+      ...(note ? { note } : {}),
       order: dto.order,
       frequencyType: dto.frequencyType as Habit['frequencyType'],
       timesPerWeek: dto.timesPerWeek ?? undefined,
@@ -656,6 +663,3 @@ export async function loadSyncState(): Promise<{ lastSyncAt?: string; lastImport
     lastImportAt: items[1]?.value
   }
 }
-
-// 供懒引用，避免未使用告警
-export type { Table }

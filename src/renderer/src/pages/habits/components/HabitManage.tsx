@@ -45,7 +45,8 @@ const HabitManage: FC = () => {
     a.href = url
     a.download = `habit-backup-${todayISO().replace(/-/g, '')}.json`
     a.click()
-    URL.revokeObjectURL(url)
+    // 延迟回收：click 触发的下载还没开始读 URL 就 revoke 可能在个别环境把下载掐断
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
   }
 
   const onImportFile = async (file: File) => {
@@ -70,7 +71,7 @@ const HabitManage: FC = () => {
               <Dot $color={h.color} />
               <span className="emoji">{h.icon}</span>
               <span className="name">{h.name}</span>
-              <Spacer />
+              {h.note?.trim() ? <span className="note">{h.note.trim()}</span> : <Spacer />}
               <IconBtn title="编辑" onClick={() => setEditing(h)}>
                 <Pencil size={13} />
               </IconBtn>
@@ -92,7 +93,7 @@ const HabitManage: FC = () => {
               <Dot $color={mx.border} />
               <span className="emoji">{h.icon}</span>
               <span className="name dim">{h.name}</span>
-              <Spacer />
+              {h.note?.trim() ? <span className="note">{h.note.trim()}</span> : <Spacer />}
               <IconBtn title="恢复" onClick={() => onRestore(h)}>
                 <ArchiveRestore size={13} />
               </IconBtn>
@@ -182,6 +183,16 @@ const Item = styled.div`
   }
   .name.dim {
     color: ${mx.text3};
+  }
+  /* 备注灰字占满剩余空间，过长省略；无备注时由 Spacer 补位，操作按钮永远靠右 */
+  .note {
+    flex: 1;
+    min-width: 0;
+    font-size: 11.5px;
+    color: ${mx.text3};
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 `
 

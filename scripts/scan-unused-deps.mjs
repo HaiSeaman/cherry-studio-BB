@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 
 console.log('=== [1/2] 开始编译 Electron 产物 (electron-vite build) ===')
 const viteRes = spawnSync(

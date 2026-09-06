@@ -110,31 +110,35 @@ const IptvPage = () => {
   }, [])
   playLocalRef.current = playLocal
 
-  /** 添加并起播第一个（拖入窗口 / 文件选择共用入口） */
+  /** 添加并起播第一个（拖入窗口 / 文件选择共用入口）；失败兜底提示，不让 Promise 静默拒约 */
   const onFilesDropped = useCallback(async (paths: string[]) => {
-    const videos = paths.filter(isVideoFile)
-    if (videos.length === 0) {
-      message.warning('只支持视频文件（mp4 / mkv / webm / mov 等）')
-      return
-    }
-    setListTab('local')
-    const added = await addLocalVideos(videos)
-    if (added > 0) message.success(`已添加 ${added} 个视频`)
-    else message.info('所选视频都已在列表中')
-    // 起播第一个：优先用库里记录（带断点/时长）
-    const first = videos[0]
-    const stored = (await db.iptv_locals.where('path').equals(first).first()) as IptvLocalVideo | undefined
-    playLocalRef.current(
-      stored ?? {
-        id: 0,
-        name: basename(first),
-        path: first,
-        addedAt: 0,
-        lastPlayedAt: null,
-        positionSec: 0,
-        durationSec: 0
+    try {
+      const videos = paths.filter(isVideoFile)
+      if (videos.length === 0) {
+        message.warning('只支持视频文件（mp4 / mkv / webm / mov 等）')
+        return
       }
-    )
+      setListTab('local')
+      const added = await addLocalVideos(videos)
+      if (added > 0) message.success(`已添加 ${added} 个视频`)
+      else message.info('所选视频都已在列表中')
+      // 起播第一个：优先用库里记录（带断点/时长）
+      const first = videos[0]
+      const stored = await db.iptv_locals.where('path').equals(first).first()
+      playLocalRef.current(
+        stored ?? {
+          id: 0,
+          name: basename(first),
+          path: first,
+          addedAt: 0,
+          lastPlayedAt: null,
+          positionSec: 0,
+          durationSec: 0
+        }
+      )
+    } catch {
+      message.error('添加视频失败，请重试')
+    }
   }, [])
 
   /** 断点落盘（PlayerArea 每 3 秒节流上报一次） */
@@ -390,7 +394,6 @@ const IptvPage = () => {
         <PlayerPane>
           <PlayerArea
             volume={settings.volume}
-            muted={false}
             maximized={maximized}
             isLocal={isLocal}
             playbackRate={settings.localRate}

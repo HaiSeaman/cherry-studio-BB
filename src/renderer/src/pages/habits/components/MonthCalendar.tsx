@@ -4,13 +4,11 @@ import { type FC, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 import { useActiveHabits, useAllRecords, useMonthRecords } from '../hooks/useHabits'
-import { addMonths, monthDays, toISODate, weekdayOf } from '../services/calendar'
+import { addMonths, monthDays, toISODate, WEEK_DAYS_CN, weekdayOf } from '../services/calendar'
 import { restoreRecord, setSkip, toggleRecord } from '../services/habitService'
 import { currentStreak, longestStreak } from '../services/stats'
 import type { Habit, HabitRecord } from '../types'
 import { mx } from './mx'
-
-const WEEK_INITIALS = ['日', '一', '二', '三', '四', '五', '六']
 
 /**
  * B 风格月历：每习惯一行，整月格子从左到右横向展开
@@ -98,7 +96,7 @@ const MonthCalendar: FC<{ today: string; onOpenDetail: (habit: Habit) => void }>
             return (
               <HeaderCell key={d.date} data-day={d.day} $isToday={d.isToday} $isWeekend={wd === 0 || wd === 6}>
                 <span className="d">{d.day}</span>
-                <span className="w">{WEEK_INITIALS[wd]}</span>
+                <span className="w">{WEEK_DAYS_CN[wd]}</span>
               </HeaderCell>
             )
           })}

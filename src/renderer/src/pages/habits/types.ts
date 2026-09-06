@@ -7,6 +7,7 @@
 export interface Habit {
   id: string // uuid（crypto.randomUUID()）
   name: string // 习惯名称，如"戒烟"
+  note?: string // 备注（可选）：补充说明具体要求，如"每天至少 2000ml"；老数据无此字段
   icon: string // emoji 图标，用于列表/详情
   color: string // 主题色 '#RRGGBB'（色板中选，如 #D85A30）
   order: number // 排序权重，升序从上到下

@@ -22,7 +22,6 @@ export const ChannelItem: FC<ChannelItemProps> = ({ channel, active, favorite, o
     onKeyDown={(e) => {
       if (e.key === 'Enter') onPlay(channel)
     }}>
-    {' '}
     <Logo name={channel.name} logo={channel.logo} size={30} />
     <Name title={channel.name}>{channel.name}</Name>
     <FavButton

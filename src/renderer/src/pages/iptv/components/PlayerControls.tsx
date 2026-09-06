@@ -35,7 +35,6 @@ const MODE_META: Record<LocalPlayMode, { icon: typeof Repeat; label: string }> =
 interface PlayerControlsProps {
   state: PlayerState
   volume: number
-  muted: boolean
   maximized: boolean
   /** 正在播本地视频（file://）：显示进度条/上下曲/倍速/模式/旋转/截图等 VOD 控件 */
   isLocal: boolean
@@ -64,7 +63,6 @@ interface PlayerControlsProps {
 export const PlayerControls: FC<PlayerControlsProps> = ({
   state,
   volume,
-  muted,
   maximized,
   isLocal,
   currentTime,
@@ -135,10 +133,10 @@ export const PlayerControls: FC<PlayerControlsProps> = ({
 
         <VolumeGroup $boost={volume > 100}>
           <Ctl onClick={onToggleMute} aria-label="静音" title="静音">
-            {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </Ctl>
           <Slider
-            value={muted ? 0 : volume}
+            value={volume}
             onChange={onVolume}
             min={0}
             max={200}

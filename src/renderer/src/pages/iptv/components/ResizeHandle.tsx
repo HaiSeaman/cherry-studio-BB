@@ -5,7 +5,7 @@ interface ResizeHandleProps {
   /** 拖动中的每次鼠标位移（px，右拖为正）。回调经 ref 转发，拖动期间父组件换新回调也能生效 */
   onResize: (deltaX: number) => void
   /** 松开鼠标（本次拖拽结束） */
-  onResizeEnd?: () => void
+  onResizeEnd: () => void
   ariaLabel: string
 }
 
@@ -39,7 +39,7 @@ export const ResizeHandle = ({ onResize, onResizeEnd, ariaLabel }: ResizeHandleP
       document.body.style.userSelect = ''
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
-      cbRef.current.onResizeEnd?.()
+      cbRef.current.onResizeEnd()
     }
     cleanupRef.current = onUp
     window.addEventListener('mousemove', onMove)

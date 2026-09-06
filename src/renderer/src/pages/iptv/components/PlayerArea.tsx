@@ -1,5 +1,5 @@
 import { message } from 'antd'
-import { Volume2, VolumeX } from 'lucide-react'
+import { Volume2, VolumeX, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 
@@ -11,7 +11,6 @@ import { PlayerControls } from './PlayerControls'
 
 interface PlayerAreaProps {
   volume: number
-  muted: boolean
   maximized: boolean
   /** 正在播本地视频（file://）→ 控制条展开 VOD 功能集 */
   isLocal: boolean
@@ -28,7 +27,7 @@ interface PlayerAreaProps {
   /** 拖入/选择本地视频（已过滤出路径，含非视频时由页面提示） */
   onFilesDropped: (paths: string[]) => void
   /** 本地视频播放进度节流回调（页面负责写断点） */
-  onProgress?: (currentTime: number, duration: number) => void
+  onProgress: (currentTime: number, duration: number) => void
 }
 
 /** 引擎类型徽标文案 */
@@ -38,17 +37,18 @@ const VOLUME_MAX = 200
 const WHEEL_STEP = 10 // 每格滚轮 ±10（0-200 全程 20 格，与 YouTube 0-100×5 手感一致）
 const OSD_HIDE_MS = 900
 const PROGRESS_SAVE_MS = 3000 // 断点落盘节流
+const CLICK_TOGGLE_MS = 250 // 单击暂停/继续的延迟：双击全屏时来不及取消的单击窗口
 
 /**
  * 播放器（剧院式布局）：
  * - 视频区 flex:1 吃满剩余高度，video object-fit:contain 信箱化 → 任意窗口比例下都与左栏精确对齐
  * - 信息条 + 控制条固定底部，永不随内容滚动消失
- * - 双击视频区 = 全屏/退出全屏；滚轮 = 调音量（带 OSD 反馈）
+ * - 单击视频区 = 暂停/继续（失败态 = 重试）；双击 = 全屏/退出全屏；滚轮 = 调音量（带 OSD 反馈）
+ * - 右上角 ✕ = 关闭播放（停引擎断流，回到待机）
  * - 本地视频增强：拖文件入窗自动播放、90° 顺时针旋转、截图、画中画
  */
 export const PlayerArea = ({
   volume,
-  muted,
   maximized,
   isLocal,
   playbackRate,
@@ -122,7 +122,7 @@ export const PlayerArea = ({
       // 播放中每 3 秒存一次断点（有有效时长、超过 5s、未临近片尾）；看完的视频下次从头播
       if (duration > 0 && hasResumePoint(v.currentTime, duration) && now - lastSaveRef.current > PROGRESS_SAVE_MS) {
         lastSaveRef.current = now
-        onProgressRef.current?.(v.currentTime, duration)
+        onProgressRef.current(v.currentTime, duration)
       }
     }
     const onMeta = () => {
@@ -253,6 +253,30 @@ export const PlayerArea = ({
     else void el.requestFullscreen().catch(() => {})
   }
 
+  // ---------------- 单击视频区 = 暂停/继续（与双击全屏的冲突消解：单击延迟执行，双击取消它） ----------------
+  // 点击具体动作交给 store.toggle：播放中→暂停，暂停→继续，失败→重试；待机/连接中由 store 自行忽略
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (clickTimer.current) clearTimeout(clickTimer.current)
+    },
+    []
+  )
+  const onStageClick = () => {
+    if (clickTimer.current) clearTimeout(clickTimer.current)
+    clickTimer.current = setTimeout(() => {
+      clickTimer.current = null
+      iptvPlayerStore.toggle()
+    }, CLICK_TOGGLE_MS)
+  }
+  const onStageDoubleClick = () => {
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current)
+      clickTimer.current = null
+    }
+    toggleFullscreen()
+  }
+
   return (
     <Root ref={rootRef}>
       <Stage
@@ -262,7 +286,19 @@ export const PlayerArea = ({
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        onDoubleClick={toggleFullscreen}>
+        onClick={onStageClick}
+        onDoubleClick={onStageDoubleClick}>
+        {state.current && (
+          <CloseBtn
+            aria-label="关闭播放"
+            title="关闭（停止播放并断开信号，回到待机）"
+            onClick={(e) => {
+              e.stopPropagation() // 关闭动作不触发舞台的单击暂停/双击全屏
+              iptvPlayerStore.stop()
+            }}>
+            <X size={15} />
+          </CloseBtn>
+        )}
         {state.status === 'playing' && !isLocal && (
           <LiveBadge>
             <LiveDot />
@@ -320,7 +356,6 @@ export const PlayerArea = ({
       <PlayerControls
         state={state}
         volume={volume}
-        muted={muted}
         maximized={maximized}
         isLocal={isLocal}
         currentTime={progress.time}
@@ -503,6 +538,32 @@ const LiveDot = styled.span`
       opacity: 0.35;
       transform: scale(0.72);
     }
+  }
+`
+
+/** 右上角关闭按钮：彻底停止播放回到待机（区别于暂停）；悬停转红提示"关闭" */
+const CloseBtn = styled.button`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background: #e5484d;
+    color: #fff;
   }
 `
 

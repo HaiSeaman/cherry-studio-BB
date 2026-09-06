@@ -23,7 +23,7 @@ describe('ResizeHandle（栏间拖拽手柄）', () => {
 
   it('拖动中组件卸载：监听器被拆除，不再上报（防泄漏）', () => {
     const onResize = vi.fn()
-    const { container, unmount } = render(<ResizeHandle onResize={onResize} ariaLabel="拖我" />)
+    const { container, unmount } = render(<ResizeHandle onResize={onResize} onResizeEnd={() => {}} ariaLabel="拖我" />)
 
     fireEvent.mouseDown(container.firstElementChild!, { clientX: 0 })
     unmount()
@@ -37,10 +37,10 @@ describe('ResizeHandle（栏间拖拽手柄）', () => {
   it('回调经 ref 转发：拖动期间父组件换新回调也生效', () => {
     const first = vi.fn()
     const second = vi.fn()
-    const { container, rerender } = render(<ResizeHandle onResize={first} ariaLabel="拖我" />)
+    const { container, rerender } = render(<ResizeHandle onResize={first} onResizeEnd={() => {}} ariaLabel="拖我" />)
     fireEvent.mouseDown(container.firstElementChild!, { clientX: 0 })
 
-    rerender(<ResizeHandle onResize={second} ariaLabel="拖我" />)
+    rerender(<ResizeHandle onResize={second} onResizeEnd={() => {}} ariaLabel="拖我" />)
     fireEvent.mouseMove(window, { clientX: 30 })
 
     expect(second).toHaveBeenCalledWith(30)

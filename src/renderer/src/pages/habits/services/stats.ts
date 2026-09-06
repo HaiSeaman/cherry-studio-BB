@@ -108,10 +108,7 @@ export function weekdayDistribution(
   const denom = new Array(7).fill(0)
   const num = new Array(7).fill(0)
   eachDate(createdISO, today, (d) => {
-    const w = (() => {
-      const [y, m, day] = d.split('-').map(Number)
-      return new Date(y, m - 1, day).getDay()
-    })()
+    const w = weekdayOf(d)
     if (skipSet.has(d)) return
     denom[w]++
     if (doneSet.has(d)) num[w]++
@@ -156,7 +153,7 @@ export function yearlyCheckinStats(
 
 export type HeatCellState = 'done' | 'skip' | 'none' | 'future'
 
-export interface YearHeatCell {
+interface YearHeatCell {
   date: string
   state: HeatCellState
   /** 0 起算的周列序号（Grid 定位用 week+1） */
@@ -165,7 +162,7 @@ export interface YearHeatCell {
   dow: number
 }
 
-export interface YearHeatData {
+interface YearHeatData {
   cols: number
   cells: YearHeatCell[]
   labels: { week: number; label: string }[]

@@ -2,7 +2,10 @@
  * 打卡 TAB 月历日期工具（纯函数，本地时区口径 'YYYY-MM-DD'，与 hub_day_notes 一致）
  */
 
-export interface MonthDay {
+/** 中文星期单字（索引 0=周日…6=周六），月历表头与详情页星期分布共用 */
+export const WEEK_DAYS_CN = ['日', '一', '二', '三', '四', '五', '六'] as const
+
+interface MonthDay {
   date: string // 'YYYY-MM-DD'
   day: number // 1..31
   isToday: boolean
@@ -21,14 +24,9 @@ export function todayISO(): string {
   return toISODate(new Date())
 }
 
-function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
-}
-
 function daysInMonth(year: number, month: number): number {
-  // month: 1~12
-  const table = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-  return table[month - 1]
+  // month: 1~12；new Date(y, m, 0) 即当月最后一天（闰年由 Date 引擎处理，免手写闰年表）
+  return new Date(year, month, 0).getDate()
 }
 
 /** 整月日期序列（1 号到月末），today 用于标记 isToday/isFuture */

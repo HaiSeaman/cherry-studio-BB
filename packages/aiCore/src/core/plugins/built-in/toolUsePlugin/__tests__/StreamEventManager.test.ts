@@ -514,11 +514,13 @@ describe('StreamEventManager', () => {
 
       await manager.handleRecursiveCall(controller, {}, context)
 
-      // Should skip 'start' type and stop at 'finish' type
-      expect(enqueuedChunks).toHaveLength(4)
+      // 跳过 'start'；'finish' 会被转发（递归轮的 totalUsage 在其中，丢弃会永久丢用量），
+      // 转发后立即停止读取
+      expect(enqueuedChunks).toHaveLength(5)
       expect(enqueuedChunks[0]).toEqual({ type: 'start-step', request: {}, warnings: [] })
       expect(enqueuedChunks[1]).toEqual({ type: 'text-delta', id: 'chunk-1', text: 'recursive' })
       expect(enqueuedChunks[2]).toEqual({ type: 'text-delta', id: 'chunk-2', text: ' response' })
+      expect(enqueuedChunks[4]).toEqual(mockChunks[5]) // 转发的 finish 事件（含 totalUsage）
       expect(enqueuedChunks[3]).toMatchObject({
         type: 'finish-step',
         finishReason: 'stop',

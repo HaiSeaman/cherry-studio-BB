@@ -1,13 +1,11 @@
 import { type FC, useMemo } from 'react'
 import styled from 'styled-components'
 
-import { toISODate } from '../services/calendar'
+import { toISODate, WEEK_DAYS_CN } from '../services/calendar'
 import type { HabitDateSets } from '../services/stats'
 import { currentStreak, longestStreak, strengthIndex, weekdayDistribution } from '../services/stats'
 import type { Habit } from '../types'
 import { mx } from './mx'
-
-const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 
 /**
  * 单习惯详情：当前连续 / 最长连续 / 总打卡 / 强度指数 + 星期分布柱状图
@@ -40,6 +38,8 @@ const HabitDetail: FC<{ habit: Habit; today: string; allRecords: Map<string, Hab
         <span className="name">{habit.name}</span>
         <ColorDot $color={habit.color} />
       </HabitHead>
+      {/* 备注是可选字段：老数据/未填写时整行不渲染，不留空壳 */}
+      {habit.note?.trim() && <NoteLine $color={habit.color}>{habit.note.trim()}</NoteLine>}
 
       <MetricRow>
         <Metric>
@@ -69,7 +69,7 @@ const HabitDetail: FC<{ habit: Habit; today: string; allRecords: Map<string, Hab
               <BarFill $color={habit.color} $h={Math.max((v / data.maxDist) * 100, 2)} />
             </BarWrap>
             <BarPct>{v}%</BarPct>
-            <BarLabel>{WEEK_LABELS[i]}</BarLabel>
+            <BarLabel>{WEEK_DAYS_CN[i]}</BarLabel>
           </BarCol>
         ))}
       </WeekChart>
@@ -102,6 +102,18 @@ const ColorDot = styled.span<{ $color: string }>`
   height: 10px;
   border-radius: 50%;
   background: ${(p) => p.$color};
+`
+
+/** 备注行：习惯主题色左边条的引用式卡片（与表单预览同一设计语言） */
+const NoteLine = styled.div<{ $color: string }>`
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, ${(p) => p.$color} 8%, transparent);
+  border-left: 3px solid ${(p) => p.$color};
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: ${mx.text2};
+  word-break: break-word;
 `
 
 const MetricRow = styled.div`

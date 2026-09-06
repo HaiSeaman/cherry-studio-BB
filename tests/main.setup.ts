@@ -25,7 +25,11 @@ vi.mock('electron', () => {
             return '/mock/unknown'
         }
       }),
-      getVersion: vi.fn(() => '1.0.0')
+      getVersion: vi.fn(() => '1.0.0'),
+      // BrowserServer 等进程级单例会在模块加载时注册生命周期监听（app.on('before-quit')）
+      on: vi.fn(),
+      once: vi.fn(),
+      off: vi.fn()
     },
     ipcMain: {
       handle: vi.fn(),

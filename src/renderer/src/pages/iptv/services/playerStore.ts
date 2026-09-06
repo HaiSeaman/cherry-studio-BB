@@ -7,7 +7,7 @@ import { clampRate, isLocalUrl } from './localMediaService'
 import { selectEngine } from './m3uService'
 import { initialRetry, onRetryError, onRetryPlaying, type RetryState } from './retryLogic'
 
-export type PlayerStatus = 'idle' | 'connecting' | 'playing' | 'paused' | 'failed'
+type PlayerStatus = 'idle' | 'connecting' | 'playing' | 'paused' | 'failed'
 
 export type PlayerState = {
   current: IptvChannel | null
@@ -102,12 +102,7 @@ class IptvPlayerStore {
   // ---------------- 播放控制 ----------------
 
   play(channel: IptvChannel, autoplay = true, startAt = 0): void {
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer)
-      this.retryTimer = null
-    }
-    this.playToken += 1
-    this.destroyEngines()
+    this.teardown()
 
     // 本地文件（file://）永远走 native 引擎：selectEngine 按扩展名会把 .flv/.ts 路由到直播引擎
     // （mpegts isLive 模式），对本地文件是错误语义，这里按协议强制覆盖
@@ -143,6 +138,16 @@ class IptvPlayerStore {
       if (status === 'failed') return this.retryNow()
       void this.video.play().catch(() => {})
     }
+  }
+
+  /** 关闭播放（播放器右上角 ✕）：停引擎 + 掐断网络流，回到待机态；从列表重新选择才开始 */
+  stop(): void {
+    this.teardown()
+    // removeAttribute+load 才真正断流：pause 只是停止渲染，native 直连仍会继续下载
+    this.video.pause()
+    this.video.removeAttribute('src')
+    this.video.load()
+    this.patch({ ...INIT })
   }
 
   /**
@@ -248,19 +253,36 @@ class IptvPlayerStore {
     }
   }
 
+  /** 换台（play）与关闭（stop）共用的拆卸序列：撤掉待执行的重连、作废旧 token、销毁引擎 */
+  private teardown(): void {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer)
+      this.retryTimer = null
+    }
+    this.playToken += 1
+    this.destroyEngines()
+  }
+
   // ---------------- 事件 ----------------
 
   private bindNativeEvents(): void {
     this.video.addEventListener('playing', () => {
       if (this.state.status === 'connecting' || this.state.retry.attempt > 0) {
+        // 重连等待期内引擎自愈并真正出画：必须撤掉待执行的重连定时器，
+        // 否则定时器到点会把这条已恢复的流销毁重启（自愈反被误杀）
+        if (this.retryTimer) {
+          clearTimeout(this.retryTimer)
+          this.retryTimer = null
+        }
         this.patch({ status: 'playing', errorMsg: '', retry: onRetryPlaying(this.state.retry) })
       } else {
         this.patch({ status: 'playing' })
       }
     })
     this.video.addEventListener('pause', () => {
-      // 切台销毁旧引擎时浏览器会异步补发 pause 事件——忽略它，防止把 connecting 翻成 paused（覆盖层闪烁）
-      if (this.state.status === 'connecting') return
+      // 切台/关闭时浏览器会异步补发 pause 事件——connecting 是新流正在连接，current 为空是已关闭待机，
+      // 两者都不能翻成 paused（覆盖层闪烁 / 黑屏无提示）
+      if (this.state.status === 'connecting' || !this.state.current) return
       this.patch({ status: 'paused' })
     })
     // video error 只在 native 引擎处理：hls/mpegts 走各自错误通道，避免双触发导致重连计数跳级
@@ -283,8 +305,15 @@ class IptvPlayerStore {
 
   private handleError(msg: string): void {
     const token = this.playToken
+    if (!this.state.current) return // 已关闭待机：旧引擎的迟到错误直接丢弃，别把 idle 翻回 connecting/failed
+    // 用户已主动暂停：自动重连会违背暂停意图把画面重新起播，直接进失败态，等用户回来手动处理
+    if (this.state.status === 'paused') {
+      this.destroyEngines()
+      this.patch({ status: 'failed', errorMsg: msg, retry: initialRetry })
+      return
+    }
     // 本地文件不会"自己恢复"，重连毫无意义：直接进失败态，把重试按钮留给用户手动重载
-    if (isLocalUrl(this.state.current?.url)) {
+    if (isLocalUrl(this.state.current.url)) {
       this.destroyEngines()
       this.patch({ status: 'failed', errorMsg: msg, retry: initialRetry })
       return

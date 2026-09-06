@@ -2,7 +2,7 @@ import db from '@renderer/databases'
 
 import type { IptvChannel, IptvFavorite, IptvHistory } from '../types'
 
-export const HISTORY_LIMIT = 50
+const HISTORY_LIMIT = 50
 
 /** 全量加载所有播放列表的频道（orderBy(':id') = 插入顺序 = M3U 原始顺序），后续过滤全在内存做 */
 export async function loadChannels(): Promise<IptvChannel[]> {
@@ -56,15 +56,16 @@ export async function toggleFavorite(channel: Pick<IptvChannel, 'url' | 'name' |
 
 export async function recordPlay(channel: Pick<IptvChannel, 'url' | 'name' | 'logo'>) {
   await db.iptv_history.put({ url: channel.url, name: channel.name, logo: channel.logo, playedAt: Date.now() })
-  // 超上限删最旧
-  const total = await db.iptv_history.count()
-  if (total > HISTORY_LIMIT) {
+  // 超上限删最旧（事务包裹读改写：快速连开两个台并发裁剪时不会重复多删）
+  await db.transaction('rw', db.iptv_history, async () => {
+    const total = await db.iptv_history.count()
+    if (total <= HISTORY_LIMIT) return
     const oldest = await db.iptv_history
       .orderBy('playedAt')
       .limit(total - HISTORY_LIMIT)
       .toArray()
     await db.iptv_history.bulkDelete(oldest.map((h) => h.url))
-  }
+  })
 }
 
 export async function getRecent(limit = HISTORY_LIMIT): Promise<IptvHistory[]> {
