@@ -10,15 +10,15 @@
     "moduleResolution": "bundler",
     "noEmitOnError": false,
     "outDir": "./dist",
+    "paths": {
+      "@test-utils": ["./test_utils"],
+      "@test-utils/*": ["./test_utils/*"]
+    },
     "resolveJsonModule": true,
     "rootDir": ".",
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2020",
-    "paths": {
-      "@test-utils": ["./test_utils"],
-      "@test-utils/*": ["./test_utils/*"]
-    }
+    "target": "ES2020"
   },
   "exclude": ["node_modules", "dist"],
   "include": ["src/**/*", "test_utils/**/*"]

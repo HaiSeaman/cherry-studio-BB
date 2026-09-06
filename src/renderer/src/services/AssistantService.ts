@@ -142,12 +142,6 @@ export function getProviderByModel(model?: Model): Provider {
 }
 
 // FIXME: This function may return undefined but as Provider
-export function getProviderByModelId(modelId?: string) {
-  const providers = getStoreProviders()
-  const _modelId = modelId || getDefaultModel().id
-  return providers.find((p) => p.models.find((m) => m.id === _modelId)) as Provider
-}
-
 /**
  * Retrieves and normalizes assistant settings with special transformation handling.
  *

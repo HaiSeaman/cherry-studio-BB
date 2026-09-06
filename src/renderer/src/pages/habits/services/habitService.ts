@@ -5,7 +5,7 @@
 import { db } from '@renderer/databases'
 
 import type { Habit, HabitRecord } from '../types'
-import { todayISO,toISODate } from './calendar'
+import { todayISO, toISODate } from './calendar'
 
 /** 点格子：无记录→打 done；done→取消（删行）；skip→改为 done。返回新状态（撤销 toast 判断用） */
 export async function toggleRecord(habitId: string, date: string): Promise<'added' | 'removed'> {
@@ -155,10 +155,12 @@ export function parseHabitsBackup(json: string): HabitsBackup {
   // 创建前的日期会让漏卡判定/完成率失真，未来日期会污染日历与统计
   const today = todayISO()
   const createdISOs = new Map(parsed.habits.map((h) => [h.id, toISODate(new Date(h.createdAt))]))
-  if (!parsed.records.every((r) => {
-    const created = createdISOs.get(r.habitId)
-    return !!created && r.date >= created && r.date <= today
-  })) {
+  if (
+    !parsed.records.every((r) => {
+      const created = createdISOs.get(r.habitId)
+      return !!created && r.date >= created && r.date <= today
+    })
+  ) {
     throw new Error('invalid habits backup file')
   }
   return { version: 1, exportedAt: parsed.exportedAt ?? Date.now(), habits: parsed.habits, records: parsed.records }

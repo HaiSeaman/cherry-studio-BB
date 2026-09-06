@@ -186,7 +186,7 @@ const FmRadio: FC = () => {
   }, [searchText, searchMode])
 
   // rawList 依赖 tab 状态切换，必须在 useMemo 内计算：
-// 每次渲染新建的数组引用（尤其 favorites || [] 兜底）会让下方 stations memo 依赖漂移而整体失效
+  // 每次渲染新建的数组引用（尤其 favorites || [] 兜底）会让下方 stations memo 依赖漂移而整体失效
   const rawList: RadioStation[] = useMemo(
     () => (tab === 'top' ? topList : tab === 'cnhk' ? cnhkList : tab === 'search' ? searchList : favorites || []),
     [tab, topList, cnhkList, searchList, favorites]

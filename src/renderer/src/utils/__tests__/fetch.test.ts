@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { fetchWebContent, fetchWebContents } from '../fetch'
+
 // Mock 外部依赖
 vi.mock('turndown', () => ({
   default: vi.fn(() => ({
@@ -18,8 +20,6 @@ vi.mock('@mozilla/readability', () => ({
 vi.mock('@reduxjs/toolkit', () => ({
   nanoid: vi.fn(() => 'test-id')
 }))
-
-import { fetchRedirectUrl, fetchWebContent, fetchWebContents } from '../fetch'
 
 // 设置基础 mocks
 global.DOMParser = vi.fn().mockImplementation(() => ({
@@ -178,29 +178,6 @@ describe('fetch', () => {
       expect(results).toHaveLength(2)
       expect(results[0].content).toBe('# Test content')
       expect(results[1].content).toBe('No content found')
-
-      consoleSpy.mockRestore()
-    })
-  })
-
-  describe('fetchRedirectUrl', () => {
-    it('should return final redirect URL', async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce({
-        url: 'https://redirected.com/final'
-      } as any)
-
-      const result = await fetchRedirectUrl('https://example.com')
-
-      expect(result).toBe('https://redirected.com/final')
-      expect(global.fetch).toHaveBeenCalledWith('https://example.com', expect.any(Object))
-    })
-
-    it('should return original URL on error', async () => {
-      vi.mocked(global.fetch).mockRejectedValueOnce(new Error('Network error'))
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-      const result = await fetchRedirectUrl('https://example.com')
-      expect(result).toBe('https://example.com')
 
       consoleSpy.mockRestore()
     })

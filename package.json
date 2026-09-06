@@ -1,6 +1,6 @@
 {
   "name": "CherryStudio",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "private": true,
   "description": "A powerful AI assistant for producer.",
   "desktopName": "CherryStudio.desktop",
@@ -33,6 +33,7 @@
     "test:renderer": "vitest run --project renderer",
     "test:aicore": "vitest run --project aiCore",
     "test:shared": "vitest run --project shared",
+    "check:theme-cascade": "electron scripts/cascade-check.js",
     "test:update": "pnpm test:renderer --update",
     "test:coverage": "vitest run --coverage --silent",
     "test:ui": "vitest --ui",

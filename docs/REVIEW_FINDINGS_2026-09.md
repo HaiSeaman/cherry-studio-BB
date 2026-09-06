@@ -416,3 +416,36 @@
 
 - 无孤儿文件、无未使用依赖（hls.js / mpegts.js / iptv-playlist-parser 均有真实消费方）。
 - 需求轴：电视单击暂停/关闭、打卡备注/图标色板扩容均忠实实现，图标 40（≥2×16）、颜色 24（≥2×10）达标。
+
+---
+
+## 八、追加审查轮（2026-09-07，v1.9.4 未提交改动三轴审查 + 全仓 ponytail-audit）
+
+> 范围：工作区未提交 diff（主题 @layer 修复 + 删跨设备同步 + V2 清理）code-review 双轴（规范轴/需求轴）+ ponytail-audit 全仓扫描。
+> 方法：3 路并行只读审查员，全部发现逐条人工复核引用链后裁决（audit 误报率约 40%，剔除 8 项）。
+> 基线：typecheck 三端全绿、CI 0/0、Vitest 3794 项 0 失败、完整构建通过、主题层叠回归 6/6。
+
+### 已修（引用链逐条核实）
+
+- **[P1·主题] 自定义 CSS 被内置主题特异性压制**：`color.css` 主题分支 `[theme-mode][theme-id]`（0,2,0）压过 cherrycss 主题与用户 CSS 常规写法（0,1,1）。→ 全文包进 `@layer theme-color` + 首行层顺序声明（高于 Tailwind theme 层）；自定义 CSS（un-layered）按规范全胜。回归脚本 `scripts/cascade-check.js` 接线 `npm run check:theme-cascade`（Electron 无界面窗口实测 6 断言）。
+- **[P1·死代码] 整体删除跨设备同步**：CrossDeviceSyncSettings / SyncAdapter / CherrySyncStorage + IPC 三通道 + preload api.sync + 菜单项，全仓零残留。StoreSyncService（窗口间 Redux 同步）与 S3/WebDAV/本地备份为独立功能，保留。
+- **[P2·死代码] V2 遗留**：注释掉的 `loadTopicMessagesThunkV2` 死代码 + 26 个文件头部 v2 迁移警告注释块（每文件 16-19 行纯注释）。
+- **[P2·死代码] 引用链核实后退役**：`is.ts` 6 个零调用类型守卫；`useProvider` 3 死 hook + 2 死选择器；`getModelById`/`getProviderByModelId`/`requestUserConfirmation`/`getProviderNameById`/`isProviderSupportCharge`/`getEnableDeveloperMode`/`fetchRedirectUrl`；shared 6 死导出 + `SENSITIVE_ENV_KEYS`/`NON_FUNCTIONAL_KEYS` 孤儿常量；配套测试段同步清理（`filterAdjacentUserMessaegs` 拼写错误弃用别名的测试改挂正名，覆盖保留）。
+- **[P2·重复设计] collection.ts 整体退役**：65 行手写泛型集合工具 + 268 行测试，两个生产调用点换 lodash `union`/`difference`/`unionBy`。
+- **[P3·重复收敛] 画图/视频历史 `fmtTime`**：两处逐字相同 → dayjs 一行（TodoPanel MM-dd HH:mm、iptv h:mm:ss+UNC、music 时长格式语义不同，不合并）。
+- **[P3·重复设计] Local/WebDAV 设置页**逐字重复的同步间隔/最大备份数/管理弹窗逻辑 → 共享 `useBackupSettings`（S3 为整包更新模式形状不同，保持原样）。
+- **[P3·脚本] `scan-unused-deps.mjs`** 名实修正（实为编译+打包 EXE），硬编码版本号改读 package.json；`dist-build.log` 误留文件删除；cascade-check.js 接线 package.json。
+
+### 审查确认不改（记录结论）
+
+- **audit 误报保留（活代码）**：`buildClaudeCodeSystemMessage`（AiProvider OAuth 链在用）、`checkModelWithMultipleKeys`（checkModelsHealth→useHealthCheck 在用）、`findCitationBlocks`（getCitationContent→export.ts 在用）、`formatAxiosError`（formatErrorMessage 五处在用）、`estimateImageTokens`（TokenService 内部链在用）、WebSearchSettings 手写 logo 表（key/value 与 config/providers 的 AI 提供商表完全不同空间）、`ollama-ai-provider-v2`（现役 provider，v2 为 AI SDK 协议版本）、高计数符号（getBaseModelName 17 处等）。
+- **MessageDataSource 单实现接口**：DbService 迁移期接缝，拆除收益小于间接层成本，保留。
+- **`uniqueObjectArray`**：2 个调用方 + 清晰实现，重写 lodash 无净收益。
+- **LocalBackup/S3/WebDav 三页 JSX 全量抽组件**：差异点过多（目录校验/凭据表单/文案），仅抽状态逻辑 hook，不做 10+ props 参数化怪物。
+- **用户数据残留**：`RKSyncStore` IndexedDB 库与 `rk-cross-device-sync` localStorage 无代码引用，无害不清。
+- **v1.9.0 台账遗留核对**：`getDifference`/`getUnion` 泛型机器（当时 P2）本轮已随 collection.ts 退役；`scan-unused-deps.mjs` 名实问题本轮已修。
+
+### 结论
+
+- 无新增孤儿文件；依赖零冗余（全部 dependencies/devDependencies 逐一核对）；净删约 2700 行。
+- 需求轴：主题共存（un-layered 全胜 + 8 主题保留）、删同步（零残留 + 独立功能零误伤）、V2 清理（注释级清理零代码变动）均忠实实现。

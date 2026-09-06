@@ -4,7 +4,6 @@ import { HStack } from '@renderer/components/Layout'
 import Selector from '@renderer/components/Selector'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { startAutoSync, stopAutoSync } from '@renderer/services/BackupService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
   setWebdavAllowSelfSignedCertificate as _setWebdavAllowSelfSignedCertificate,
@@ -25,6 +24,7 @@ import { useState } from 'react'
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
 import { BACKUP_MAX_KEEP_OPTIONS, BACKUP_SYNC_INTERVAL_OPTIONS } from './backupOptions'
 import { SyncStatus } from './SyncStatus'
+import { useBackupSettings } from './useBackupSettings'
 
 const WebDavSettings: FC = () => {
   const {
@@ -48,10 +48,6 @@ const WebDavSettings: FC = () => {
   const [webdavAllowSelfSignedCertificate, setWebdavAllowSelfSignedCertificate] = useState<boolean>(
     webDAVAllowSelfSignedCertificate
   )
-  const [backupManagerVisible, setBackupManagerVisible] = useState(false)
-
-  const [syncInterval, setSyncInterval] = useState<number>(webDAVSyncInterval)
-  const [maxBackups, setMaxBackups] = useState<number>(webDAVMaxBackups)
 
   const dispatch = useAppDispatch()
   const { theme } = useTheme()
@@ -60,22 +56,22 @@ const WebDavSettings: FC = () => {
 
   // 把之前备份的文件定时上传到 webdav，首先先配置 webdav 的 host, port, user, pass, path
 
-  const onSyncIntervalChange = (value: number) => {
-    setSyncInterval(value)
-    dispatch(_setWebdavSyncInterval(value))
-    if (value === 0) {
-      dispatch(setWebdavAutoSync(false))
-      stopAutoSync('webdav')
-    } else {
-      dispatch(setWebdavAutoSync(true))
-      startAutoSync(false, 'webdav')
-    }
-  }
-
-  const onMaxBackupsChange = (value: number) => {
-    setMaxBackups(value)
-    dispatch(_setWebdavMaxBackups(value))
-  }
+  const {
+    syncInterval,
+    maxBackups,
+    backupManagerVisible,
+    onSyncIntervalChange,
+    onMaxBackupsChange,
+    showBackupManager,
+    closeBackupManager
+  } = useBackupSettings({
+    syncInterval: webDAVSyncInterval,
+    maxBackups: webDAVMaxBackups,
+    setSyncIntervalAction: _setWebdavSyncInterval,
+    setMaxBackupsAction: _setWebdavMaxBackups,
+    setAutoSyncAction: setWebdavAutoSync,
+    channel: 'webdav'
+  })
 
   const onSkipBackupFilesChange = (value: boolean) => {
     setWebdavSkipBackupFile(value)
@@ -94,14 +90,6 @@ const WebDavSettings: FC = () => {
 
   const { isModalVisible, handleBackup, handleCancel, backuping, customFileName, setCustomFileName, showBackupModal } =
     useWebdavBackupModal()
-
-  const showBackupManager = () => {
-    setBackupManagerVisible(true)
-  }
-
-  const closeBackupManager = () => {
-    setBackupManagerVisible(false)
-  }
 
   return (
     <SettingGroup theme={theme}>

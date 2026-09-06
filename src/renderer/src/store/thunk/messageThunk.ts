@@ -502,16 +502,6 @@ export const sendMessage =
   }
 
 /**
- * Loads messages and their blocks for a specific topic from the database
- * and updates the Redux store.
- */
-// export const loadTopicMessagesThunk =
-//   (topicId: string, forceReload: boolean = false) =>
-//   async (dispatch: AppDispatch, getState: () => RootState) => {
-//     return loadTopicMessagesThunkV2(topicId, forceReload)(dispatch, getState)
-//   }
-
-/**
  * Thunk to delete a single message and its associated blocks.
  */
 export const deleteSingleMessageThunk =
@@ -1307,9 +1297,6 @@ export const removeBlocksThunk =
       throw error
     }
   }
-
-//以下内容从原 messageThunk.v2.ts 迁移过来，原文件已经删除
-//原因：v2.ts并不是v2数据重构的一部分，而相关命名对v2重构造成重大误解，故两文件合并，以消除误解
 
 /**
  * Load messages for a topic using unified DbService

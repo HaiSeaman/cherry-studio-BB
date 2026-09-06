@@ -52,7 +52,6 @@ vi.mock('@renderer/services/AssistantService', () => {
     getDefaultTopic: () => createDefaultTopic(),
     getAssistantProvider: () => ({}),
     getProviderByModel: () => ({}),
-    getProviderByModelId: () => ({}),
     getAssistantById: () => createDefaultAssistant(),
     getQuickModel: () => null,
     getTranslateModel: () => null,

@@ -12,13 +12,10 @@ import {
   updateProvider,
   updateProviders
 } from '@renderer/store/llm'
-import type { Assistant, Model, Provider } from '@renderer/types'
-import { isSystemProvider } from '@renderer/types'
+import type { Model, Provider } from '@renderer/types'
 import { isNewApiProvider } from '@renderer/utils/provider'
 import { withoutTrailingSlash } from '@shared/utils'
 import { useCallback, useMemo } from 'react'
-
-import { useDefaultModel } from './useAssistant'
 
 /**
  * Normalizes provider apiHost by removing trailing slashes.
@@ -40,14 +37,6 @@ const selectEnabledProviders = createSelector(selectProviders, (providers) =>
     .concat(CHERRYAI_PROVIDER)
 )
 
-const selectSystemProviders = createSelector(selectProviders, (providers) =>
-  providers.filter((p) => isSystemProvider(p)).map(normalizeProvider)
-)
-
-const selectUserProviders = createSelector(selectProviders, (providers) =>
-  providers.filter((p) => !isSystemProvider(p)).map(normalizeProvider)
-)
-
 const selectAllProviders = createSelector(selectProviders, (providers) => providers.map(normalizeProvider))
 
 const selectAllProvidersWithCherryAI = createSelector(selectProviders, (providers) =>
@@ -65,14 +54,6 @@ export function useProviders() {
     updateProvider: (updates: Partial<Provider> & { id: string }) => dispatch(updateProvider(updates)),
     updateProviders: (providers: Provider[]) => dispatch(updateProviders(providers))
   }
-}
-
-export function useSystemProviders() {
-  return useAppSelector(selectSystemProviders)
-}
-
-export function useUserProviders() {
-  return useAppSelector(selectUserProviders)
 }
 
 export function useAllProviders() {
@@ -111,11 +92,4 @@ export function useProvider(id: string) {
     removeModel: (model: Model) => dispatch(removeModel({ providerId: id, model })),
     updateModel: (model: Model) => dispatch(updateModel({ providerId: id, model }))
   }
-}
-
-export function useProviderByAssistant(assistant: Assistant) {
-  const { defaultModel } = useDefaultModel()
-  const model = assistant.model || defaultModel
-  const { provider } = useProvider(model.provider)
-  return provider
 }

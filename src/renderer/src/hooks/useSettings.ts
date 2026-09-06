@@ -132,10 +132,6 @@ export const useEnableDeveloperMode = () => {
   }
 }
 
-export const getEnableDeveloperMode = () => {
-  return store.getState().settings.enableDeveloperMode
-}
-
 export const useNavbarPosition = () => {
   const navbarPosition = useAppSelector((state) => state.settings.navbarPosition)
   const dispatch = useAppDispatch()

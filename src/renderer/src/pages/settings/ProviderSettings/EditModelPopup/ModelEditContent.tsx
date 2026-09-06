@@ -19,11 +19,11 @@ import {
 } from '@renderer/config/models'
 import { getDynamicLabelWidth } from '@renderer/hooks/useDynamicLabelWidth'
 import type { Model, ModelCapability, ModelType, Provider } from '@renderer/types'
-import { getDefaultGroupName, getDifference, getUnion, uniqueObjectArray } from '@renderer/utils'
+import { getDefaultGroupName, uniqueObjectArray } from '@renderer/utils'
 import { isNewApiProvider } from '@renderer/utils/provider'
 import type { ModalProps } from 'antd'
 import { Button, Divider, Flex, Form, Input, InputNumber, message, Modal, Select, Switch, Tooltip } from 'antd'
-import { cloneDeep } from 'lodash'
+import { cloneDeep, difference, union, unionBy } from 'lodash'
 import { ChevronDown, ChevronUp, RotateCcw, SaveIcon } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -118,12 +118,9 @@ const ModelEditContent: FC<ModelEditContentProps & ModalProps> = ({ provider, mo
 
   const selectedTypes: ModelType[] = useMemo(
     () =>
-      getUnion(
+      union(
         modelCapabilities?.filter((t) => t.isUserSelected).map((t) => t.type) || [],
-        getDifference(
-          defaultTypes,
-          modelCapabilities?.filter((t) => t.isUserSelected === false).map((t) => t.type) || []
-        )
+        difference(defaultTypes, modelCapabilities?.filter((t) => t.isUserSelected === false).map((t) => t.type) || [])
       ),
     [defaultTypes, modelCapabilities]
   )
@@ -133,7 +130,7 @@ const ModelEditContent: FC<ModelEditContentProps & ModalProps> = ({ provider, mo
 
   useEffect(() => {
     if (showMoreSettings) {
-      const newModelCapabilities = getUnion(
+      const newModelCapabilities = unionBy(
         selectedTypes.map((type) => {
           const existingCapability = modelCapabilities?.find((m) => m.type === type)
           return {

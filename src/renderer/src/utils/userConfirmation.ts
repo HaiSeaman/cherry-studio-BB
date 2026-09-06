@@ -21,13 +21,6 @@ function notifyPendingChange(toolId: string) {
 
 const logger = loggerService.withContext('Utils:UserConfirmation')
 
-export function requestUserConfirmation(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const globalKey = '_global'
-    toolConfirmResolvers.set(globalKey, resolve)
-  })
-}
-
 export function requestToolConfirmation(toolId: string, abortSignal?: AbortSignal): Promise<boolean> {
   return new Promise((resolve) => {
     if (abortSignal?.aborted) {

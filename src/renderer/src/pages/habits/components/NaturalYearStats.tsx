@@ -60,11 +60,7 @@ const NaturalYearStats: FC<Props> = ({ habits, allRecords, today }) => {
             const isToday = c.date === today
             const isFuture = c.state === 'future'
             const background =
-              c.state === 'done' || c.state === 'skip'
-                ? habit.color
-                : isFuture
-                  ? 'transparent'
-                  : mx.soft
+              c.state === 'done' || c.state === 'skip' ? habit.color : isFuture ? 'transparent' : mx.soft
             const opacity = c.state === 'skip' ? 0.22 : isFuture ? 0.35 : 1
             const outline = isToday ? `1px solid ${mx.text2}` : undefined
             return {

@@ -18,10 +18,10 @@ import type { AppInfo } from '@renderer/types'
 import { Button, Input, Switch } from 'antd'
 import { useEffect, useState } from 'react'
 
-import { BACKUP_MAX_KEEP_OPTIONS, BACKUP_SYNC_INTERVAL_OPTIONS } from './backupOptions'
-
 import { SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
+import { BACKUP_MAX_KEEP_OPTIONS, BACKUP_SYNC_INTERVAL_OPTIONS } from './backupOptions'
 import { SyncStatus } from './SyncStatus'
+import { useBackupSettings } from './useBackupSettings'
 
 const logger = loggerService.withContext('LocalBackupSettings')
 
@@ -38,10 +38,6 @@ const LocalBackupSettings: React.FC = () => {
   const [localBackupDir, setLocalBackupDir] = useState<string | undefined>(localBackupDirSetting)
   const [resolvedLocalBackupDir, setResolvedLocalBackupDir] = useState<string | undefined>(undefined)
   const [localBackupSkipBackupFile, setLocalBackupSkipBackupFile] = useState<boolean>(localBackupSkipBackupFileSetting)
-  const [backupManagerVisible, setBackupManagerVisible] = useState(false)
-
-  const [syncInterval, setSyncInterval] = useState<number>(localBackupSyncIntervalSetting)
-  const [maxBackups, setMaxBackups] = useState<number>(localBackupMaxBackupsSetting)
 
   const [appInfo, setAppInfo] = useState<AppInfo>()
 
@@ -59,17 +55,22 @@ const LocalBackupSettings: React.FC = () => {
 
   const { localBackupSync } = useAppSelector((state) => state.backup)
 
-  const onSyncIntervalChange = (value: number) => {
-    setSyncInterval(value)
-    dispatch(_setLocalBackupSyncInterval(value))
-    if (value === 0) {
-      dispatch(setLocalBackupAutoSync(false))
-      stopAutoSync('local')
-    } else {
-      dispatch(setLocalBackupAutoSync(true))
-      startAutoSync(false, 'local')
-    }
-  }
+  const {
+    syncInterval,
+    maxBackups,
+    backupManagerVisible,
+    onSyncIntervalChange,
+    onMaxBackupsChange,
+    showBackupManager,
+    closeBackupManager
+  } = useBackupSettings({
+    syncInterval: localBackupSyncIntervalSetting,
+    maxBackups: localBackupMaxBackupsSetting,
+    setSyncIntervalAction: _setLocalBackupSyncInterval,
+    setMaxBackupsAction: _setLocalBackupMaxBackups,
+    setAutoSyncAction: setLocalBackupAutoSync,
+    channel: 'local'
+  })
 
   const checkLocalBackupDirValid = async (dir: string) => {
     if (dir === '') {
@@ -128,11 +129,6 @@ const LocalBackupSettings: React.FC = () => {
     }
   }
 
-  const onMaxBackupsChange = (value: number) => {
-    setMaxBackups(value)
-    dispatch(_setLocalBackupMaxBackups(value))
-  }
-
   const onSkipBackupFilesChange = (value: boolean) => {
     setLocalBackupSkipBackupFile(value)
     dispatch(_setLocalBackupSkipBackupFile(value))
@@ -171,14 +167,6 @@ const LocalBackupSettings: React.FC = () => {
 
   const { isModalVisible, handleBackup, handleCancel, backuping, customFileName, setCustomFileName, showBackupModal } =
     useLocalBackupModal(resolvedLocalBackupDir)
-
-  const showBackupManager = () => {
-    setBackupManagerVisible(true)
-  }
-
-  const closeBackupManager = () => {
-    setBackupManagerVisible(false)
-  }
 
   return (
     <SettingGroup theme={theme}>

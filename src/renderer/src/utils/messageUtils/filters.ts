@@ -145,7 +145,6 @@ export function filterAdjacentUserMessages(messages: Message[]): Message[] {
 /**
  * @deprecated 拼写兼容别名，请使用 filterAdjacentUserMessages
  */
-export const filterAdjacentUserMessaegs = filterAdjacentUserMessages
 
 /**
  * Filters out assistant messages that only contain ErrorBlocks and their associated user messages.
@@ -212,7 +211,7 @@ export function filterContextMessages(messages: Message[], contextCount: number)
   // 按理说 fetchCompletions 也可以复用这个函数，不过 fetchCompletions 不敢随便乱改，后面再考虑重构吧
   const afterContextClearMsgs = filterAfterContextClearMessages(messages)
   const usefulMsgs = filterUsefulMessages(afterContextClearMsgs)
-  const adjacentRemovedMsgs = filterAdjacentUserMessaegs(usefulMsgs)
+  const adjacentRemovedMsgs = filterAdjacentUserMessages(usefulMsgs)
   const filteredMessages = filterUserRoleStartMessages(
     filterEmptyMessages(takeRight(adjacentRemovedMsgs, contextCount))
   )

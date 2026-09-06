@@ -25,17 +25,28 @@ import { writeFileSync } from 'fs'
 import { readFile } from 'fs/promises'
 
 const COMMON_RIPGREP_EXCLUDES = [
-  '-g', '!**/node_modules/**',
-  '-g', '!**/.git/**',
-  '-g', '!**/.idea/**',
-  '-g', '!**/.vscode/**',
-  '-g', '!**/.DS_Store',
-  '-g', '!**/dist/**',
-  '-g', '!**/build/**',
-  '-g', '!**/.next/**',
-  '-g', '!**/.nuxt/**',
-  '-g', '!**/coverage/**',
-  '-g', '!**/.cache/**'
+  '-g',
+  '!**/node_modules/**',
+  '-g',
+  '!**/.git/**',
+  '-g',
+  '!**/.idea/**',
+  '-g',
+  '!**/.vscode/**',
+  '-g',
+  '!**/.DS_Store',
+  '-g',
+  '!**/dist/**',
+  '-g',
+  '!**/build/**',
+  '-g',
+  '!**/.next/**',
+  '-g',
+  '!**/.nuxt/**',
+  '-g',
+  '!**/coverage/**',
+  '-g',
+  '!**/.cache/**'
 ]
 import { isBinaryFile } from 'isbinaryfile'
 import * as path from 'path'

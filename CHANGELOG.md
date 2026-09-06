@@ -5,6 +5,40 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.9.4] - 2026-09-07
+
+### 核心主题：主题系统自定义 CSS 解锁（内置主题与自定义 CSS 共存）+ 删除跨设备同步 + V2 死代码清理 + 全仓审查瘦身（净删约 2700 行）
+
+**1. 主题系统：自定义 CSS 全面解锁（修"一点内置主题自定义 CSS 就被绑死"）**
+
+- **根因**：内置主题分支选择器 `[theme-mode][theme-id]` 的 CSS 特异性（0,2,0）压过 cherrycss.com 主题与用户自定义 CSS 的常规写法 `body[theme-mode=...]`（0,1,1），导致选中任意非默认主题后自定义 CSS 全部失效（默认主题走 `:root` 打平且后加载取胜，故仅默认主题下可改）；
+- **修复**：内置主题色板（8 款）整体包进 `@layer theme-color` 层叠层，首行显式声明层顺序（`theme-color` 高于 Tailwind 的 theme/base/utilities 层，防止 Tailwind 输出的同名 `--color-*` 映射翻身）。CSS 规范保证"不在任何层里的作者样式永远压过层内样式"——自定义 CSS 无需任何写法约束即可覆盖任意内置主题，8 款内置主题切换逻辑原样保留；
+- **已知边界**（与原版行为一致，非回归）：`:root` 开头的自定义 CSS 作用于 `html`，会被 `body` 上的主题分支变量遮蔽，请用 `body[theme-mode=...]` / `body[theme-id=...]` 写法（cherrycss.com 主题均为此写法）；
+- **回归防线**：新增 `scripts/cascade-check.js`（Electron 无界面窗口加载真实构建产物实测层叠，6 项断言），接线为 `npm run check:theme-cascade`。
+
+**2. 删除跨设备同步功能（主人不再使用）**
+
+- 整体移除设置→数据设置→跨设备同步（便签/待办/日历笔记/习惯打卡/提醒经 S3/WebDAV 与手机端同步）：`CrossDeviceSyncSettings`、`SyncAdapter`、`CherrySyncStorage` 三个文件与 IPC 三通道（`Sync_PutFile/GetFile/DeleteFile`）、preload `api.sync`、设置页菜单项全链路清除，全仓零残留；
+- **不受影响**：窗口间 Redux 同步（StoreSyncService，窗口间状态通信）、WebDAV / S3 / 本地备份（云备份功能，与被删功能仅共享底层传输库）全部保留；
+- 用户数据目录中的 `RKSyncStore` 索引库与 `rk-cross-device-sync` 本地配置为无引用残留，无害可不处理。
+
+**3. V2 遗留清理（不再升级上游 V2）**
+
+- 删除注释掉的 `loadTopicMessagesThunkV2` 死代码与 V2 历史迁移说明注释；
+- 清除 26 个核心文件头部"V2 DATA&UI REFACTORING / Scheduled for removal in v2.0.0"迁移警告注释块（每文件 16-19 行，纯注释，不动任何可执行代码）；
+- 依赖核对：`ollama-ai-provider-v2` 为现役 Ollama provider（包名的 v2 指 AI SDK v2 协议），保留。
+
+**4. 全仓审查瘦身（code-review 双轴 + ponytail-audit 全仓，净删约 2700 行）**
+
+- **死代码退役**：`is.ts` 6 个零调用类型守卫；`useProvider` 3 个死 hook + 2 个配套选择器；`getModelById`/`getProviderByModelId`/`requestUserConfirmation`/`getProviderNameById`/`isProviderSupportCharge`/`getEnableDeveloperMode`/`fetchRedirectUrl` 等 0 引用死函数；shared 库 6 个死导出（`toNullIfUndefined`/`toUndefinedIfNull`/`getFunctionalKeys`/`sanitizeEnvForLogging`/`isDataUrl`/`isBase64ImageDataUrl`）与 2 个孤儿常量；配套测试段同步清理（拼写错误弃用别名 `filterAdjacentUserMessaegs` 的测试改挂正名，覆盖保留）；
+- **collection.ts 整体退役**：65 行手写泛型集合工具 + 268 行测试，仅有的两个生产调用点改用已有依赖 lodash（`union`/`difference`/`unionBy` 各一行）；
+- **重复收敛**：画图 / 视频历史列表两份逐字相同的 `fmtTime` 合并为 dayjs 一行（TodoPanel / IPTV / 音乐的格式确实不同，不强凑）；
+- **设置页去重**：本地备份与 WebDAV 设置页逐字重复的"自动同步间隔 / 最大备份数 / 备份管理弹窗"逻辑抽取共享 `useBackupSettings` hook（S3 页为整包更新模式，形状不同，保持原样）；
+- **脚本治理**：`scripts/scan-unused-deps.mjs` 名实修正（实为"编译+打包 EXE"脚本，补用途说明），硬编码版本号改为自动读 `package.json`；清理误留仓库根目录的 `dist-build.log`；
+- **依赖审计**：package.json 全部依赖逐一核对，零冗余（冷门依赖均有真实引用）。
+
+**质量验证**：Vitest 全仓 **237 个文件 3794 项测试 0 失败**（较上版减少的 1 文件 / 46 用例即退役的死码测试）；TypeScript 三端类型检查全绿；CI（oxlint/eslint/biome）0 error 0 warning；完整构建通过；主题层叠回归 6/6 通过。
+
 ## [1.9.3] - 2026-09-06
 
 ### 核心主题：电视播放器交互增强（单击暂停/继续 + 右上角一键关闭）+ 打卡备注功能与图标色板扩容 + 三线审查修复（含 2 个数据级 bug）

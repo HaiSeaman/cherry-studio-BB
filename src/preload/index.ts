@@ -137,14 +137,6 @@ const api = {
       ipcRenderer.invoke(IpcChannel.Backup_DeleteS3File, fileName, s3Config),
     checkS3Connection: (s3Config: S3Config) => ipcRenderer.invoke(IpcChannel.Backup_CheckS3Connection, s3Config)
   },
-  sync: {
-    putFile: (channel: string, config: Record<string, unknown>, key: string, content: string) =>
-      ipcRenderer.invoke(IpcChannel.Sync_PutFile, channel, config, key, content),
-    getFile: (channel: string, config: Record<string, unknown>, key: string) =>
-      ipcRenderer.invoke(IpcChannel.Sync_GetFile, channel, config, key),
-    deleteFile: (channel: string, config: Record<string, unknown>, key: string) =>
-      ipcRenderer.invoke(IpcChannel.Sync_DeleteFile, channel, config, key)
-  },
   file: {
     select: (options?: OpenDialogOptions): Promise<FileMetadata[] | null> =>
       ipcRenderer.invoke(IpcChannel.File_Select, options),

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createErrorBlock, createMainTextBlock, createMessage } from '../create'
 import {
-  filterAdjacentUserMessaegs,
+  filterAdjacentUserMessages,
   filterAfterContextClearMessages,
   filterEmptyMessages,
   filterErrorOnlyMessagesWithRelated,
@@ -293,13 +293,13 @@ describe('Message Filter Utils', () => {
     })
   })
 
-  describe('filterAdjacentUserMessaegs', () => {
+  describe('filterAdjacentUserMessages', () => {
     it('should keep only the last of adjacent user messages', () => {
       const user1 = createMessage('user', 'topic-1', 'assistant-1', { id: 'user-1' })
       const user2 = createMessage('user', 'topic-1', 'assistant-1', { id: 'user-2' })
       const user3 = createMessage('user', 'topic-1', 'assistant-1', { id: 'user-3' })
 
-      const result = filterAdjacentUserMessaegs([user1, user2, user3])
+      const result = filterAdjacentUserMessages([user1, user2, user3])
 
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe('user-3')
@@ -312,7 +312,7 @@ describe('Message Filter Utils', () => {
       })
       const user2 = createMessage('user', 'topic-1', 'assistant-1', { id: 'user-2' })
 
-      const result = filterAdjacentUserMessaegs([user1, assistant1, user2])
+      const result = filterAdjacentUserMessages([user1, assistant1, user2])
 
       expect(result).toHaveLength(3)
     })
@@ -326,7 +326,7 @@ describe('Message Filter Utils', () => {
       const user3 = createMessage('user', 'topic-1', 'assistant-1', { id: 'user-3' })
       const user4 = createMessage('user', 'topic-1', 'assistant-1', { id: 'user-4' })
 
-      const result = filterAdjacentUserMessaegs([user1, user2, assistant1, user3, user4])
+      const result = filterAdjacentUserMessages([user1, user2, assistant1, user3, user4])
 
       expect(result).toHaveLength(3)
       expect(result.map((m) => m.id)).toEqual(['user-2', 'assistant-1', 'user-4'])

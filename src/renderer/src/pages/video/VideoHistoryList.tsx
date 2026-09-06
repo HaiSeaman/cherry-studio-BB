@@ -9,6 +9,7 @@ import type { Assistant, Topic } from '@renderer/types'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { getErrorMessage } from '@renderer/utils/error'
 import { Tooltip } from 'antd'
+import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Clapperboard, Film, History, Plus, Trash2 } from 'lucide-react'
 import { type FC, useCallback, useState } from 'react'
@@ -152,7 +153,7 @@ const VideoHistoryList: FC<Props> = ({ assistant, activeTopicId, isGenerating, o
                 <Name>{topic.name || '未命名会话'}</Name>
                 <Meta>
                   {videoCount > 0 && <span>{videoCount} 条</span>}
-                  <span>{fmtTime(topic.updatedAt)}</span>
+                  <span>{dayjs(topic.updatedAt).format('YYYY-MM-DD HH:mm')}</span>
                 </Meta>
               </Info>
               <DeleteBtn
@@ -171,13 +172,6 @@ const VideoHistoryList: FC<Props> = ({ assistant, activeTopicId, isGenerating, o
       </List>
     </Sidebar>
   )
-}
-
-function fmtTime(iso?: string): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 const Sidebar = styled.div`

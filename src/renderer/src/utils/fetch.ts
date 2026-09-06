@@ -169,20 +169,3 @@ export async function fetchXOEmbed(url: string): Promise<{ author: string; text:
     return null
   }
 }
-
-export async function fetchRedirectUrl(url: string) {
-  try {
-    const response = await fetch(url, {
-      method: 'HEAD',
-      redirect: 'follow',
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    })
-    return response.url
-  } catch (e) {
-    logger.error('Failed to fetch redirect url', e as Error)
-    return url
-  }
-}

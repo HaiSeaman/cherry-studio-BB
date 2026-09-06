@@ -8,4 +8,4 @@ export type { ModelConfig, ModelConfig as ModelConfigType } from './models/types
 // 执行管理
 export type { ToolUseRequestContext } from './plugins/built-in/toolUsePlugin/type'
 export { createExecutor, createOpenAICompatibleExecutor, RuntimeExecutor } from './runtime'
-export type { RuntimeConfig, generateImageResult } from './runtime/types'
+export type { generateImageResult, RuntimeConfig } from './runtime/types'

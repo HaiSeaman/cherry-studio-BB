@@ -22,10 +22,7 @@ function formatLatency(time: number): string {
   return `${(time / 1000).toFixed(2)}s`
 }
 
-export const formatHealthStatus = ({
-  results,
-  showLatency = false
-}: UseHealthStatusProps): UseHealthStatusReturn => {
+export const formatHealthStatus = ({ results, showLatency = false }: UseHealthStatusProps): UseHealthStatusReturn => {
   if (!results || results.length === 0) {
     return { overallStatus: 'not_checked', tooltip: null, latencyText: null }
   }

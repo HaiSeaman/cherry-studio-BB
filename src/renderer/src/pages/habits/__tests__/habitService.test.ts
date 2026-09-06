@@ -81,9 +81,7 @@ describe('parseHabitsBackup', () => {
     expect(parseHabitsBackup(JSON.stringify({ version: 1, habits: withNote, records: [] })).habits[0]?.note).toBe(
       '每天至少 2000ml'
     )
-    expect(() =>
-      parseHabitsBackup(JSON.stringify({ version: 1, habits: [validHabit], records: [] }))
-    ).not.toThrow()
+    expect(() => parseHabitsBackup(JSON.stringify({ version: 1, habits: [validHabit], records: [] }))).not.toThrow()
   })
 
   it('备注字段类型损坏（非字符串）→ 拒绝', () => {
