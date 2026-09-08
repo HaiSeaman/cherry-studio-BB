@@ -1,4 +1,5 @@
-import { DEFAULT_SHORTCUTS, mergeDefaultShortcuts } from '@shared/config/constant'
+import { DEFAULT_SHORTCUTS, DEFAULT_VOICE_INPUT_CONFIG, mergeDefaultShortcuts } from '@shared/config/constant'
+import type { VoiceInputConfig } from '@shared/config/types'
 import type { LanguageVarious, Shortcut } from '@types'
 import { ThemeMode } from '@types'
 import Store from 'electron-store'
@@ -27,7 +28,8 @@ export enum ConfigKeys {
   MusicWidgetLaunchOnBoot = 'musicWidgetLaunchOnBoot',
   // Master switch for the hub `exec` tool (arbitrary JS execution). Defaults
   // to off so that prompt-injected tool calls cannot reach code execution.
-  HubExecEnabled = 'hubExecEnabled'
+  HubExecEnabled = 'hubExecEnabled',
+  VoiceInput = 'voiceInput'
 }
 
 export class ConfigManager {
@@ -213,6 +215,21 @@ export class ConfigManager {
 
   setAndNotify(key: string, value: unknown) {
     this.set(key, value, true)
+  }
+
+  getVoiceInputConfig(): VoiceInputConfig {
+    const saved = this.get<Partial<VoiceInputConfig>>(ConfigKeys.VoiceInput, DEFAULT_VOICE_INPUT_CONFIG)
+    // 字段级合并默认值：持久化数据残缺（旧版本写入/外部编辑）时不至于让 start() 访问 undefined 崩溃
+    return {
+      provider: saved.provider ?? DEFAULT_VOICE_INPUT_CONFIG.provider,
+      qwen: { ...DEFAULT_VOICE_INPUT_CONFIG.qwen, ...saved.qwen },
+      doubao: { ...DEFAULT_VOICE_INPUT_CONFIG.doubao, ...saved.doubao },
+      tencent: { ...DEFAULT_VOICE_INPUT_CONFIG.tencent, ...saved.tencent }
+    }
+  }
+
+  setVoiceInputConfig(config: VoiceInputConfig) {
+    this.set(ConfigKeys.VoiceInput, config)
   }
 
   set(key: string, value: unknown, isNotify: boolean = false) {

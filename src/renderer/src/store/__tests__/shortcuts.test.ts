@@ -29,6 +29,15 @@ describe('shortcuts store', () => {
     expect(desktopWidget?.shortcut).toEqual(['Alt', '`'])
   })
 
+  it('DEFAULT_SHORTCUTS contains the voice input shortcut (Win + Shift + `), enabled by default', () => {
+    const voiceInput = DEFAULT_SHORTCUTS.find((s) => s.key === 'voice_input')
+    expect(voiceInput).toBeDefined()
+    expect(voiceInput?.enabled).toBe(true)
+    expect(voiceInput?.editable).toBe(true)
+    expect(voiceInput?.system).toBe(true)
+    expect(voiceInput?.shortcut).toEqual(['Meta', 'Shift', '`'])
+  })
+
   it('initialState uses the shared DEFAULT_SHORTCUTS list', () => {
     expect(initialState.shortcuts).toEqual(DEFAULT_SHORTCUTS)
     expect(initialState.shortcuts.some((s) => s.key === 'screenshot')).toBe(true)

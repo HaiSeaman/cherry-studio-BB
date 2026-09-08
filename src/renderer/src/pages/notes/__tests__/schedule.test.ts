@@ -28,6 +28,18 @@ describe('computeDueAlarms', () => {
     expect(miss.toFire).toHaveLength(0)
   })
 
+  it('默认窗口 90 秒；传入更大 windowSec（睡眠补响）时窗口外错过的闹钟可命中', () => {
+    const a = alarm({ h: 9, m: 0, s: 0 })
+    // 默认：超过 90 秒不命中
+    expect(computeDueAlarms([a], at('2026-08-16', 9, 30, 0), '2026-08-16').toFire).toHaveLength(0)
+    // 系统睡眠 30 分钟后唤醒：gap=1800s，睡眠期间到点的闹钟补响
+    const catchUp = computeDueAlarms([a], at('2026-08-16', 9, 30, 0), '2026-08-16', 1800)
+    expect(catchUp.toFire.map((x) => x.id)).toEqual([1])
+    // 唤醒补响窗口外的更早闹钟（gap 之前）仍不命中
+    const tooLate = computeDueAlarms([a], at('2026-08-16', 9, 31, 0), '2026-08-16', 1800)
+    expect(tooLate.toFire).toHaveLength(0)
+  })
+
   it('当前秒等于闹钟时刻命中；未来时刻不命中', () => {
     const a = alarm({ h: 8, m: 59, s: 59 })
     expect(computeDueAlarms([a], at('2026-08-16', 8, 59, 59), '2026-08-15').toFire).toHaveLength(1)

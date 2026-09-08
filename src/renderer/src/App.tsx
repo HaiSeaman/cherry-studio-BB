@@ -13,6 +13,7 @@ import { CodeStyleProvider } from './context/CodeStyleProvider'
 import { NotificationProvider } from './context/NotificationProvider'
 import StyleSheetManager from './context/StyleSheetManager'
 import { ThemeProvider } from './context/ThemeProvider'
+import { useVoiceInput } from './hooks/useVoiceInput'
 // 音乐播放器全局状态机 + 挂件消息桥：主窗口启动即初始化（不依赖用户访问音乐页）
 import { initWidgetBridge } from './pages/music/services/widgetBridge'
 import Router from './Router'
@@ -37,6 +38,8 @@ function App(): React.ReactElement {
 
   // 监听主进程自动化任务触发（顶层挂载，窗口隐藏时仍生效）
   useAutomationRunner()
+  // 全局语音输入：订阅主进程键盘钩子 begin/end 事件（按住说话录音）
+  useVoiceInput()
 
   return (
     <Provider store={store}>

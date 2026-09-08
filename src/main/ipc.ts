@@ -57,6 +57,7 @@ import { SelectionService } from './services/SelectionService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
 import storeSyncService from './services/StoreSyncService'
 import { themeService } from './services/ThemeService'
+import { voiceInputService } from './services/voiceInput/VoiceInputService'
 import { setOpenLinkExternal } from './services/WebviewService'
 import { windowService } from './services/WindowService'
 import { calculateDirectorySize, getNewDataPathFromArgs, getResourcePath } from './utils'
@@ -562,6 +563,16 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
       unregisterAllShortcuts()
       registerShortcuts(mainWindow)
     }
+  })
+
+  // 语音输入：渲染进程推送录音音频块（16kHz/16bit/单声道 PCM）
+  ipcMain.on(IpcChannel.VoiceInput_Audio, (_event, chunk: ArrayBuffer) => {
+    voiceInputService.handleAudio(new Uint8Array(chunk))
+  })
+
+  // 语音输入：渲染进程录音结束，请求最终识别结果（阶段 B 记录日志）
+  ipcMain.on(IpcChannel.VoiceInput_Finalize, () => {
+    void voiceInputService.finalize()
   })
 
   // window

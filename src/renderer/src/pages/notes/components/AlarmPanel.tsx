@@ -5,7 +5,7 @@ import { Pause, Play, Plus, RotateCcw, Volume2 } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 
-import { useCountdown } from '../hooks/useCountdown'
+import { useCountdown } from '../services/countdownEngine'
 import { alarmScheduler } from '../services/alarmScheduler'
 import { alarmSounds, soundLabel } from '../services/alarmSounds'
 import { nextRingInfo } from '../services/schedule'
@@ -58,7 +58,8 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
   const customSounds = useAppSelector((s) => s.hubSettings.customSounds)
 
   // 结束时走全局调度器：响铃 + 系统通知 + 后台唤起主窗口（与闹钟同一引擎）
-  const cd = useCountdown(() => alarmScheduler.fireExternal(timerLabel, timerSound))
+  // 引擎为应用级单例：label/sound 在 start 时快照，归零回调不依赖本组件存活（切页后照响）
+  const cd = useCountdown()
 
   const stopAllRinging = (e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -239,7 +240,9 @@ const AlarmPanel: FC<AlarmPanelProps> = ({ ringing }) => {
               </MXGhostPill>
             ) : (
               <MXGhostPill
-                onClick={() => cd.start(clampNum(timerH, 99), clampNum(timerM, 59), clampNum(timerS, 59))}
+                onClick={() =>
+                  cd.start(clampNum(timerH, 99), clampNum(timerM, 59), clampNum(timerS, 59), timerLabel, timerSound)
+                }
                 disabled={anyRinging}>
                 <Play size={13} /> 开始
               </MXGhostPill>

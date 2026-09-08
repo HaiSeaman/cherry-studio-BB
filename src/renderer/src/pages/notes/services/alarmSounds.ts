@@ -167,7 +167,13 @@ class AlarmSounds {
 
   /** 开始循环响铃；sound 形如 'custom:<id>' 时走自定义 buffer（未缓存回退默认叮咚） */
   start(sound: string): void {
-    if (ringing) return
+    if (previewTimer) {
+      // 真闹钟到点时试听还在进行：打断试听、接管响铃
+      // （否则 ringing 标志互斥会把真闹钟的 start 吞掉，横幅显示响铃却一点声音都没有）
+      this.stop()
+    } else if (ringing) {
+      return
+    }
     const customId = sound.startsWith('custom:') ? sound.slice(7) : null
     const buffer = customId ? this.customBuffers.get(customId) : null
     const ctx = ensureCtx()

@@ -10,6 +10,7 @@ import { useOnboardingState } from './hooks/useOnboardingState'
 import HomePage from './pages/home/HomePage'
 import LaunchpadPage from './pages/launchpad/LaunchpadPage'
 import { OnboardingPage } from './pages/onboarding'
+import AlarmEngineHost from './pages/notes/components/AlarmEngineHost'
 
 // 懒加载的非首屏页面（减少首屏 JS 解析量）
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
@@ -19,7 +20,6 @@ const NotesPage = lazy(() => import('./pages/notes/NotesPage'))
 const HabitsPage = lazy(() => import('./pages/habits/HabitsPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
 const IptvPage = lazy(() => import('./pages/iptv/IptvPage'))
-
 const Router: FC = () => {
   const { onboardingCompleted, completeOnboarding } = useOnboardingState()
 
@@ -52,6 +52,8 @@ const Router: FC = () => {
       {routes}
       <Sidebar />
       <NavigationHandler />
+      {/* 闹钟引擎应用级常驻：不进便签页闹钟也照响，响铃横幅全局可见可关 */}
+      <AlarmEngineHost />
     </HashRouter>
   )
 }

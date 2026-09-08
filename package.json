@@ -1,6 +1,6 @@
 {
   "name": "CherryStudio",
-  "version": "1.9.4",
+  "version": "1.10.0",
   "private": true,
   "description": "A powerful AI assistant for producer.",
   "desktopName": "CherryStudio.desktop",
@@ -67,7 +67,9 @@
     "os-proxy-config": "1.1.2",
     "pdf-parse": "^2.4.5",
     "selection-hook": "2.0.1",
-    "turndown": "7.2.0"
+    "turndown": "7.2.0",
+    "uiohook-napi": "^1.5.5",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@agentic/exa": "^7.3.3",
@@ -138,6 +140,7 @@
     "@types/turndown": "^5.0.5",
     "@types/unist": "3.0.3",
     "@types/word-extractor": "^1",
+    "@types/ws": "^8.18.1",
     "@typescript/native-preview": "7.0.0-dev.20260204.1",
     "@uiw/codemirror-extensions-langs": "4.25.7",
     "@uiw/codemirror-themes-all": "4.25.7",

@@ -234,6 +234,23 @@ const api = {
   shortcuts: {
     update: (shortcuts: Shortcut[]) => ipcRenderer.invoke(IpcChannel.Shortcuts_Update, shortcuts)
   },
+  voiceInput: {
+    onBeginCapture: (listener: () => void) => {
+      ipcRenderer.on(IpcChannel.VoiceInput_BeginCapture, listener)
+      return () => ipcRenderer.off(IpcChannel.VoiceInput_BeginCapture, listener)
+    },
+    onEndCapture: (listener: () => void) => {
+      ipcRenderer.on(IpcChannel.VoiceInput_EndCapture, listener)
+      return () => ipcRenderer.off(IpcChannel.VoiceInput_EndCapture, listener)
+    },
+    onState: (listener: (state: string) => void) => {
+      const wrapped = (_event: Electron.IpcRendererEvent, state: string) => listener(state)
+      ipcRenderer.on(IpcChannel.VoiceInput_State, wrapped)
+      return () => ipcRenderer.off(IpcChannel.VoiceInput_State, wrapped)
+    },
+    sendAudio: (chunk: ArrayBuffer) => ipcRenderer.send(IpcChannel.VoiceInput_Audio, chunk),
+    finalize: () => ipcRenderer.send(IpcChannel.VoiceInput_Finalize)
+  },
   window: {
     setMinimumSize: (width: number, height: number) =>
       ipcRenderer.invoke(IpcChannel.Windows_SetMinimumSize, width, height),

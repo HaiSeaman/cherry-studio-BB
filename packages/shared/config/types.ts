@@ -74,3 +74,37 @@ export interface WebSocketCandidatesResponse {
   interface: string
   priority: number
 }
+
+export type VoiceInputProvider = 'qwen' | 'doubao' | 'tencent'
+
+export interface VoiceInputQwenConfig {
+  apiKey: string
+  /** 千问识别模型名，默认 paraformer-realtime-v2 */
+  model: string
+}
+
+export interface VoiceInputDoubaoConfig {
+  /** 新版控制台 APP Key（X-Api-Key 请求头） */
+  apiKey: string
+  /** 大模型资源 ID（X-Api-Resource-Id），即豆包语音模型标识，默认 volc.seedasr.sauc.duration（模型 2.0） */
+  resourceId: string
+}
+
+export interface VoiceInputTencentConfig {
+  appid: string
+  secretId: string
+  secretKey: string
+  /** 腾讯引擎型号 engine_model_type，默认 16k_zh */
+  engineModel: string
+}
+
+export interface VoiceInputConfig {
+  /** 当前选中的服务商 */
+  provider: VoiceInputProvider
+  qwen: VoiceInputQwenConfig
+  doubao: VoiceInputDoubaoConfig
+  tencent: VoiceInputTencentConfig
+}
+
+/** 语音输入主进程状态（经 IPC 广播给渲染层） */
+export type VoiceInputState = 'listening' | 'inserting' | 'done' | 'error'

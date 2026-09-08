@@ -44,6 +44,13 @@ export enum IpcChannel {
   App_SetDisableHardwareAcceleration = 'app:set-disable-hardware-acceleration',
   App_SetUseSystemTitleBar = 'app:set-use-system-title-bar',
 
+  // 全局语音输入（按住说话）：主进程键盘钩子 → 渲染进程录音
+  VoiceInput_BeginCapture = 'voice-input:begin-capture',
+  VoiceInput_EndCapture = 'voice-input:end-capture',
+  VoiceInput_Audio = 'voice-input:audio',
+  VoiceInput_State = 'voice-input:state',
+  VoiceInput_Finalize = 'voice-input:finalize',
+
   Notification_Send = 'notification:send',
 
   Webview_SetOpenLinkExternal = 'webview:set-open-link-external',

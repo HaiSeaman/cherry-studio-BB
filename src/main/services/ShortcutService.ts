@@ -8,6 +8,7 @@ import { convertShortcutFormat } from '../utils/shortcut'
 import { configManager } from './ConfigManager'
 import screenshotService from './ScreenshotService'
 import selectionService from './SelectionService'
+import { voiceKeyboardManager } from './voiceInput/voiceKeyboardManager'
 import { windowService } from './WindowService'
 
 const logger = loggerService.withContext('ShortcutService')
@@ -109,6 +110,13 @@ export function registerShortcuts(window: BrowserWindow) {
 
     shortcuts.forEach((shortcut) => {
       try {
+        // 全局语音输入：由键盘钩子实现（需要感知 keyup），不走 globalShortcut。
+        // 分支必须放在所有过滤之前——即使禁用/清空快捷键/仅注册通用快捷键，也要同步到钩子。
+        if (shortcut.key === 'voice_input') {
+          voiceKeyboardManager.sync(shortcut)
+          return
+        }
+
         if (shortcut.shortcut.length === 0) {
           return
         }
@@ -172,6 +180,11 @@ export function registerShortcuts(window: BrowserWindow) {
       if (!shortcuts) return
 
       shortcuts.forEach((shortcut) => {
+        // 语音输入钩子与窗口无关，保持运行（sync 幂等，配置不变则无操作）
+        if (shortcut.key === 'voice_input') {
+          voiceKeyboardManager.sync(shortcut)
+          return
+        }
         if (shortcut.shortcut.length === 0 || !shortcut.enabled) {
           return
         }

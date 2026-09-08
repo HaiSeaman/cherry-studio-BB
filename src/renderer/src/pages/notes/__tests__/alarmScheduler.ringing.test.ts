@@ -84,7 +84,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-09-06T08:00:00'))
   dbUpdate.mockClear()
   dbModify.mockClear()
-  // 清空调度器与声音引擎的跨用例残留状态
+  // 清空调度器与声音引擎的跨用例残留状态（含 lastCheckDate / lastTickAt / 已触发 key 集合）
+  alarmScheduler.resetForTest()
   alarmScheduler.stopRinging()
   alarmSounds.stop()
 })
@@ -139,6 +140,56 @@ describe('闹钟响铃与关闭（全局调度器）', () => {
     alarmScheduler.stopRinging()
     alarmScheduler.stopRinging()
     expect(alarmScheduler.getRinging()).toBeNull()
+    expect(soundOn()).toBe(false)
+  })
+
+  it('liveQuery 回流旧快照（触发标记被清）→ 90 秒窗口内不重复入队', () => {
+    alarmScheduler.setAlarms([alarm()])
+    vi.advanceTimersByTime(1000) // 08:00:00 响铃
+    expect(alarmScheduler.getRinging()).not.toBeNull()
+    alarmScheduler.stopRinging()
+
+    // 页面回流了旧快照：lastTriggerKey 又变回 undefined（模拟 Dexie 两次写入间的旧发射）
+    alarmScheduler.setAlarms([alarm()])
+    vi.advanceTimersByTime(90_000)
+    expect(alarmScheduler.getRinging()).toBeNull()
+    expect(soundOn()).toBe(false)
+  })
+
+  it('系统睡眠跨过闹钟点：唤醒后第一条 tick 补响（gap 扩大触发窗口）', () => {
+    alarmScheduler.setAlarms([alarm({ h: 8, m: 5 })])
+    // 正常走到 08:00:10（未到点）
+    vi.advanceTimersByTime(10_000)
+    expect(alarmScheduler.getRinging()).toBeNull()
+
+    // 系统睡眠 30 分钟：墙钟直接跳到 08:30:10（定时器暂停，无 tick）
+    vi.setSystemTime(new Date('2026-09-06T08:30:10'))
+    vi.advanceTimersByTime(1000) // 唤醒后第一条 tick
+    expect(alarmScheduler.getRinging()).not.toBeNull()
+    expect(soundOn()).toBe(true)
+    alarmScheduler.stopRinging()
+
+    // 补响过的闹钟不再重复响
+    vi.advanceTimersByTime(5000)
+    expect(alarmScheduler.getRinging()).toBeNull()
+  })
+
+  it('试听铃声进行中闹钟到点：真闹钟打断试听，铃声必须是真闹钟的（不静音）', () => {
+    alarmScheduler.setAlarms([alarm({ h: 8, m: 0 })])
+    // 用户此刻在铃声选择器里试听（preview 内部 1.5 秒后自动停）
+    alarmSounds.preview('nokia')
+    expect(soundOn()).toBe(true)
+
+    // 1 秒后闹钟到点 tick
+    vi.advanceTimersByTime(1000)
+    expect(alarmScheduler.getRinging()).not.toBeNull()
+    expect(soundOn()).toBe(true)
+
+    // 试听的原定 1.5 秒自动停止不得把真闹钟的铃声掐掉
+    vi.advanceTimersByTime(1000)
+    expect(alarmScheduler.getRinging()).not.toBeNull()
+    expect(soundOn()).toBe(true)
+    alarmScheduler.stopRinging()
     expect(soundOn()).toBe(false)
   })
 })

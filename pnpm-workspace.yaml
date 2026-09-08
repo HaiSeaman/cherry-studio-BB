@@ -53,6 +53,7 @@ onlyBuiltDependencies:
   - 'protobufjs'
   - 'registry-js'
   - 'selection-hook'
+  - 'uiohook-napi'
 
 ignoredBuiltDependencies:
   - '@paymoapp/electron-shutdown-handler'

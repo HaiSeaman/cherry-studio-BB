@@ -12,15 +12,19 @@ import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
 import { useAppDispatch } from '@renderer/store'
 import { setTranslateModelPrompt } from '@renderer/store/settings'
 import type { Model } from '@renderer/types'
-import { Button, Tooltip } from 'antd'
+import { DEFAULT_VOICE_INPUT_CONFIG } from '@shared/config/constant'
+import type { VoiceInputConfig, VoiceInputProvider } from '@shared/config/types'
+import { Button, Select, Tooltip } from 'antd'
 import { find } from 'lodash'
-import { Languages, MessageSquareMore, Rocket, Settings2 } from 'lucide-react'
+import { Languages, MessageSquareMore, Mic, Rocket, Settings2 } from 'lucide-react'
 import type { FC } from 'react'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { SettingContainer, SettingDescription, SettingGroup, SettingTitle } from '..'
 import DefaultAssistantSettings from './DefaultAssistantSettings'
 import TopicNamingModalPopup from './QuickModelPopup'
+import { VOICE_INPUT_PROVIDER_OPTIONS } from './voiceInputFields'
+import VoiceInputSettingsPopup from './VoiceInputSettingsPopup'
 
 interface ModelSettingsProps {
   showSettingsButton?: boolean
@@ -65,6 +69,34 @@ const ModelSettings: FC<ModelSettingsProps> = ({
 
   const containerStyle = compact ? { padding: 0, background: 'transparent' } : undefined
   const groupStyle = compact ? { padding: 0, border: 'none', background: 'transparent' } : undefined
+
+  // 语音输入：服务商选择 + 设置弹窗（密钥/模型名在弹窗里填，存主进程配置）
+  const [voiceInputProvider, setVoiceInputProvider] = useState<VoiceInputProvider>('qwen')
+
+  const loadVoiceInputProvider = useCallback(() => {
+    void window.api.config.get('voiceInput').then((c) => {
+      const saved = c as Partial<VoiceInputConfig> | undefined
+      if (saved?.provider) {
+        setVoiceInputProvider(saved.provider)
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    loadVoiceInputProvider()
+  }, [loadVoiceInputProvider])
+
+  const onVoiceInputProviderChange = (provider: VoiceInputProvider) => {
+    setVoiceInputProvider(provider)
+    void window.api.config.get('voiceInput').then((c) => {
+      const saved = (c ?? structuredClone(DEFAULT_VOICE_INPUT_CONFIG)) as VoiceInputConfig
+      void window.api.config.set('voiceInput', { ...saved, provider })
+    })
+  }
+
+  const openVoiceInputSettings = () => {
+    void VoiceInputSettingsPopup.show().then(() => loadVoiceInputProvider())
+  }
 
   return (
     <SettingContainer theme={theme} style={containerStyle}>
@@ -146,6 +178,30 @@ const ModelSettings: FC<ModelSettingsProps> = ({
           )}
         </HStack>
         {showDescription && <SettingDescription>{'翻译服务使用的模型'}</SettingDescription>}
+      </SettingGroup>
+      <SettingGroup theme={theme} style={groupStyle}>
+        <SettingTitle style={{ marginBottom: 12 }}>
+          <HStack alignItems="center" gap={10}>
+            <Mic size={18} color="var(--color-text)" />
+            {'语音输入模型'}
+            <InfoTooltip title={'按住 Win+Shift+` 说话，松开后识别文字并打字到鼠标光标处'} />
+          </HStack>
+        </SettingTitle>
+        <HStack alignItems="center">
+          <Select
+            value={voiceInputProvider}
+            style={{ width: compact ? '100%' : 360 }}
+            options={VOICE_INPUT_PROVIDER_OPTIONS}
+            onChange={(p) => onVoiceInputProviderChange(p)}
+            placeholder={'选择语音识别服务商'}
+          />
+          {showSettingsButton && (
+            <Button icon={<Settings2 size={16} />} style={{ marginLeft: 8 }} onClick={openVoiceInputSettings} />
+          )}
+        </HStack>
+        {showDescription && (
+          <SettingDescription>{'语音输入的识别服务商；API 地址固定，密钥与模型名称在右侧设置中填写'}</SettingDescription>
+        )}
       </SettingGroup>
     </SettingContainer>
   )

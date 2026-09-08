@@ -32,11 +32,17 @@ export function alarmKey(dateKey: string, h: number, m: number, s: number): stri
  * 每秒调度核心（纯函数，便于单测）：
  * - 跨天（lastCheckDate ≠ 今天）→ crossedDay=true，调用方负责清全部 triggered
  * - 日历闹钟（date 字段）仅在指定日期触发
- * - 触发窗口 = alarmSec ≤ nowSec ≤ alarmSec + 90
+ * - 触发窗口 = alarmSec ≤ nowSec ≤ alarmSec + windowSec
+ *   （默认 90 秒补触发窗口；系统睡眠/定时器被冻结后唤醒时，调用方传更大的 gap 以补响错过的闹钟）
  * - lastTriggerKey 命中过当天该时刻则跳过（防同秒重复）
  * 返回副本（triggered=true + lastTriggerKey），不修改入参数组
  */
-export function computeDueAlarms(alarms: HubAlarm[], now: Date, lastCheckDate: string): DueResult {
+export function computeDueAlarms(
+  alarms: HubAlarm[],
+  now: Date,
+  lastCheckDate: string,
+  windowSec: number = ALARM_FIRE_WINDOW_SEC
+): DueResult {
   const todayKey = dateKeyOf(now)
   const crossedDay = lastCheckDate !== '' && lastCheckDate !== todayKey
   const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
@@ -48,7 +54,7 @@ export function computeDueAlarms(alarms: HubAlarm[], now: Date, lastCheckDate: s
     const key = alarmKey(todayKey, a.h, a.m, a.s || 0)
     if (a.lastTriggerKey === key) continue
     const alarmSec = a.h * 3600 + a.m * 60 + (a.s || 0)
-    if (nowSec >= alarmSec && nowSec - alarmSec <= ALARM_FIRE_WINDOW_SEC) {
+    if (nowSec >= alarmSec && nowSec - alarmSec <= windowSec) {
       toFire.push({ ...a, triggered: true, lastTriggerKey: key })
     }
   }

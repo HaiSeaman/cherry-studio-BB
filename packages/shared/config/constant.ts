@@ -1,4 +1,5 @@
 import { codeLanguages } from './code-languages'
+import type { VoiceInputConfig } from './types'
 
 export const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
 export const videoExts = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv']
@@ -237,6 +238,14 @@ export const DEFAULT_SHORTCUTS = [
     system: true
   },
   {
+    //全局语音输入（按住 Win+Shift+` 说话，松开打字；由 uiohook 键盘钩子实现，不走 globalShortcut）
+    key: 'voice_input',
+    shortcut: ['Meta', 'Shift', '`'],
+    editable: true,
+    enabled: true,
+    system: true
+  },
+  {
     key: 'new_topic',
     shortcut: ['CommandOrControl', 'N'],
     editable: true,
@@ -378,3 +387,11 @@ export const defaultByPassRules = 'localhost,127.0.0.1,::1'
 export const HOME_CHERRY_DIR = '.cherrystudio'
 
 export const APP_NAME = 'Cherry Studio'
+
+/** 语音输入默认配置：三家服务商密钥留空，模型名给官方推荐默认值 */
+export const DEFAULT_VOICE_INPUT_CONFIG: VoiceInputConfig = {
+  provider: 'qwen',
+  qwen: { apiKey: '', model: 'qwen-audio-3.0-asr-flash-streaming' },
+  doubao: { apiKey: '', resourceId: 'volc.seedasr.sauc.duration' },
+  tencent: { appid: '', secretId: '', secretKey: '', engineModel: '16k_zh' }
+}

@@ -1,32 +1,31 @@
-import { db } from '@renderer/databases'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { type FC } from 'react'
+import { useSyncExternalStore, type FC } from 'react'
 import styled from 'styled-components'
 
 import FmRadio from '../music/components/FmRadio'
 import LocalMusicPlayer from '../music/components/LocalMusicPlayer'
 import AlarmPanel from './components/AlarmPanel'
-import { AlarmRingingBanner } from './components/AlarmRingingBanner'
 import CalendarPanel from './components/CalendarPanel'
 import { mx } from './components/mx'
 import NotesPanel from './components/NotesPanel'
 import TodoPanel from './components/TodoPanel'
-import { useAlarmEngine } from './services/alarmScheduler'
+import { alarmScheduler } from './services/alarmScheduler'
 
 /**
  * 个人效率中控台（晨间绿洲浅色主题）
  * 2×2 四宫格：左上 闹钟 / 右上 便签(列表3+内容7，内容区上下拆：便签编辑器+待办) / 左下 日历 / 右下 音乐(FM 左右并排)
- * 闹钟调度器与音频引擎均为应用级单例，页面卸载后闹钟照响、音乐照播
+ * 闹钟调度器、响铃横幅与音频引擎均为应用级单例（AlarmEngineHost 挂在 Router 根）：
+ * 页面卸载后闹钟照响、音乐照播；本页只订阅响铃状态用于面板 UI
  */
 const NotesPage: FC = () => {
-  const alarms = useLiveQuery(async () => (await db.hub_alarms.toArray()) ?? [], [], [])
-  const { ringing, stopRinging } = useAlarmEngine(alarms ?? [])
+  // getRinging 必须箭头包裹：直接传方法引用会丢 this（React 调 getSnapshot 时不带 receiver）
+  const ringing = useSyncExternalStore(
+    alarmScheduler.subscribe,
+    () => alarmScheduler.getRinging(),
+    () => null
+  )
 
   return (
     <Container>
-      {/* 全局绝对置顶响铃通知条：z-index 99999 永不被任何四宫格内容遮挡，带呼吸动画与键盘 Esc/空格秒关 */}
-      <AlarmRingingBanner ringing={ringing} onStop={stopRinging} />
-
       <MainArea>
         <NotesCell>
           {/* 上半：便签编辑器；下半：待办事项（完整功能页，随容器自适应滚动） */}
