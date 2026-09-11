@@ -57,7 +57,8 @@ export default class WebDav {
     options?: PutFileContentsOptions
   ) => {
     if (!this.instance) {
-      return new Error('WebDAV client not initialized')
+      // 必须抛出：返回 Error 对象会被调用方当成成功结果，导致「上传失败但界面报成功」
+      throw new Error('WebDAV client not initialized')
     }
 
     try {

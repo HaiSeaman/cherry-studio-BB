@@ -5,6 +5,55 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.10.1] - 2026-09-11
+
+### 核心主题：语音输入升级为「边说边出字」（真·逐字输入，不再借用剪贴板）+ 快捷键更名「语音输入法」+ 全仓审查修复（双轴审查 + 三区巡检）
+
+**1. 语音输入：流式逐字上屏（重构打字链路）**
+
+- 旧方案为「松开快捷键 → 收最终文本 → 剪贴板 + 模拟 Ctrl+V 一次性整段输入」；新方案在按住说话期间，云端每返回一次累计全量识别文本就经 `StreamingTypewriter` 按**前缀差量**上屏（说话过程中光标持续出字），服务端修正前文时退格删掉分叉尾巴再补新文本；`finalize` 只做尾部校正，不再整段重复输出。
+- **上屏方式由剪贴板粘贴改为 koffi FFI 调 `user32!SendInput`**：字符走 `KEYEVENTF_UNICODE`（WM_CHAR 通道，不受物理按住的 Win/Shift 影响——旧方案按住说话时 Ctrl+V 会被污染成 Ctrl+Shift+V），退格用真实 VK_BACK。剪贴板全程不被动用，备份/恢复逻辑删除。
+- 新增 `focusGuard`（焦点漂移守卫）：录音期间检测到用户真实按键/点击即冻结退格修正，只追加不回退，避免把别处内容删掉；用「按住键集合 + 自维护 pressed Set」排除长按自动重复，用 120ms 注入回声窗口排除自身注入的事件。
+- 退格计数按**码点**而非 UTF-16 码元（含 emoji 时按码元会多退一个字，属真机可见的文本损坏）；`commonPrefixLength` 对代理对切点回退一位，避免把 emoji 拆成半个码元。
+- 腾讯适配器 `slice_type` 0/1 的中间结果改为实时上屏预览（此前回调的是未变化的旧文本，看不到逐字增长）。
+
+**2. 快捷键更名**：快捷键设置页该功能显示名由 `voice_input` 改为「语音输入法」（`i18n/label.ts` 的 `shortcutKeyMap` 补映射），并新增 label 单测。
+
+**3. 全仓审查修复（7 处真实缺陷，均带回归测试）**
+
+- `BackupManager.restoreFromWebdav/restoreFromS3`：本地落盘路径补 `path.basename` 净化（远端文件名带 `../` 可写到备份目录外，`backup()` 侧本有此保护）；恢复完成后清理下载副本（与备份收尾对齐，此前越堆越多）。
+- `WebDav.putFileContents` 未初始化时由 `return new Error(...)` 改为 `throw`（同文件 `getFileContents` 本就抛出），此前调用方把 Error 对象当成功结果，界面报成功但实际未上传。
+- `store/assistants.ts` 的 `updateTopic` 改为纯函数：不再就地改写 action.payload（传入冻结对象时会抛错），并移除对全部话题的 `messages` 就地赋值（清空不变量改为产出新对象表达）。
+- `useTopic.getTopicById` 话题不存在时如实返回 `undefined`（此前返回缺 `id/name` 的残缺对象），4 个调用点各自兜底。
+- `scripts/before-pack.js` 的 `copyKoffiNativeBinding()` 找不到 koffi 平台绑定时由仅告警改为**硬失败**（否则会打出语音输入静默失效的安装包），并支持 `rootDir` 注入便于单测。
+
+**4. 打包可靠性（koffi 原生绑定）**
+
+- 根因：`@koromix/koffi-win32-x64` 只是 koffi 的 optionalDependency，pnpm 将其放在虚拟仓库内（koffi 包目录的同级），electron-builder 的依赖收集看不到 → 打包产物缺 `koffi.node`，语音输入在打包版完全失效。
+- 修复：`before-pack.js` 按 koffi 官方加载器的回退路径，把平台包内的 `koffi.node` 拷入 koffi 包内 `build/koffi/<平台>_<abi>/`（`electron-builder.yml` 的 `asarUnpack` 覆盖 `node_modules` 下 koffi 目录）；不采用「根 package.json 加 optionalDependency 提升平台包」的方案（会触发 pnpm 全图重解析，且需同步产出新锁文件）。
+
+**质量验证**：Vitest 全仓 259 个测试文件 **3963 项测试 0 失败**（main 455 / renderer 3068 / shared 72 / aiCore 360 / scripts 8，较上版新增 57 项回归测试）；tsgo node/web 双端类型检查全绿；改动文件 biome + eslint 0 error 0 warning；完整构建通过；打包产物经脚本校验（原生绑定在位可加载、asar 含新增文案）。
+
+## [1.10.0] - 2026-09-08
+
+### 核心主题：全局语音输入（按住说话，千问 / 豆包 / 腾讯三家可切）+ 闹钟「有时不响」根因修复 + 倒计时单例化
+
+**1. 全局语音输入（首次交付）**
+
+- 按住 `Win + ~` 说话、松开打字到光标处：`keyboardHook`（uiohook-napi 全局按下/松开 + 防抖）→ `ShortcutService` 特殊分支（不走 globalShortcut，需感知 keyup）→ 渲染层 `getUserMedia` 录音 → 重采样 16kHz 单声道 PCM 按 100ms 分块经 IPC 推主进程 → 按所选服务商建立 WebSocket 识别会话（千问 / 豆包大模型流式 / 腾讯云三套适配器，含豆包帧协议与腾讯 HMAC-SHA1 签名）→ 识别文本一次性输入光标处。
+- 设置：默认模型页新增「语音输入模型」区块（三家密钥 / 模型名分存互不干扰，密钥校验收敛到 shared）；快捷键页新增「语音输入」行（可改键）。
+- 生命周期状态广播（listening / inserting / done / error）+ 渲染层错误提示；音频缓存补发（连接建立前的音频不丢）、极短按键挂起收尾等 11 处竞态/边界修复。
+
+**2. 闹钟「有时不响」根因修复（5 项）**
+
+- 引擎挂载点移至 Router 根常驻 `AlarmEngineHost`（原只挂在便签页，未进过该页则调度器从未启动）；
+- 睡眠跨点补响：调度器记录 `lastTickAt`，补响窗口扩为 `max(90s, gap)`（仅限当天）；
+- `firedKeys` 当日去重（跨重启由 db 的 `lastTriggerKey` 兜底）；
+- 试听与真响互斥（试听进行中到点的闹钟接管响铃）；
+- 倒计时独立单例 `services/countdownEngine.ts`（页面切换不再被组件卸载杀掉计时）。
+
+**质量验证**：Vitest 全仓 0 失败（3906 项）；typecheck 全绿；豆包用真实 Key 直连生产代码全链路验证通过。
+
 ## [1.9.4] - 2026-09-07
 
 ### 核心主题：主题系统自定义 CSS 解锁（内置主题与自定义 CSS 共存）+ 删除跨设备同步 + V2 死代码清理 + 全仓审查瘦身（净删约 2700 行）

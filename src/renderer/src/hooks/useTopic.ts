@@ -99,10 +99,12 @@ export function getTopic(assistant: Assistant, topicId: string) {
   return assistant?.topics.find((topic) => topic.id === topicId)
 }
 
-export async function getTopicById(topicId: string) {
+export async function getTopicById(topicId: string): Promise<Topic | undefined> {
   const assistants = store.getState().assistants.assistants
-  const topics = assistants.map((assistant) => assistant.topics).flat()
+  const topics = assistants.flatMap((assistant) => assistant.topics ?? [])
   const topic = topics.find((topic) => topic.id === topicId)
+  // 话题已删除或尚未加载：返回 undefined，不要造出缺少 id/name 的残缺对象喂给调用方
+  if (!topic) return undefined
   const messages = await TopicManager.getTopicMessages(topicId)
   return { ...topic, messages } as Topic
 }
@@ -151,7 +153,7 @@ export const autoRenameTopic = async (assistant: Assistant, topicId: string) => 
     const topic = await getTopicById(topicId)
     const enableTopicNaming = getStoreSetting('enableTopicNaming')
 
-    if (isEmpty(topic.messages)) {
+    if (!topic || isEmpty(topic.messages)) {
       return
     }
 

@@ -247,11 +247,14 @@ export class TencentASRAdapter implements ASRAdapter {
       return
     }
     if (message.text) {
-      // slice_type=2（稳态）才追加到最终文本；中间结果仅用于实时回调
       if (message.sliceType === 2) {
+        // 稳态结果：本句已确定，落盘并回调（流式打字以这个位置为准向后追加）
         this.resultText += message.text
+        this.options.onResult?.(this.resultText)
+      } else if (message.sliceType === 0 || message.sliceType === 1) {
+        // 中间结果：本句尚未定稿，只作为实时上屏预览（已确定文本 + 当前分句），不落盘
+        this.options.onResult?.(this.resultText + message.text)
       }
-      this.options.onResult?.(this.resultText)
     }
     if (message.final && this.finalizeResolver) {
       const resolve = this.finalizeResolver

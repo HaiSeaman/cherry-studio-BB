@@ -32,7 +32,7 @@ const SearchMessage: FC<Props> = ({ message, ...props }) => {
     const seq = ++querySeq.current
     void runAsyncFunction(async () => {
       const topic = await getTopicById(topicId)
-      if (querySeq.current === seq) setTopic(topic)
+      if (querySeq.current === seq) setTopic(topic ?? null)
     })
   }, [message])
 

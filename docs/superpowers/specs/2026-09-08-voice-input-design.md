@@ -392,3 +392,20 @@ interface VoiceInputConfig {
 5. 腾讯云 实时语音识别（WebSocket）：https://cloud.tencent.com/document/product/1093/48982
 6. uiohook-napi（键盘钩子+模拟按键）：https://github.com/SnosMe/uiohook-napi
 7. Daisy-Voice-Agent（按住说话参考实现）：https://github.com/forestai123456/Daisy-Voice-Agent
+
+---
+
+## 十七、v1.10.1 修订：流式逐字上屏（本节取代 §六 打字方案与 §十二 打字时序中的「松开后一次性整段输入」）
+
+v1.10.0 交付的是「松开快捷键 → 收最终文本 → 剪贴板 + 模拟 Ctrl+V 一次性整段输入」。v1.10.1 按新需求重构为 **按住说话期间光标处持续逐字出字**，要点：
+
+1. **打字器 `StreamingTypewriter`**（`voiceInput/streamingTypewriter.ts`）：维护「已打进光标的文本」，收到云端每次返回的**累计全量**文本时求最长公共前缀 → 退格删掉分叉尾巴 → 只输入新增片段；服务端修正前文（`你说今天在主` → `你说今天在做些什么东西`）自动收敛；`freeze()` 后只追加不退格；`finalize` 只做尾部校正，**绝不再整段重复输入**（否则与已上屏内容重复出字）。
+2. **退格按码点计数**：真实输入框一次退格删一个码点（emoji 算一个），不能用 `str.length`（UTF-16 码元），否则含 emoji 会多退一个字。`commonPrefixLength` 对代理对切点回退一位。
+3. **上屏改为 koffi FFI 调 `user32!SendInput`**，弃用剪贴板 + Ctrl+V：按住 `Win+Shift+~` 时物理按住的 Shift 会把模拟粘贴污染成 `Ctrl+Shift+V`（部分软件不响应），且剪贴板被反复占用；`KEYEVENTF_UNICODE` 走 WM_CHAR 通道则完全不受按住的修饰键影响。退格用真实 VK_BACK。
+4. **焦点守卫 `focusGuard`**：录音期间用户真实按键/点击 → `freeze()`（只追加不退格，避免删错别处内容）。长按自动重复用「holdKeys + 自维护 pressed Set」排除；自身注入的键鼠事件用 120ms 回声窗口（`getLastInjectionAt`）排除。守卫要活到 `finalize` 的尾部校正之后。
+5. **适配器契约**：`onResult` 必须是**累计全量**文本；腾讯 `slice_type` 0/1 改为实时上屏预览（此前回调的是未变化的旧文本）。
+6. **打包（koffi 原生绑定）**：`@koromix/koffi-win32-x64` 只是 koffi 的 optionalDependency，pnpm 放在虚拟仓库里 electron-builder 收集不到 → `before-pack.js` 按 koffi 官方回退路径把 `koffi.node` 拷进 koffi 包内 `build/koffi/<平台>_<abi>/`（`asarUnpack` 已覆盖），找不到时**硬失败**。不要用「根 package.json 加 optionalDependency」提升平台包（触发 pnpm 全图重解析且需同步锁文件）。
+7. **改名**：快捷键设置页显示名 `voice_input` → 「语音输入法」（`i18n/label.ts`）。
+8. 验收：Vitest 全仓 3963 项 0 失败（含退格码点 / 焦点冻结 / finalize 不重复输入 / 打包脚本 4 类回归测试）；tsgo node/web 双绿；打包产物经脚本校验绑定在位可加载。
+
+已知未修（与本功能无关，另排期）：`BackupManager` 所有备份/恢复共用固定 `tempDir` 且各自收尾删除，并发会互相破坏。

@@ -169,6 +169,7 @@ const shortcutKeyMap = {
   toggle_new_context: '清除上下文',
   toggle_show_assistants: '切换助手显示',
   toggle_show_topics: '切换话题显示',
+  voice_input: '语音输入法',
   zoom_in: '放大界面',
   zoom_out: '缩小界面',
   zoom_reset: '重置缩放'

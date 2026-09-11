@@ -3,7 +3,7 @@ import { IpcChannel } from '@shared/IpcChannel'
 import type { Shortcut } from '@types'
 
 import { windowService } from '../WindowService'
-import { createVoiceKeyboardHook, type VoiceKeyboardHook } from './keyboardHook'
+import { createVoiceKeyboardHook, parseShortcutToKeycodes, type VoiceKeyboardHook } from './keyboardHook'
 import { voiceInputService } from './VoiceInputService'
 
 const logger = loggerService.withContext('VoiceKeyboard')
@@ -16,10 +16,12 @@ const logger = loggerService.withContext('VoiceKeyboard')
  */
 class VoiceKeyboardManager {
   private hook: VoiceKeyboardHook | null = null
+  /** 当前按住的快捷键键码：交给焦点守卫用于忽略长按自动重复 */
+  private holdKeys: number[] = []
 
   private readonly onStart = (): void => {
     logger.info('voice input started')
-    voiceInputService.start()
+    voiceInputService.start(this.holdKeys)
     windowService.getMainWindow()?.webContents.send(IpcChannel.VoiceInput_BeginCapture)
   }
 
@@ -30,6 +32,7 @@ class VoiceKeyboardManager {
 
   sync(shortcut: Shortcut): void {
     const enabled = shortcut.enabled && shortcut.shortcut.length > 0
+    this.holdKeys = parseShortcutToKeycodes(shortcut.shortcut)
 
     if (!enabled) {
       if (this.hook) {

@@ -42,7 +42,8 @@ const { mockLogger } = vi.hoisted(() => ({
   mockLogger: {
     info: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
+    error: vi.fn(),
+    debug: vi.fn()
   }
 }))
 
@@ -109,6 +110,7 @@ vi.mock('node-stream-zip', () => ({
 }))
 
 // Import after mocks
+import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 
 import BackupManager from '../BackupManager'
@@ -335,5 +337,71 @@ describe('BackupManager.copyDirWithProgress - Symlink Handling', () => {
       expect.stringContaining('Skipping circular symlink directory'),
       expect.objectContaining({ path: '/src/self-link', realPath: '/src' })
     )
+  })
+})
+
+describe('BackupManager 远端恢复 - 落盘路径净化与副本清理', () => {
+  let backupManager: BackupManager
+  const fakeStream = {
+    write: vi.fn(),
+    end: vi.fn(),
+    on: vi.fn((event: string, callback: () => void) => {
+      if (event === 'finish') callback()
+    })
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    backupManager = new BackupManager()
+    vi.mocked(fs.createWriteStream).mockReturnValue(fakeStream as never)
+    vi.mocked(fsp.rm).mockResolvedValue(undefined as never)
+  })
+
+  const stubRemote = () => {
+    const client = { getFileContents: vi.fn().mockResolvedValue(Buffer.from('zip-bytes')) }
+    const restore = vi.fn().mockResolvedValue('restored')
+    ;(backupManager as any).getWebDavInstance = () => client
+    ;(backupManager as any).getS3Storage = () => client
+    ;(backupManager as any).restore = restore
+    return { client, restore }
+  }
+
+  it('WebDAV 远端文件名带 ../ 时，本地只写到 backupDir 内（不越界）', async () => {
+    const { client, restore } = stubRemote()
+
+    await backupManager.restoreFromWebdav({} as never, { fileName: '../../evil.zip' } as never)
+
+    expect(fs.createWriteStream).toHaveBeenCalledWith('/tmp/cherry-studio/backup/evil.zip')
+    expect(restore).toHaveBeenCalledWith({}, '/tmp/cherry-studio/backup/evil.zip')
+    // 远端仍按原文件名取（WebDAV 侧另有 .. 校验，S3 侧 key 不存在路径穿越问题）
+    expect(client.getFileContents).toHaveBeenCalledWith('../../evil.zip')
+  })
+
+  it('WebDAV 恢复完成后删掉下载来的副本（不再在 backupDir 里越堆越多）', async () => {
+    const { restore } = stubRemote()
+
+    await backupManager.restoreFromWebdav({} as never, { fileName: 'backup.zip' } as never)
+
+    expect(restore).toHaveBeenCalled()
+    expect(fsp.rm).toHaveBeenCalledWith('/tmp/cherry-studio/backup/backup.zip', { recursive: true, force: true })
+  })
+
+  it('WebDAV 恢复失败时同样清掉副本', async () => {
+    const { restore } = stubRemote()
+    restore.mockRejectedValue(new Error('zip 损坏'))
+
+    await expect(backupManager.restoreFromWebdav({} as never, { fileName: 'backup.zip' } as never)).rejects.toThrow()
+
+    expect(fsp.rm).toHaveBeenCalledWith('/tmp/cherry-studio/backup/backup.zip', { recursive: true, force: true })
+  })
+
+  it('S3 远端文件名带 ../ 时，本地只写到 backupDir 内，且恢复后清理副本', async () => {
+    const { restore } = stubRemote()
+
+    await backupManager.restoreFromS3({} as never, { fileName: '../../evil.zip' } as never)
+
+    expect(fs.createWriteStream).toHaveBeenCalledWith('/tmp/cherry-studio/backup/evil.zip')
+    expect(restore).toHaveBeenCalledWith({}, '/tmp/cherry-studio/backup/evil.zip')
+    expect(fsp.rm).toHaveBeenCalledWith('/tmp/cherry-studio/backup/evil.zip', { recursive: true, force: true })
   })
 })

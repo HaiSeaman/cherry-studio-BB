@@ -122,17 +122,17 @@ const assistantsSlice = createSlice({
       )
     },
     updateTopic: (state, action: PayloadAction<{ assistantId: string; topic: Topic }>) => {
-      const newTopic = action.payload.topic
-      newTopic.updatedAt = new Date().toISOString()
+      const { assistantId, topic: newTopic } = action.payload
+      const updatedAt = new Date().toISOString()
+      // 注意：不要就地改写 action.payload（它是调用方的对象，且被 Immer 冻结后写入会抛错），
+      // 一律产出新对象；messages 清空是该仓库既有不变量（消息存在 messages slice 里）
       state.assistants = state.assistants.map((assistant) =>
-        assistant.id === action.payload.assistantId
+        assistant.id === assistantId
           ? {
               ...assistant,
-              topics: normalizeTopics(assistant.topics).map((topic) => {
-                const _topic = topic.id === newTopic.id ? newTopic : topic
-                _topic.messages = []
-                return _topic
-              })
+              topics: normalizeTopics(assistant.topics).map((topic) =>
+                topic.id === newTopic.id ? { ...newTopic, updatedAt, messages: [] } : { ...topic, messages: [] }
+              )
             }
           : assistant
       )

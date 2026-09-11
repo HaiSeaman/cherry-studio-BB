@@ -1,6 +1,7 @@
 # Cherry Studio BB · Code Wiki
 
-> 本 Wiki 基于 2026-08 对仓库源码的静态分析生成，对应版本 **v1.6.1**（fork：`CherryHQ/cherry-studio` 的中文增强分支 `Cherry-Studio-BB`）。
+> 本 Wiki 基于 2026-08 对仓库源码的静态分析生成，基线版本 **v1.6.1**（fork：`CherryHQ/cherry-studio` 的中文增强分支 `Cherry-Studio-BB`）。
+> 2026-09 起随版本增量维护（闹钟 / 语音输入 / 打包链路等），当前对应 **v1.10.1**。
 
 ## 文档目录
 
@@ -25,7 +26,7 @@
 │  ├─ index.ts 启动编排            ├─ React 19 + Redux Toolkit │
 │  ├─ services/* 30+ 服务         ├─ pages/home 聊天工作台      │
 │  ├─ ipc.ts IPC 注册中心          ├─ aiCore → @cherrystudio/ai-core
-│  └─ mcpServers 内置MCP           ├─ Dexie (IndexedDB v12)    │
+│  └─ mcpServers 内置MCP           ├─ Dexie (IndexedDB v15)    │
 │                                 └─ 5 个 HTML 多入口窗口       │
 │         ▲│ invoke/handle (IpcChannel 枚举, packages/shared)   │
 │         │▼                                                   │

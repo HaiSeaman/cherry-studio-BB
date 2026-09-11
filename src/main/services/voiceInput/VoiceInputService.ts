@@ -7,28 +7,39 @@ import { configManager } from '../ConfigManager'
 import { windowService } from '../WindowService'
 import { type ASRAdapterCallbacks, createASRAdapter } from './asr'
 import type { ASRAdapter } from './asr/types'
-import { insertTextAtCursor } from './textInserter'
+import { createFocusGuard, type FocusGuard } from './focusGuard'
+import { StreamingTypewriter } from './streamingTypewriter'
+import { backspaceAtCursor, typeTextAtCursor } from './textInserter'
 
 const logger = loggerService.withContext('VoiceInput')
 
 type CreateAdapterFn = (config: VoiceInputConfig, callbacks: ASRAdapterCallbacks) => ASRAdapter
+type FocusGuardFactory = (onUserInput: () => void) => FocusGuard
 
 /**
  * 语音输入主进程编排：
  * 键盘钩子 start → 按所选服务商建识别会话；渲染推音频 → 转发；
- * 渲染 finalize → 收最终文本 → 全局打字（剪贴板 + 模拟 Ctrl+V）。
+ * 云端每返回一次「累计全量」识别文本 → 增量打字器按差量上屏（说话过程中光标持续出字）；
+ * 渲染 finalize → 收到最终文本后只做尾部校正（不重复整段输入）。
+ * 焦点漂移守卫在检测到用户真实键鼠输入时冻结退格修正。
  * 生命周期状态经 broadcast 通知渲染层（可选依赖，便于测试）。
  */
 export class VoiceInputService {
   private adapter: ASRAdapter | null = null
+  private guard: FocusGuard | null = null
+  private readonly typewriter = new StreamingTypewriter({
+    type: typeTextAtCursor,
+    backspace: backspaceAtCursor
+  })
 
   constructor(
     private readonly createAdapter: CreateAdapterFn = createASRAdapter,
-    private readonly broadcast: (state: VoiceInputState) => void = () => {}
+    private readonly broadcast: (state: VoiceInputState) => void = () => {},
+    private readonly guardFactory: FocusGuardFactory = createFocusGuard
   ) {}
 
-  /** 键盘钩子「按下」：读取配置、校验密钥并按服务商建立识别会话 */
-  start(): void {
+  /** 键盘钩子「按下」：读取配置、校验密钥并按服务商建立识别会话；holdKeys 为按住的快捷键键码 */
+  start(holdKeys: number[] = []): void {
     const cfg = configManager.getVoiceInputConfig()
 
     const missing = getMissingVoiceInputCredential(cfg)
@@ -39,9 +50,11 @@ export class VoiceInputService {
     }
 
     this.closeCurrent()
+    this.typewriter.reset()
 
     const callbacks: ASRAdapterCallbacks = {
-      onResult: (text) => logger.debug(`voice input 识别中：${text}`),
+      // 中间结果与最终结果都从这里进来：差量上屏由打字器负责
+      onResult: (text) => this.typewriter.commit(text),
       onError: (message) => {
         logger.error(`voice input 识别错误：${message}`)
         this.broadcast('error')
@@ -49,6 +62,7 @@ export class VoiceInputService {
     }
     const adapter = this.createAdapter(cfg, callbacks)
     this.adapter = adapter
+    this.getOrCreateGuard().start(holdKeys)
     this.broadcast('listening')
 
     void adapter
@@ -70,20 +84,22 @@ export class VoiceInputService {
     this.adapter?.sendAudio(chunk)
   }
 
-  /** 渲染进程通知结束：返回最终识别文本，并全局打字到光标处 */
+  /** 渲染进程通知结束：等最终识别文本，把光标处内容校正到最终结果 */
   async finalize(): Promise<string> {
     const adapter = this.adapter
     this.adapter = null
-    if (!adapter) return ''
+    if (!adapter) {
+      this.endSession()
+      return ''
+    }
 
     this.broadcast('inserting')
     try {
       const text = await adapter.stopAndFinalize()
       adapter.close()
       logger.info(`voice input 识别结果：${text}`)
-      if (text.trim()) {
-        insertTextAtCursor(text)
-      }
+      // 流式阶段已上屏的内容由差量逻辑复用，这里只补齐/修正尾部
+      this.typewriter.finish(text)
       this.broadcast('done')
       return text
     } catch (error) {
@@ -91,7 +107,24 @@ export class VoiceInputService {
       adapter.close()
       this.broadcast('error')
       return ''
+    } finally {
+      this.endSession()
     }
+  }
+
+  /**
+   * 收尾清理：停掉焦点守卫并复位打字器。
+   * 守卫必须活到最终校正之后——等最终结果最长 5 秒，期间用户若点了别处，
+   * 这次校正就可能退格删错地方。
+   */
+  private endSession(): void {
+    this.guard?.stop()
+    this.typewriter.reset()
+  }
+
+  private getOrCreateGuard(): FocusGuard {
+    this.guard ??= this.guardFactory(() => this.typewriter.freeze())
+    return this.guard
   }
 
   private closeCurrent(): void {

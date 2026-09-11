@@ -617,7 +617,9 @@ class BackupManager {
     const webdavClient = this.getWebDavInstance(webdavConfig)
     try {
       const retrievedFile = await webdavClient.getFileContents(filename)
-      const backupedFilePath = path.join(this.backupDir, filename)
+      // 本地落盘路径必须剥掉目录成分（与 backup() 一致）：
+      // 远端返回/渲染层传入的 fileName 若为 "../evil.zip"，否则会写到 backupDir 之外
+      const backupedFilePath = path.join(this.backupDir, path.basename(filename))
 
       if (!fs.existsSync(this.backupDir)) {
         fs.mkdirSync(this.backupDir, { recursive: true })
@@ -633,7 +635,12 @@ class BackupManager {
         writeStream.on('error', (error) => reject(error))
       })
 
-      return await this.restore(_, backupedFilePath)
+      try {
+        return await this.restore(_, backupedFilePath)
+      } finally {
+        // 恢复完就清掉下载来的副本，避免 backupDir 里越堆越多（与 backupToWebdav 的收尾一致）
+        await removePath(backupedFilePath).catch(() => {})
+      }
     } catch (error: any) {
       logger.error('Failed to restore from WebDAV:', error)
       throw new Error(error.message || 'Failed to restore backup file')
@@ -655,7 +662,8 @@ class BackupManager {
     const s3Client = this.getS3Storage(s3Config)
     try {
       const retrievedFile = await s3Client.getFileContents(filename)
-      const backupedFilePath = path.join(this.backupDir, filename)
+      // 本地落盘路径必须剥掉目录成分（与 backup() 一致），否则 "../evil.zip" 会写到 backupDir 之外
+      const backupedFilePath = path.join(this.backupDir, path.basename(filename))
       if (!fs.existsSync(this.backupDir)) {
         fs.mkdirSync(this.backupDir, { recursive: true })
       }
@@ -668,7 +676,12 @@ class BackupManager {
       })
 
       logger.info(`S3 restore file downloaded successfully: ${filename}`)
-      return await this.restore(_, backupedFilePath)
+      try {
+        return await this.restore(_, backupedFilePath)
+      } finally {
+        // 恢复完就清掉下载来的副本，避免 backupDir 里越堆越多（与 backupToS3 的收尾一致）
+        await removePath(backupedFilePath).catch(() => {})
+      }
     } catch (error: any) {
       logger.error('[BackupManager] Failed to restore from S3:', error)
       throw new Error(error.message || 'Failed to restore backup file')

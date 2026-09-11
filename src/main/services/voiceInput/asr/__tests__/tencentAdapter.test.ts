@@ -108,6 +108,30 @@ describe('TencentASRAdapter', () => {
     expect(onResult.mock.calls.map((c) => c[0])).toEqual(['你好', '你好你们好'])
   })
 
+  it('中间结果（slice_type 0/1）作为实时上屏预览回调，稳态（slice_type 2）才落盘', async () => {
+    const onResult = vi.fn()
+    const adapter = createAdapter({ onResult })
+    const connected = adapter.connect()
+    trigger('open')
+    await connected
+
+    trigger('message', message(0, '今天', { sliceType: 0 }))
+    trigger('message', message(0, '今天天气不错', { sliceType: 1 }))
+    trigger('message', message(0, '今天天气不错。', { sliceType: 2 }))
+    trigger('message', message(0, '明天', { sliceType: 1 }))
+
+    expect(onResult.mock.calls.map((c) => c[0])).toEqual([
+      '今天',
+      '今天天气不错',
+      '今天天气不错。',
+      '今天天气不错。明天' // 未定稿分句只做预览，不计入最终文本
+    ])
+
+    const finalText = adapter.stopAndFinalize()
+    trigger('message', message(0, '', { final: 1 }))
+    await expect(finalText).resolves.toBe('今天天气不错。')
+  })
+
   it('code 非 0 时回调 onError', async () => {
     const onError = vi.fn()
     const adapter = createAdapter({ onError })

@@ -88,6 +88,11 @@ asarUnpack:
   # electron-screenshots screenshot capture depends on it (screenshot toolbar feature)
   - "node_modules/node-screenshots*/**"
   - "node_modules/**/node-screenshots-win32-x64-msvc/**"
+  # koffi：FFI 调 user32!SendInput 实现「逐字输入到光标」。
+  # 原生绑定与它的平台预编译包（@koromix/koffi-win32-x64）必须解包到 asar 外，
+  # .node 无法从 asar 内加载
+  - "node_modules/**/koffi/**"
+  - "node_modules/**/@koromix/**"
 
 win:
   executableName: Cherry-Studio-BB
