@@ -1,30 +1,14 @@
 import { db } from '@renderer/databases'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Pause, Play, Plus, Radio, RefreshCw, RotateCw, Search, SkipBack, SkipForward } from 'lucide-react'
+import { Pause, Play, Plus, Radio, RotateCw, Search, SkipBack, SkipForward } from 'lucide-react'
 import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 
 import { type FmStatus, useFmPlayer } from '../hooks/useFmPlayer'
-import {
-  dedupStationsByUrl,
-  getCnHkMusicStations,
-  getStationsBySource,
-  getTopStations,
-  type RadioConfig,
-  type RadioSource,
-  searchStations,
-  withBuiltinCnHk
-} from '../services/radioApi'
-import {
-  addExcludedUrl,
-  clearRadioCache,
-  getCachedCnHk,
-  getCachedTop,
-  getExcludedUrls,
-  setCachedCnHk,
-  setCachedTop
-} from '../services/radioCache'
+import { type RadioConfig, searchStations } from '../services/radioApi'
+import { BOARD_SUBS, type BoardGroup, boardKeyOf, type BoardSub, getBoardStations } from '../services/radioBoards'
+import { addExcludedUrl, getExcludedUrls } from '../services/radioCache'
 import { addCustomStation, removeCustomStation } from '../store/musicSettingsSlice'
 import type { RadioStation } from '../types'
 import {
@@ -43,18 +27,12 @@ import {
 } from './mx'
 import VolumeControl from './VolumeControl'
 
-type FmTab = 'top' | 'cnhk' | 'search' | 'favorites'
+/** 一级 tab：国内 / 国外（各含综合+音乐两板块）/ 搜索 / 收藏 */
+type FmTab = BoardGroup | 'search' | 'favorites'
 type SearchMode = 'keyword' | 'country' | 'tag'
 
-/** 列表刷新来源循环（仅热门 tab，照文档 §7.7 五种） */
-const REFRESH_SOURCES: RadioSource[] = ['topvote', 'topclick', 'recent', 'bycountry-china', 'bycountry-hongkong']
-const SOURCE_LABELS: Record<RadioSource, string> = {
-  topvote: '热门投票',
-  topclick: '热门收听',
-  recent: '最近播放',
-  'bycountry-china': '中国大陆',
-  'bycountry-hongkong': '香港'
-}
+/** 二级板块中文名（板块顺序见 BOARD_SUBS） */
+const SUB_LABELS: Record<BoardSub, string> = { news: '综合', music: '音乐' }
 
 const FAVICON_FALLBACK =
   'data:image/svg+xml,' +
@@ -70,8 +48,16 @@ const STATUS_TEXT: Record<FmStatus, string> = {
   error: '连接失败'
 }
 
+/** 名称按「 (」拆主副标题：如「中国之声 (CNR-1 国家级综合广播)」→ 主「中国之声」/ 副「CNR-1 国家级综合广播」 */
+function splitName(name: string): { title: string; subtitle: string } {
+  const i = name.indexOf(' (')
+  if (i < 0) return { title: name, subtitle: '' }
+  return { title: name.slice(0, i), subtitle: name.slice(i + 2).replace(/\)\s*$/, '') }
+}
+
 /**
- * FM 网络电台（右栏卡片）：LIVE 状态胶囊 + 控制 + 胶囊标签 + 电台列表
+ * FM 网络电台（右栏卡片）：国内/国外 × 综合/音乐 四大板块 + 搜索 + 收藏。
+ * 板块数据打包内置（radioBoards.ts，零网络依赖）；搜索走 RadioBrowser；收存 Dexie。
  */
 const FmRadio: FC = () => {
   const dispatch = useAppDispatch()
@@ -79,18 +65,16 @@ const FmRadio: FC = () => {
   const customStations = useAppSelector((s) => s.musicSettings.customStations)
 
   const cfg: RadioConfig = useMemo(
-    () => ({ apiBaseUrl: radioConfigState.apiBaseUrl, timeout: radioConfigState.timeout, customStations }),
-    [radioConfigState, customStations]
+    () => ({ apiBaseUrl: radioConfigState.apiBaseUrl, timeout: radioConfigState.timeout }),
+    [radioConfigState]
   )
   const cfgRef = useRef(cfg)
   cfgRef.current = cfg
 
-  const [tab, setTab] = useState<FmTab>('cnhk')
-  const [topList, setTopList] = useState<RadioStation[]>([])
-  const [cnhkList, setCnhkList] = useState<RadioStation[]>([])
+  const [tab, setTab] = useState<FmTab>('domestic')
+  const [boardSub, setBoardSub] = useState<BoardSub>('news')
   const [searchList, setSearchList] = useState<RadioStation[]>([])
   const [loading, setLoading] = useState(false)
-  const [sourceIdx, setSourceIdx] = useState(0)
   const [searchMode, setSearchMode] = useState<SearchMode>('keyword')
   const [searchText, setSearchText] = useState('')
   const [excludedUrls, setExcludedUrls] = useState<string[]>(() => getExcludedUrls())
@@ -104,60 +88,23 @@ const FmRadio: FC = () => {
   const tabRef = useRef(tab)
   tabRef.current = tab
 
-  const loadTop = useCallback(async (force = false) => {
-    const cached = force ? null : getCachedTop()
-    if (cached) {
-      setTopList(dedupStationsByUrl(cached.chinaHk, cached.stations))
-      return
-    }
-    setLoading(true)
-    try {
-      const list = await getTopStations(cfgRef.current)
-      setTopList(list)
-      const chinaHk = list.filter((s) => s.country.includes('China') || s.country.includes('Hong Kong'))
-      setCachedTop(list, chinaHk)
-    } catch {
-      // 全部镜像失败：回退内置精选台（清晨音乐台 + RTHK + 自定义），保证始终有台可听
-      setTopList(withBuiltinCnHk([], cfgRef.current.customStations))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // 一级 tab 收窄为板块组（搜索/收藏时为 null）：靠类型收窄取组名，不写字符串拼接 + 断言
+  const group: BoardGroup | null = tab === 'domestic' || tab === 'foreign' ? tab : null
+  const boardKey = group ? boardKeyOf(group, boardSub) : null
 
-  const loadCnhk = useCallback(async (force = false) => {
-    const cached = force ? null : getCachedCnHk()
-    if (cached) {
-      setCnhkList(withBuiltinCnHk(cached.stations, cfgRef.current.customStations))
-      return
-    }
-    try {
-      const list = await getCnHkMusicStations(cfgRef.current)
-      setCnhkList(list)
-      setCachedCnHk(list)
-    } catch {
-      setCnhkList(withBuiltinCnHk([], cfgRef.current.customStations))
-    }
-  }, [])
+  // 板块电台：内置数据 + 自定义电台（自定义排尾部，撞 url 时自定义优先）
+  const boardStations = useMemo(
+    () => (boardKey ? getBoardStations(boardKey, customStations) : []),
+    [boardKey, customStations]
+  )
 
-  useEffect(() => {
-    void loadTop()
-    void loadCnhk()
-  }, [loadTop, loadCnhk])
-
-  // 列表 ↻：五来源循环替换热门列表（不写缓存，控制栏 ↻ 才强制重拉）
-  const cycleSource = useCallback(async () => {
-    const nextIdx = (sourceIdx + 1) % REFRESH_SOURCES.length
-    setSourceIdx(nextIdx)
-    setLoading(true)
-    try {
-      const list = await getStationsBySource(cfgRef.current, REFRESH_SOURCES[nextIdx])
-      setTopList(list)
-    } catch {
-      // 失败保留原列表
-    } finally {
-      setLoading(false)
-    }
-  }, [sourceIdx])
+  // 二级 tab 数量徽标 = 该板块实际可播条数（与列表严格一致：含自定义、扣除被 ✕ 隐藏的）
+  const boardCounts = useMemo(() => {
+    if (!group) return null
+    const countOf = (s: BoardSub) =>
+      getBoardStations(boardKeyOf(group, s), customStations).filter((x) => !excludedUrls.includes(x.url)).length
+    return { news: countOf('news'), music: countOf('music') }
+  }, [group, customStations, excludedUrls])
 
   // 搜索：200ms 防抖 + 请求序号守卫丢弃过期响应
   const searchReqId = useRef(0)
@@ -188,26 +135,22 @@ const FmRadio: FC = () => {
   // rawList 依赖 tab 状态切换，必须在 useMemo 内计算：
   // 每次渲染新建的数组引用（尤其 favorites || [] 兜底）会让下方 stations memo 依赖漂移而整体失效
   const rawList: RadioStation[] = useMemo(
-    () => (tab === 'top' ? topList : tab === 'cnhk' ? cnhkList : tab === 'search' ? searchList : favorites || []),
-    [tab, topList, cnhkList, searchList, favorites]
+    () => (boardKey ? boardStations : tab === 'search' ? searchList : favorites || []),
+    [boardKey, boardStations, tab, searchList, favorites]
   )
   const stations = useMemo(() => rawList.filter((s) => !excludedUrls.includes(s.url)), [rawList, excludedUrls])
 
   const player = useFmPlayer(stations)
 
-  // 控制栏 ↻：清 7 天缓存后强制重拉当前子 tab 数据
+  // 控制栏 ↻：板块为内置静态数据、收藏为 Dexie 实时，仅搜索需要重新拉取
   const forceRefresh = useCallback(() => {
-    clearRadioCache()
-    if (tabRef.current === 'top') void loadTop(true)
-    else if (tabRef.current === 'cnhk') void loadCnhk(true)
-    else if (tabRef.current === 'search') {
-      const text = searchText.trim()
-      if (text) {
-        setSearchText('')
-        setTimeout(() => setSearchText(text), 0)
-      }
+    if (tabRef.current !== 'search') return
+    const text = searchText.trim()
+    if (text) {
+      setSearchText('')
+      setTimeout(() => setSearchText(text), 0)
     }
-  }, [loadTop, loadCnhk, searchText])
+  }, [searchText])
 
   const toggleFavorite = useCallback(
     async (s: RadioStation) => {
@@ -255,13 +198,13 @@ const FmRadio: FC = () => {
 
   const live = player.status === 'playing'
   const emptyText =
-    tab === 'search' && searchText.trim() ? '没有找到电台' : tab === 'favorites' ? '还没有收藏电台' : '电台列表加载失败'
+    tab === 'search' && searchText.trim() ? '没有找到电台' : tab === 'favorites' ? '还没有收藏电台' : '本板块暂无电台'
   const emptyHint =
     tab === 'search'
       ? '换个关键词，或切换名称 / 国家 / 标签模式'
       : tab === 'favorites'
         ? '点击电台旁的 ☆ 收藏，随时在这里找到它'
-        : '检查网络后点右上 ↻ 重试；中港音乐 tab 始终有内置精选台'
+        : '内置电台若被 ✕ 隐藏，可在此添加自定义电台补充'
 
   // 列表行 memo：网速（kbps）每秒刷新时只更新状态栏，不重建整张列表
   const stationRows = useMemo(
@@ -289,25 +232,28 @@ const FmRadio: FC = () => {
           value={tab}
           onChange={(v) => setTab(v)}
           options={[
-            { value: 'top', label: '热门' },
-            { value: 'cnhk', label: '中港音乐' },
+            { value: 'domestic', label: '国内' },
+            { value: 'foreign', label: '国外' },
             { value: 'search', label: '搜索' },
             { value: 'favorites', label: '收藏', badge: favorites?.length }
           ]}
         />
         <TabsActions>
-          {tab === 'top' && (
-            <MXGhostPill
-              onClick={cycleSource}
-              title={`当前来源：${SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}，点击循环切换`}>
-              <RefreshCw size={12} /> {SOURCE_LABELS[REFRESH_SOURCES[sourceIdx]]}
-            </MXGhostPill>
-          )}
-          <MXGhostPill onClick={() => setCustomOpen(true)} title="添加自定义电台">
+          <MXGhostPill onClick={() => setCustomOpen(true)} title="添加自定义电台（将并入所有板块列表尾部）">
             <Plus size={12} /> 自定义
           </MXGhostPill>
         </TabsActions>
       </TabsRow>
+      {group && boardCounts && (
+        <SubTabsRow>
+          <MXTabs
+            size="sm"
+            value={boardSub}
+            onChange={(v) => setBoardSub(v)}
+            options={BOARD_SUBS.map((s) => ({ value: s, label: SUB_LABELS[s], badge: boardCounts[s] }))}
+          />
+        </SubTabsRow>
+      )}
       {tab === 'search' && (
         <SearchRow>
           <MXTabs
@@ -337,7 +283,8 @@ const FmRadio: FC = () => {
         </SearchRow>
       )}
       <ListArea>
-        {loading && tab !== 'search' ? (
+        {/* 仅搜索会 loading；板块为内置数据、收藏为 Dexie 实时，切过去时不能被转圈挡住列表 */}
+        {loading && tab === 'search' ? (
           <CenterTip>
             <MXSpinner />
           </CenterTip>
@@ -370,7 +317,10 @@ const FmRadio: FC = () => {
           </TransportGroup>
           <ToolGroup>
             <VolumeControl />
-            <MXIconButton onClick={forceRefresh} title="强制刷新（清 7 天缓存）">
+            <MXIconButton
+              onClick={forceRefresh}
+              disabled={tab !== 'search'}
+              title={tab === 'search' ? '重新搜索' : '板块为内置数据，无需刷新'}>
               <RotateCw size={15} />
             </MXIconButton>
           </ToolGroup>
@@ -440,6 +390,10 @@ const StationRow: FC<StationRowProps> = memo(function StationRow({
   onToggleFavorite,
   onRemove
 }) {
+  const { title, subtitle } = splitName(s.name)
+  const metaParts = [subtitle, s.desc, s.country, s.bitrate > 0 ? `${s.bitrate} kbps` : '', s.codec].filter(Boolean)
+  if (isCustom) metaParts.push('自定义')
+
   return (
     <StationItem className={isCurrent ? 'playing' : ''} onClick={() => onPlay(s.url)}>
       <FaviconWrap>
@@ -456,11 +410,11 @@ const StationRow: FC<StationRowProps> = memo(function StationRow({
         {isCurrent && <FaviconMask>{live ? <Eq /> : <Eq paused />}</FaviconMask>}
       </FaviconWrap>
       <StationInfo>
-        <StationName>{s.name}</StationName>
-        <StationMeta>
-          {[s.country, s.bitrate > 0 ? `${s.bitrate} kbps` : '', s.codec].filter(Boolean).join(' · ')}
-          {isCustom ? ' · 自定义' : ''}
-        </StationMeta>
+        <NameRow>
+          <StationName title={s.name}>{title}</StationName>
+          {s.badge && <BadgeChip>{s.badge}</BadgeChip>}
+        </NameRow>
+        <StationMeta>{metaParts.join(' · ')}</StationMeta>
       </StationInfo>
       <FavBtn
         className={favored ? 'favorited' : ''}
@@ -482,6 +436,21 @@ const StationRow: FC<StationRowProps> = memo(function StationRow({
     </StationItem>
   )
 })
+
+/** 板块徽标（如「国家台」「香港」）：紧跟台名右侧，不被名称省略号挤掉 */
+const BadgeChip = styled.span`
+  flex-shrink: 0;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: ${mx.accent};
+  background: ${mx.accentSoft};
+`
 
 /** 播放舱状态点：绿=播放中 / 琥珀=连接中 / 灰=未播放 */
 const LiveDot = styled.span`
@@ -612,6 +581,15 @@ const TabsActions = styled.div`
   gap: 6px;
 `
 
+/** 二级板块行（综合 / 音乐），仅国内/国外下显示 */
+const SubTabsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+`
+
 const SearchRow = styled.div`
   display: flex;
   align-items: center;
@@ -732,6 +710,14 @@ const FaviconMask = styled.span`
 
 const StationInfo = styled.div`
   flex: 1;
+  min-width: 0;
+`
+
+/** 台名 + 徽标同一行：名称可省略，徽标固定不被挤压 */
+const NameRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 `
 

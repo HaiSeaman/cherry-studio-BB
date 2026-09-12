@@ -2,16 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   buildTryUrls,
-  BUILTIN_CN_HK_MUSIC_STATIONS,
-  BUILTIN_CN_MUSIC_STATIONS,
   dedupStationsByUrl,
   fetchStations,
-  isPlayableCnHk,
   RADIO_DEFAULT_API,
   RADIO_FALLBACKS,
   radioGetMirror,
-  radioNormalizeStation,
-  withBuiltinCnHk
+  radioNormalizeStation
 } from '../services/radioApi'
 import type { RadioStation } from '../types'
 
@@ -115,45 +111,6 @@ describe('dedupStationsByUrl', () => {
     const b = [station({ name: 'B1', url: 'http://x/1' }), station({ name: 'B2', url: 'http://x/3' })]
     const merged = dedupStationsByUrl(a, b)
     expect(merged.map((s) => s.name)).toEqual(['A1', 'A2', 'B2'])
-  })
-})
-
-describe('isPlayableCnHk', () => {
-  it('剔除 HLS / m3u8 / 低码率', () => {
-    expect(isPlayableCnHk(station({ codec: 'HLS' }))).toBe(false)
-    expect(isPlayableCnHk(station({ codec: 'AAC/HLS,MPEGURL' }))).toBe(false)
-    expect(isPlayableCnHk(station({ url: 'http://a/playlist.m3u8' }))).toBe(false)
-    expect(isPlayableCnHk(station({ bitrate: 32 }))).toBe(false)
-    expect(isPlayableCnHk(station({ bitrate: 64 }))).toBe(true)
-  })
-})
-
-describe('内置精选电台', () => {
-  it('4 个 RTHK 电台且流地址正确', () => {
-    expect(BUILTIN_CN_HK_MUSIC_STATIONS).toHaveLength(4)
-    expect(BUILTIN_CN_HK_MUSIC_STATIONS.map((s) => s.name)).toEqual([
-      'RTHK Radio 1',
-      'RTHK Radio 2',
-      'RTHK Radio 3',
-      'RTHK Radio 4'
-    ])
-    expect(BUILTIN_CN_HK_MUSIC_STATIONS[0].url).toBe('http://rthkaudio1.rthk.hk:80/')
-  })
-
-  it('中文音乐台含清晨音乐台并排最前，withBuiltinCnHk 合并顺序：中文精选→RTHK→自定义→线上', () => {
-    expect(BUILTIN_CN_MUSIC_STATIONS.length).toBeGreaterThanOrEqual(11)
-    expect(BUILTIN_CN_MUSIC_STATIONS[0].name).toBe('清晨音乐台')
-    expect(BUILTIN_CN_MUSIC_STATIONS.every((s) => /^https?:\/\//.test(s.url) && !s.url.includes('.m3u8'))).toBe(true)
-
-    const online = [station({ name: '线上台', url: 'http://online/1' })]
-    const custom = [station({ name: '自定义台', url: 'http://custom/1' })]
-    const merged = withBuiltinCnHk(online, custom)
-    expect(merged[0].name).toBe('清晨音乐台')
-    expect(merged.findIndex((s) => s.name === 'RTHK Radio 1')).toBeLessThan(
-      merged.findIndex((s) => s.name === '自定义台')
-    )
-    expect(merged[merged.length - 1].name).toBe('线上台')
-    expect(merged).toHaveLength(BUILTIN_CN_MUSIC_STATIONS.length + BUILTIN_CN_HK_MUSIC_STATIONS.length + 2)
   })
 })
 

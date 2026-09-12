@@ -1,6 +1,7 @@
 import type { FmStatus, MusicTrack, PlayMode, RadioStation } from '../types'
 import { type AudioEngine, audioEngine } from './audioEngine'
 import { nextIndexInPool, prevIndexInPool, pushShuffleHistory, toFileUrl } from './playLogic'
+import { isHlsStation } from './radioBoards'
 
 /** 播放模式/收藏夹模式持久化在 Redux（musicSettings），主窗口经 attachPlayerStoreDeps 注入读写通道 */
 export type PlayerStoreDeps = {
@@ -444,7 +445,11 @@ export class PlayerStore {
     if (!this.fmAutoAdvance) this.fmConsecutiveErrors = 0
     this.fmAutoAdvance = false
     this.patchFm({ url, status: 'connecting' })
-    this.engine.load('fm', url)
+    // HLS 判定统一走 isHlsStation：当前列表内取 codec，不在列表内（挂件播收藏台/切过板块）
+    // 则回落到板块全量名单 + .m3u8 后缀；否则无后缀的 HLS 流（如 RTHK）会被当普通流播而失败
+    const st = this.stations.find((s) => s.url === url)
+    const isHls = isHlsStation(url, st?.codec)
+    this.engine.load('fm', url, isHls ? { hls: true } : undefined)
     this.engine.play().catch((err) => {
       if (!isBenignPlayRejection(err)) this.fmHandleStreamError()
     })

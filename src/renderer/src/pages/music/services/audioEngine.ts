@@ -1,3 +1,5 @@
+import Hls from 'hls.js'
+
 export type AudioOwner = 'local' | 'fm'
 
 type ListenerEntry = { owner: AudioOwner; type: string; wrapped: EventListener }
@@ -6,6 +8,8 @@ type ListenerEntry = { owner: AudioOwner; type: string; wrapped: EventListener }
  * 全局唯一 <audio> 播放引擎：本地音乐与 FM 电台互斥播放。
  * 一方 claim 时，另一方的事件回调被移除并触发其 onStop（用于状态复位）。
  * FM 直播流（Icecast/Shoutcast）无 CORS 头，因此不设置 crossOrigin；preload='none'。
+ * HLS（m3u8）流走 hls.js 挂载同一 <audio>（由调用方经 meta.hls 提示触发，
+ * 判定集中在一处：radioBoards.isHlsStation）。
  */
 export class AudioEngine {
   private el: HTMLAudioElement
@@ -16,6 +20,7 @@ export class AudioEngine {
   private lastSampleAt = 0
   private lastKbps = 0
   private ownerMeta: unknown = null
+  private hls: Hls | null = null
 
   constructor() {
     this.el = new Audio()
@@ -49,6 +54,31 @@ export class AudioEngine {
   load(owner: AudioOwner, url: string, meta?: unknown): void {
     this.claim(owner)
     this.ownerMeta = meta ?? null
+    this.destroyHls()
+    // 是否走 HLS 由调用方经 meta.hls 明确告知（判定逻辑集中在 radioBoards.isHlsStation）。
+    // 引擎只管播放，不解析 URL 语义——避免同一套判定散落多处而彼此漂移。
+    const useHls = (meta as { hls?: boolean } | null)?.hls === true
+    if (useHls && Hls.isSupported()) {
+      const hls = new Hls()
+      this.hls = hls
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (!data.fatal) return // 非致命错误 hls.js 自行恢复
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          // 媒体解码错误：软恢复一次（hls.js 官方推荐路径）；destroy 后调用抛错则走 error 事件
+          try {
+            hls.recoverMediaError()
+            return
+          } catch {
+            /* 恢复失败走 error 事件 */
+          }
+        }
+        this.el.dispatchEvent(new Event('error'))
+      })
+      hls.loadSource(url)
+      hls.attachMedia(this.el)
+      this.resetBufferSample()
+      return
+    }
     if (this.el.src !== url) {
       this.el.src = url
       this.resetBufferSample()
@@ -71,10 +101,19 @@ export class AudioEngine {
   }
 
   stop(): void {
+    this.destroyHls()
     this.el.pause()
     this.el.removeAttribute('src')
     this.el.load()
     this.resetBufferSample()
+  }
+
+  /** 销毁当前 hls 实例（换台 / 切归属 / 停止前调用；hls.js destroy 会自动 detach media） */
+  private destroyHls(): void {
+    if (this.hls) {
+      this.hls.destroy()
+      this.hls = null
+    }
   }
 
   seek(time: number): void {

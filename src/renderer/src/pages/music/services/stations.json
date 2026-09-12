@@ -1,0 +1,978 @@
+{
+  "domestic_news": [
+    {
+      "name": "中国之声 (CNR-1 国家级综合广播)",
+      "url": "https://lhttp.qtfm.cn/live/15318317/64k.mp3",
+      "type": "mp3",
+      "desc": "中央广播电视总台主力综合新闻广播",
+      "badge": "国家台",
+      "id": "d_n_1"
+    },
+    {
+      "name": "CCTV-13 新闻频道(音频直出)",
+      "url": "https://piccpndali.v.myalicdn.com/audio/cctv13_2.m3u8",
+      "type": "m3u8",
+      "desc": "央视新闻音频流，24小时不间断全景资讯",
+      "badge": "国家台",
+      "id": "d_n_2"
+    },
+    {
+      "name": "北京新闻广播 (FM94.5 权威资讯)",
+      "url": "https://lhttp.qtfm.cn/live/339/64k.mp3",
+      "type": "mp3",
+      "desc": "首都第一新闻声音，权威聚焦",
+      "badge": "地方台",
+      "id": "d_n_3"
+    },
+    {
+      "name": "CCTV-1 综合频道(音频直出)",
+      "url": "https://piccpndali.v.myalicdn.com/audio/cctv1_2.m3u8",
+      "type": "m3u8",
+      "desc": "央视旗舰综合大台电视声音直出",
+      "badge": "国家台",
+      "id": "d_n_4"
+    },
+    {
+      "name": "CNR-2 经济之声 (国家级财经广播)",
+      "url": "http://ngcdn002.cnr.cn/live/jjzs/index.m3u8",
+      "type": "m3u8",
+      "desc": "国家级财经资讯第一广播",
+      "badge": "国家台",
+      "id": "d_n_5"
+    },
+    {
+      "name": "CRI环球资讯广播 (环球视野)",
+      "url": "https://sk.cri.cn/905.m3u8",
+      "type": "m3u8",
+      "desc": "国际视角深度中文新闻观察",
+      "badge": "国际台",
+      "id": "d_n_6"
+    },
+    {
+      "name": "CCTV-4 中文国际频道(音频直出)",
+      "url": "https://piccpndali.v.myalicdn.com/audio/cctv4_2.m3u8",
+      "type": "m3u8",
+      "desc": "连接全球华人的综合新闻资讯",
+      "badge": "国际台",
+      "id": "d_n_7"
+    },
+    {
+      "name": "CCTV-2 财经频道(音频直出)",
+      "url": "https://piccpndali.v.myalicdn.com/audio/cctv2_2.m3u8",
+      "type": "m3u8",
+      "desc": "国家级权威经济金融市场全景声",
+      "badge": "财经台",
+      "id": "d_n_8"
+    },
+    {
+      "name": "上海交通广播 (FM105.7 畅行申城)",
+      "url": "https://lhttp.qtfm.cn/live/1262/64k.mp3",
+      "type": "mp3",
+      "desc": "上海出行动态、民生与实时交通脉搏",
+      "badge": "交通台",
+      "id": "d_n_9"
+    },
+    {
+      "name": "浙江新闻广播 (FM98.8 浙江之声)",
+      "url": "https://lhttp.qtfm.cn/live/20500172/64k.mp3",
+      "type": "mp3",
+      "desc": "浙江广播主频率，长三角深度新闻",
+      "badge": "地方台",
+      "id": "d_n_10"
+    },
+    {
+      "name": "湖北之声 (FM104.6 湖北综合)",
+      "url": "https://lhttp.qtfm.cn/live/20500215/64k.mp3",
+      "type": "mp3",
+      "desc": "荆楚第一综合资讯大台",
+      "badge": "地方台",
+      "id": "d_n_11"
+    },
+    {
+      "name": "天津新闻广播 (FM97.2 津门资讯)",
+      "url": "https://lhttp.qtfm.cn/live/1089/64k.mp3",
+      "type": "mp3",
+      "desc": "天津主力新闻频道，聚焦环渤海动态",
+      "badge": "地方台",
+      "id": "d_n_12"
+    },
+    {
+      "name": "长春新闻综合广播 (FM88.9 东北之声)",
+      "url": "https://lhttp.qtfm.cn/live/1951/64k.mp3",
+      "type": "mp3",
+      "desc": "白山黑水资讯，东北综合民生大台",
+      "badge": "地方台",
+      "id": "d_n_13"
+    },
+    {
+      "name": "CGTN Radio (中国国际英语广播)",
+      "url": "https://sk.cri.cn/am846.m3u8",
+      "type": "m3u8",
+      "desc": "官方国际英语综合广播全景天下",
+      "badge": "国际台",
+      "id": "d_n_14"
+    },
+    {
+      "name": "广东新闻广播 (FM91.4 粤听全球)",
+      "url": "https://lhttp.qtfm.cn/live/1254/64k.mp3",
+      "type": "mp3",
+      "desc": "南粤政经大台，权威大湾区时事",
+      "badge": "地方台",
+      "id": "d_n_15"
+    },
+    {
+      "name": "广东珠江经济台 (FM97.4)",
+      "url": "https://lhttp.qtfm.cn/live/1259/64k.mp3",
+      "type": "mp3",
+      "desc": "经典南粤粤语经济生活综合广播",
+      "badge": "粤语台",
+      "id": "d_n_16"
+    },
+    {
+      "name": "上海第一财经广播 (FM90.9)",
+      "url": "https://lhttp-hw.qtfm.cn/live/276/64k.mp3",
+      "type": "mp3",
+      "desc": "上海第一财经专业股市金融广播",
+      "badge": "财经台",
+      "id": "d_n_17"
+    },
+    {
+      "name": "上海东广新闻台 (FM90.9 新闻资讯)",
+      "url": "http://lhttp.qingting.fm/live/275/64k.mp3",
+      "type": "mp3",
+      "desc": "上海东方广播中心即时民生资讯台",
+      "badge": "地方台",
+      "id": "d_n_18"
+    },
+    {
+      "name": "北京交通广播 (FM103.9 首都出行)",
+      "url": "https://lhttp.qingting.fm/live/336/64k.mp3",
+      "type": "mp3",
+      "desc": "首善之区最权威的交通路况伴随综合广播",
+      "badge": "交通台",
+      "id": "d_n_19"
+    },
+    {
+      "name": "北京体育广播 (FM102.5 奥运之声)",
+      "url": "https://lhttp.qtfm.cn/live/333/64k.mp3",
+      "type": "mp3",
+      "desc": "全天候体育动态、赛事解说与健康生活",
+      "badge": "体育台",
+      "id": "d_n_20"
+    },
+    {
+      "name": "香港电台第一台 (RTHK Radio 1 综合新闻)",
+      "url": "https://stm.rthk.hk/radio1",
+      "type": "m3u8",
+      "desc": "香港特区旗舰时事政论与公共广播",
+      "badge": "香港",
+      "id": "d_n_21"
+    },
+    {
+      "name": "商业电台 881 雷霆一台 (香港热线)",
+      "url": "https://stream.crhk.com.hk/881",
+      "type": "m3u8",
+      "desc": "香港最火爆的时事直击与民生热线",
+      "badge": "香港",
+      "id": "d_n_22"
+    },
+    {
+      "name": "香港电台普通话台 (全方位资讯)",
+      "url": "https://stm.rthk.hk/radiopth",
+      "type": "m3u8",
+      "desc": "华语新闻、两岸聚焦与财经深度",
+      "badge": "香港",
+      "id": "d_n_23"
+    },
+    {
+      "name": "新城知讯台 (Metro Info 综合财经)",
+      "url": "https://stream.metroradio.com.hk/997",
+      "type": "m3u8",
+      "desc": "都会生活资讯、商业前沿与娱乐",
+      "badge": "香港",
+      "id": "d_n_24"
+    },
+    {
+      "name": "D100 香港大国民 (网络综合电台)",
+      "url": "https://live.d100.net/stream",
+      "type": "mp3",
+      "desc": "香港本土多元言论与文化广角",
+      "badge": "香港",
+      "id": "d_n_25"
+    },
+    {
+      "name": "台北广播电台 (FM93.1 都会资讯)",
+      "url": "https://stream.feed.radio.gov.tw/live/931.mp3",
+      "type": "mp3",
+      "desc": "台北市政要闻、都会生活与文化",
+      "badge": "台湾",
+      "id": "d_n_26"
+    },
+    {
+      "name": "台湾中央广播电台 (RTI 华语新闻)",
+      "url": "https://stream.rti.org.tw/live/chinese.mp3",
+      "type": "mp3",
+      "desc": "两岸聚焦、国际视野与权威解读",
+      "badge": "台湾",
+      "id": "d_n_27"
+    },
+    {
+      "name": "正声综合广播 (FM104.1 宝岛之声)",
+      "url": "https://stream.csbc.com.tw/live/fm1041.mp3",
+      "type": "mp3",
+      "desc": "老牌民营广播，深入宝岛市井民生",
+      "badge": "台湾",
+      "id": "d_n_28"
+    },
+    {
+      "name": "高雄广播电台 (FM94.3 港都生活)",
+      "url": "https://stream.kbs.gov.tw/live/fm943.mp3",
+      "type": "mp3",
+      "desc": "南台湾海洋都会政务与民生综合",
+      "badge": "台湾",
+      "id": "d_n_29"
+    },
+    {
+      "name": "教育广播电台 (NER 全台联播综合)",
+      "url": "https://stream.ner.gov.tw/live/fm.mp3",
+      "type": "mp3",
+      "desc": "科教文卫、终身学习与社会热点",
+      "badge": "台湾",
+      "id": "d_n_30"
+    }
+  ],
+  "domestic_music": [
+    {
+      "name": "清晨音乐台 (温暖治愈文艺慢调)",
+      "url": "http://lhttp.qingting.fm/live/4915/64k.mp3",
+      "type": "mp3",
+      "desc": "民谣、慢歌、文艺清新的轻声陪伴",
+      "badge": "治愈台",
+      "id": "d_m_1"
+    },
+    {
+      "id": "d_m_2",
+      "name": "广东音乐之声 (FM99.3 华语流行第一台)",
+      "url": "https://lhttp.qtfm.cn/live/1260/64k.mp3",
+      "type": "mp3",
+      "desc": "粤港澳大湾区专业高品位音乐电台，华语流行与金曲盛宴",
+      "badge": "湾区热播"
+    },
+    {
+      "name": "国家经典音乐广播 (CNR-4 经典交响与国乐)",
+      "url": "https://ngcdn001.cnr.cn/live/yyzs/index.m3u8",
+      "type": "m3u8",
+      "desc": "中央广播电视总台殿堂级经典音乐",
+      "badge": "国家台",
+      "id": "d_m_3"
+    },
+    {
+      "name": "动感101 (上海流行音乐第一台)",
+      "url": "https://lhttp-hw.qtfm.cn/live/273/64k.mp3",
+      "type": "mp3",
+      "desc": "华语流行音乐风向标，东方风云榜原产地",
+      "badge": "流行榜",
+      "id": "d_m_4"
+    },
+    {
+      "name": "500首华语经典金曲 (岁月金曲台)",
+      "url": "https://lhttp.qtfm.cn/live/5022308/64k.mp3",
+      "type": "mp3",
+      "desc": "跨越八九十年代与千禧年的不朽老歌",
+      "badge": "怀旧台",
+      "id": "d_m_5"
+    },
+    {
+      "name": "中国古风传统民乐台 (国风雅乐之声)",
+      "url": "https://lhttp.qtfm.cn/live/5022107/64k.mp3",
+      "type": "mp3",
+      "desc": "筝箫琴瑟，纯正古风仙韵民乐",
+      "badge": "国风台",
+      "id": "d_m_6"
+    },
+    {
+      "name": "CCTV-15 音乐频道(高保真音乐直出)",
+      "url": "https://piccpndali.v.myalicdn.com/audio/cctv15_2.m3u8",
+      "type": "m3u8",
+      "desc": "央视高品质交响乐、现场演唱会原声音频",
+      "badge": "国家台",
+      "id": "d_m_7"
+    },
+    {
+      "name": "AsiaFM 亚洲音乐台 (亚洲顶流流行声)",
+      "url": "https://lhttp.qingting.fm/live/4581/64k.mp3",
+      "type": "mp3",
+      "desc": "24小时不间断亚洲热播华语日韩金曲",
+      "badge": "流行台",
+      "id": "d_m_8"
+    },
+    {
+      "name": "AsiaFM 经典台 (经典老歌回响)",
+      "url": "http://goldfm.cn:8000/goldfm",
+      "type": "mp3",
+      "desc": "岁月沉淀的华语经典与怀旧记忆",
+      "badge": "怀旧台",
+      "id": "d_m_9"
+    },
+    {
+      "name": "AsiaFM HD高清流行音乐台",
+      "url": "https://lhttp.qtfm.cn/live/15318341/64k.mp3",
+      "type": "mp3",
+      "desc": "高比特率全天候高品质动感流行音乐",
+      "badge": "流行台",
+      "id": "d_m_10"
+    },
+    {
+      "name": "AsiaFM 都会音乐台 (都市轻音乐)",
+      "url": "https://lhttp.qtfm.cn/live/15318569/64k.mp3",
+      "type": "mp3",
+      "desc": "都市白领专属的流行慢调与沙发音乐",
+      "badge": "轻音乐",
+      "id": "d_m_11"
+    },
+    {
+      "name": "北京音乐广播 (FM97.4 经典音乐)",
+      "url": "https://brtv-radiolive.rbc.cn/alive/fm974.m3u8",
+      "type": "m3u8",
+      "desc": "北京最具影响力的音乐电台旗舰",
+      "badge": "流行榜",
+      "id": "d_m_12"
+    },
+    {
+      "name": "南京经典音乐广播 (FM105.8 慢调时光)",
+      "url": "https://lhttp.qtfm.cn/live/4938/64k.mp3",
+      "type": "mp3",
+      "desc": "金陵古都的浪漫爵士、蓝调与老歌",
+      "badge": "经典台",
+      "id": "d_m_13"
+    },
+    {
+      "name": "河南音乐广播 (魅力88.1 音乐之声)",
+      "url": "http://play-radio-stream3.hndt.com/now/WUBA5hW2/chunklist.m3u8",
+      "type": "m3u8",
+      "desc": "中原最具活力的年轻态流行音乐调频",
+      "badge": "流行台",
+      "id": "d_m_14"
+    },
+    {
+      "name": "城市之音 CityFM (潮流音乐榜)",
+      "url": "https://lhttp.qtfm.cn/live/20500153/64k.mp3",
+      "type": "mp3",
+      "desc": "全天候年轻活力潮流热歌派对",
+      "badge": "流行台",
+      "id": "d_m_15"
+    },
+    {
+      "name": "浙江音乐调频 (FM96.8 动听968)",
+      "url": "https://lhttp.qtfm.cn/live/20500187/64k.mp3",
+      "type": "mp3",
+      "desc": "江南水乡最受欢迎的品质音乐广播",
+      "badge": "流行榜",
+      "id": "d_m_16"
+    },
+    {
+      "name": "80后专属回忆音乐台",
+      "url": "https://live.ximalaya.com/radio-first-page-app/live/2684/64.m3u8?transcode=ts",
+      "type": "m3u8",
+      "desc": "献给80/90后的青春校园与情怀旋律",
+      "badge": "怀旧台",
+      "id": "d_m_17"
+    },
+    {
+      "name": "经典老上海爵士时代曲 (1940s Vintage Jazz)",
+      "url": "https://radio.nitro-server.uk/listen/1940sshanghaioldtimesmusicradio/radio.mp3",
+      "type": "mp3",
+      "desc": "夜上海、留声机、黑胶唱片经典时代曲",
+      "badge": "爵士时代",
+      "id": "d_m_18"
+    },
+    {
+      "name": "Hit FM 台北之音 (热歌劲曲流行调频)",
+      "url": "http://202.39.43.67:1935/live/RA000036/chunklist.m3u8",
+      "type": "m3u8",
+      "desc": "亚洲流行音乐第一指标，港台新歌直击",
+      "badge": "流行榜",
+      "id": "d_m_19"
+    },
+    {
+      "name": "Classical 台北古典音乐台 (FM 97.7)",
+      "url": "http://59.120.88.155:8000/live.mp3",
+      "type": "mp3",
+      "desc": "高雅唯美的古典乐章、交响曲与大师经典",
+      "badge": "古典乐",
+      "id": "d_m_20"
+    },
+    {
+      "name": "台湾音乐广播电台 (好音乐好心情)",
+      "url": "http://202.39.43.67:1935/live/RA000080/chunklist.m3u8",
+      "type": "m3u8",
+      "desc": "清爽悠闲的民谣、流行与轻快节奏",
+      "badge": "轻音乐",
+      "id": "d_m_21"
+    },
+    {
+      "name": "香港电台第二台 (RTHK 2 流行音乐)",
+      "url": "https://stm.rthk.hk/radio2",
+      "type": "m3u8",
+      "desc": "香港中文金曲与粤语流行风向标",
+      "badge": "香港",
+      "id": "d_m_22"
+    },
+    {
+      "name": "香港电台第四台 (RTHK 4 纯正古典乐)",
+      "url": "https://stm.rthk.hk/radio4",
+      "type": "m3u8",
+      "desc": "香港唯一全天候高雅古典室内乐",
+      "badge": "香港",
+      "id": "d_m_23"
+    },
+    {
+      "name": "商业电台 903 叱咤903 (华语流行)",
+      "url": "https://stream.crhk.com.hk/903",
+      "type": "m3u8",
+      "desc": "年轻潮人音乐标杆、叱咤乐坛榜",
+      "badge": "香港",
+      "id": "d_m_24"
+    },
+    {
+      "name": "新城劲爆音乐台 (Metro Music)",
+      "url": "https://stream.metroradio.com.hk/998",
+      "type": "m3u8",
+      "desc": "新城劲爆颁奖礼主擂台、热歌榜",
+      "badge": "香港",
+      "id": "d_m_25"
+    },
+    {
+      "name": "Billboard Radio China (香港频道)",
+      "url": "https://stream.billboardradiochina.com/live/hot100.mp3",
+      "type": "mp3",
+      "desc": "公告牌中国区冠军单曲24小时轮播",
+      "badge": "香港",
+      "id": "d_m_26"
+    },
+    {
+      "name": "台北爱乐电台 (Philharmonic FM99.7)",
+      "url": "https://stream.e-classical.com.tw/live/classical.mp3",
+      "type": "mp3",
+      "desc": "全台湾最知名高品位古典交响音乐台",
+      "badge": "台湾",
+      "id": "d_m_27"
+    },
+    {
+      "name": "Hit FM 联播网 (台北之音 流行榜)",
+      "url": "https://stream.hitfm.com.tw/live/hitoradio.mp3",
+      "type": "mp3",
+      "desc": "Hito中文流行排行榜发源地，星光璀璨",
+      "badge": "台湾",
+      "id": "d_m_28"
+    },
+    {
+      "name": "飞碟电台 (UFO Network FM92.1)",
+      "url": "https://stream.uforadio.com.tw/live/ufo.mp3",
+      "type": "mp3",
+      "desc": "张小燕创办，经典华语巨星与音乐专题",
+      "badge": "台湾",
+      "id": "d_m_29"
+    },
+    {
+      "name": "Kiss Radio (大众广播 发烧流行)",
+      "url": "https://stream.kiss.com.tw/live/kiss.mp3",
+      "type": "mp3",
+      "desc": "全天候动感热歌与校园排行榜",
+      "badge": "台湾",
+      "id": "d_m_30"
+    },
+    {
+      "name": "IC之音 (竹科广播 FM97.5 文艺音乐)",
+      "url": "https://stream.ic975.com/live/music.mp3",
+      "type": "mp3",
+      "desc": "新竹科学园区心心灵绿洲，爵士轻乐",
+      "badge": "台湾",
+      "id": "d_m_31"
+    }
+  ],
+  "foreign_news": [
+    {
+      "name": "CNN Radio (美国有线新闻网音频直出)",
+      "url": "https://tunein.cdnstream1.com/2868_96.mp3",
+      "type": "mp3",
+      "desc": "全天候突发全球头条与深度连线",
+      "badge": "美国大台",
+      "id": "f_n_1"
+    },
+    {
+      "name": "MSNBC Live (美国MSNBC新闻直播流)",
+      "url": "https://tunein.cdnstream1.com/3511_96.mp3",
+      "type": "mp3",
+      "desc": "美国主流政治深度评析与白宫动态",
+      "badge": "美国大台",
+      "id": "f_n_2"
+    },
+    {
+      "name": "NPR 24h Program Stream (美国国家公共广播)",
+      "url": "https://npr-ice.streamguys1.com/live.mp3",
+      "type": "mp3",
+      "desc": "全美顶级调查新闻与人文观察声音",
+      "badge": "美国大台",
+      "id": "f_n_3"
+    },
+    {
+      "name": "LBC UK (伦敦新闻综合第一台)",
+      "url": "https://media-ice.musicradio.com/LBCUK",
+      "type": "mp3",
+      "desc": "英国收听率极高的新闻热线辩论",
+      "badge": "英国大台",
+      "id": "f_n_4"
+    },
+    {
+      "name": "WNYC 93.9 FM (纽约都市公共广播)",
+      "url": "https://fm939.wnyc.org/wnycfm",
+      "type": "mp3",
+      "desc": "纽约都会文化、深度思想与市政新闻",
+      "badge": "美国大台",
+      "id": "f_n_5"
+    },
+    {
+      "name": "RFI 法国国际广播电台(中文广播)",
+      "url": "https://rfienchinois64k.ice.infomaniak.ch//rfienchinois-64.mp3",
+      "type": "mp3",
+      "desc": "欧洲视角深度国际新闻华语观察",
+      "badge": "法国大台",
+      "id": "f_n_6"
+    },
+    {
+      "name": "Deutschlandfunk (德国国家广播 DLF)",
+      "url": "https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3",
+      "type": "mp3",
+      "desc": "德国高知学者型学术文化与国际综合大台",
+      "badge": "德国大台",
+      "id": "f_n_7"
+    },
+    {
+      "name": "Europe 1 (法国第一综合新闻广播)",
+      "url": "https://stream.europe1.fr/europe1.aac",
+      "type": "aac",
+      "desc": "法国历史悠久的全国性综合时事电台",
+      "badge": "法国大台",
+      "id": "f_n_8"
+    },
+    {
+      "name": "NPO Radio 1 (荷兰公共综合新闻)",
+      "url": "https://icecast.omroep.nl/radio1-bb-mp3",
+      "type": "mp3",
+      "desc": "荷兰国家公共广播第一频道新闻大台",
+      "badge": "荷兰大台",
+      "id": "f_n_9"
+    },
+    {
+      "name": "Radio 24 Il Sole 24 Ore (意大利太阳报财经新闻)",
+      "url": "http://shoutcast2.radio24.it:8000/;",
+      "type": "mp3",
+      "desc": "意大利首屈一指的财经与政治全景广播",
+      "badge": "意大利大台",
+      "id": "f_n_10"
+    },
+    {
+      "name": "WDR 5 (德国西德广播第五台-深度言论)",
+      "url": "http://wdr-wdr5-live.icecast.wdr.de/wdr/wdr5/live/mp3/128/stream.mp3",
+      "type": "mp3",
+      "desc": "德国深度专题、文化与全球视野分析",
+      "badge": "德国大台",
+      "id": "f_n_11"
+    },
+    {
+      "name": "KEXP 90.3 FM Seattle (西雅图公共音乐文化电台)",
+      "url": "https://kexp-mp3-128.streamguys1.com/kexp128.mp3",
+      "type": "mp3",
+      "desc": "西雅图知名独立文化与综合艺术声音",
+      "badge": "美国大台",
+      "id": "f_n_12"
+    },
+    {
+      "name": "Sveriges Radio P1 (瑞典国家公共广播综合频道)",
+      "url": "https://sverigesradio.se/topsy/direkt/srapi/132.mp3",
+      "type": "mp3",
+      "desc": "北欧瑞典第一综合新闻与深度人文言论台",
+      "badge": "北欧大台",
+      "id": "f_n_13"
+    },
+    {
+      "name": "Sveriges Radio P4 (瑞典公共广播地方综合生活台)",
+      "url": "https://sverigesradio.se/topsy/direkt/srapi/701.mp3",
+      "type": "mp3",
+      "desc": "瑞典最受欢迎的民生资讯与生活综合广播",
+      "badge": "北欧大台",
+      "id": "f_n_14"
+    },
+    {
+      "name": "Radio France Internationale (RFI 英语世界频道)",
+      "url": "https://rfienanglais64k.ice.infomaniak.ch/rfienanglais-64.mp3",
+      "type": "mp3",
+      "desc": "法国面向全球播出的英文综合国际广播",
+      "badge": "法国大台",
+      "id": "f_n_15"
+    },
+    {
+      "name": "Antenne Bayern (德国拜仁综合广播大台)",
+      "url": "https://s2-webradio.antenne.de/antenne",
+      "type": "mp3",
+      "desc": "德国巴伐利亚收听率第一的资讯综合广播",
+      "badge": "德国大台",
+      "id": "f_n_16"
+    },
+    {
+      "name": "OE1 (奥地利国家第一广播-文化与新闻)",
+      "url": "https://orf-live.ors-shoutcast.at/oe1-q2a",
+      "type": "mp3",
+      "desc": "维也纳殿堂级文化学术、交响与深度新闻",
+      "badge": "奥地利大台",
+      "id": "f_n_17"
+    },
+    {
+      "name": "Swiss Public Radio (瑞士公共资讯广播 SRF 1)",
+      "url": "https://stream.srg-ssr.ch/m/drs1/mp3_128",
+      "type": "mp3",
+      "desc": "瑞士德语区最权威的国家级综合新闻广播",
+      "badge": "瑞士大台",
+      "id": "f_n_18"
+    },
+    {
+      "name": "BFMTV Radio (法国BFM全天候新闻广播)",
+      "url": "https://hls-bfmradio.nextradiotv.com/no_ssai/128k/media.m3u8",
+      "type": "m3u8",
+      "desc": "法国第一滚动新闻大台音频实时直出",
+      "badge": "法国大台",
+      "id": "f_n_19"
+    },
+    {
+      "name": "RMC Info Talk Sport (法国国家综合体育台)",
+      "url": "https://hls-rmc.nextradiotv.com/no_ssai/128k/media.m3u8",
+      "type": "m3u8",
+      "desc": "法国极富盛名的时事、言论与体育直击",
+      "badge": "法国大台",
+      "id": "f_n_20"
+    },
+    {
+      "name": "NHK Radio 1 (日本广播协会第一套新闻)",
+      "url": "https://nhkradioakr1-i.akamaihd.net/hls/live/511633/1-r1/1-r1-01.m3u8",
+      "type": "m3u8",
+      "desc": "日本国家公共旗舰台，全天权威速报",
+      "badge": "日本",
+      "id": "f_n_21"
+    },
+    {
+      "name": "TBS Radio 954 (东京综合广播台)",
+      "url": "https://stream.tbs.co.jp/live/tbs954.mp3",
+      "type": "mp3",
+      "desc": "关东地区收听率冠军综合时事热话台",
+      "badge": "日本",
+      "id": "f_n_22"
+    },
+    {
+      "name": "KBS 1Radio (韩国国家第一新闻广播)",
+      "url": "https://kbs1r.streaming.kbs.co.kr/live/1r.m3u8",
+      "type": "m3u8",
+      "desc": "韩国大韩放送国家旗舰全时段要闻",
+      "badge": "韩国",
+      "id": "f_n_23"
+    },
+    {
+      "name": "YTN News Radio (韩国24小时全新闻台)",
+      "url": "https://live.ytnradio.kr/live/ytnfm.mp3",
+      "type": "mp3",
+      "desc": "首尔第一权威突发事件与深度政经台",
+      "badge": "韩国",
+      "id": "f_n_24"
+    },
+    {
+      "name": "Arirang Radio (韩国阿里郎英文广播)",
+      "url": "https://amdlive.ctnd.com.edgesuite.net/arirang_1ch/smil:arirang_1ch.smil/playlist.m3u8",
+      "type": "m3u8",
+      "desc": "韩国国际文化交流旗舰英文综合广播",
+      "badge": "韩国",
+      "id": "f_n_25"
+    },
+    {
+      "name": "CNA 938 (新加坡亚洲新闻台广播频率)",
+      "url": "https://mediacorp.sg/cna938/live.m3u8",
+      "type": "m3u8",
+      "desc": "东南亚最具公信力商业与地缘新闻网",
+      "badge": "东南亚",
+      "id": "f_n_26"
+    },
+    {
+      "name": "BFM 89.9 (马来西亚第一财经商业台)",
+      "url": "https://stream.bfm.my/live/bfm.mp3",
+      "type": "mp3",
+      "desc": "吉隆坡深度政经、商业领袖访谈台",
+      "badge": "东南亚",
+      "id": "f_n_27"
+    },
+    {
+      "name": "MCOT News FM100.5 (泰国国家新闻广播)",
+      "url": "https://stream.mcot.net/fm1005",
+      "type": "mp3",
+      "desc": "曼谷与东盟区域动态全景资讯大台",
+      "badge": "东南亚",
+      "id": "f_n_28"
+    },
+    {
+      "name": "Elshinta News Radio (印尼24小时新闻)",
+      "url": "https://stream.elshinta.com/live.mp3",
+      "type": "mp3",
+      "desc": "雅加达最大民营新闻与交通突发专台",
+      "badge": "东南亚",
+      "id": "f_n_29"
+    },
+    {
+      "name": "DZBB Super Radyo 594 (菲律宾新闻)",
+      "url": "https://stream.gmanetwork.com/dzbb.mp3",
+      "type": "mp3",
+      "desc": "马尼拉GMA旗舰突发时事与公共调查",
+      "badge": "东南亚",
+      "id": "f_n_30"
+    }
+  ],
+  "foreign_music": [
+    {
+      "name": "Radio Paradise (Main Mix 殿堂原音)",
+      "url": "https://stream.radioparadise.com/aac-128",
+      "type": "aac",
+      "desc": "加州高保真传奇电台，另类摇滚与世界乐融合",
+      "badge": "殿堂经典",
+      "id": "f_m_1"
+    },
+    {
+      "name": "Radio Paradise (Rock Mix 摇滚主频)",
+      "url": "https://stream.radioparadise.com/rock-128",
+      "type": "aac",
+      "desc": "经典独立摇滚、现代吉他与强劲节奏",
+      "badge": "摇滚殿堂",
+      "id": "f_m_2"
+    },
+    {
+      "name": "Radio Paradise (Mellow Mix 柔和原声)",
+      "url": "https://stream.radioparadise.com/mellow-128",
+      "type": "aac",
+      "desc": "安神舒适的木吉他、器乐与轻流行",
+      "badge": "治愈原声",
+      "id": "f_m_3"
+    },
+    {
+      "name": "Radio Paradise (Global Mix 全球混音)",
+      "url": "https://stream.radioparadise.com/global-128",
+      "type": "aac",
+      "desc": "世界音乐多元节奏与民族融合之声",
+      "badge": "世界音乐",
+      "id": "f_m_4"
+    },
+    {
+      "name": "Nightwave Plaza (蒸汽波复古未来)",
+      "url": "https://radio.plaza.one/mp3",
+      "type": "mp3",
+      "desc": "霓虹复古、City Pop 采样与蒸汽波专属",
+      "badge": "蒸汽波",
+      "id": "f_m_5"
+    },
+    {
+      "name": "Hotmixradio Dance (巴黎电子舞曲)",
+      "url": "https://streamingp.shoutcast.com/HotmixRadio-Dance",
+      "type": "mp3",
+      "desc": "来自法国巴黎的节奏电音与Club舞曲",
+      "badge": "电音舞曲",
+      "id": "f_m_6"
+    },
+    {
+      "name": "Classic FM UK (英国经典古典音乐)",
+      "url": "https://media-ssl.musicradio.com/ClassicFM",
+      "type": "aac",
+      "desc": "全球最受欢迎的纯正古典交响与电影原声",
+      "badge": "古典交响",
+      "id": "f_m_7"
+    },
+    {
+      "name": "SomaFM Groove Salad (旧金山地下氛围音乐)",
+      "url": "https://ice1.somafm.com/groovesalad-128-mp3",
+      "type": "mp3",
+      "desc": "旧金山殿堂级环境氛围、慢摇与驰放电音",
+      "badge": "环境氛围",
+      "id": "f_m_8"
+    },
+    {
+      "name": "SomaFM Secret Agent (间谍电影复古配乐)",
+      "url": "https://ice1.somafm.com/secretagent-128-mp3",
+      "type": "mp3",
+      "desc": "007风格冲浪摇滚、复古谍战与经典老调",
+      "badge": "电影原声",
+      "id": "f_m_9"
+    },
+    {
+      "name": "SomaFM DEF CON Radio (黑客大会电子音乐)",
+      "url": "https://ice1.somafm.com/defcon-128-mp3",
+      "type": "mp3",
+      "desc": "DEF CON黑客年度大会指定前沿电子声响",
+      "badge": "极客电音",
+      "id": "f_m_10"
+    },
+    {
+      "name": "SomaFM Lush (心碎民谣与唯美女声)",
+      "url": "https://ice1.somafm.com/lush-128-mp3",
+      "type": "mp3",
+      "desc": "轻柔伤感、以空灵女声为主轴的情感电台",
+      "badge": "空灵女声",
+      "id": "f_m_11"
+    },
+    {
+      "name": "SomaFM Drone Zone (深沉冥想太空空间音效)",
+      "url": "https://ice1.somafm.com/dronezone-128-mp3",
+      "type": "mp3",
+      "desc": "助眠、冥想、专注阅读必备的太空氛围音乐",
+      "badge": "冥想助眠",
+      "id": "f_m_12"
+    },
+    {
+      "name": "1.FM Amsterdam Trance (阿姆斯特丹电音迷幻)",
+      "url": "https://strm112.1.fm/atr_mobile_mp3",
+      "type": "mp3",
+      "desc": "荷兰阿姆斯特丹顶级Trance迷幻电音",
+      "badge": "迷幻电音",
+      "id": "f_m_13"
+    },
+    {
+      "name": "1.FM Otto's Baroque Music (经典巴洛克交响乐)",
+      "url": "https://strm112.1.fm/baroque_mobile_mp3",
+      "type": "mp3",
+      "desc": "巴赫、维瓦尔第纯正巴洛克时期室内管弦乐",
+      "badge": "巴洛克",
+      "id": "f_m_14"
+    },
+    {
+      "name": "1.FM Chillout Lounge (瑞士慵懒沙发音乐)",
+      "url": "https://strm112.1.fm/chilloutlounge_mobile_mp3",
+      "type": "mp3",
+      "desc": "瑞士顶级慢调咖啡馆与酒廊休闲音乐",
+      "badge": "沙发音乐",
+      "id": "f_m_15"
+    },
+    {
+      "name": "1.FM Absolute 70s Pop (七十年代欧美金曲)",
+      "url": "https://strm112.1.fm/70s_mobile_mp3",
+      "type": "mp3",
+      "desc": "70年代欧美摇滚、迪斯科与黄金流行金曲",
+      "badge": "怀旧金曲",
+      "id": "f_m_16"
+    },
+    {
+      "name": "1.FM Absolute 90s (九十年代青春金曲)",
+      "url": "https://strm112.1.fm/90s_mobile_mp3",
+      "type": "mp3",
+      "desc": "90年代席卷全球的欧美流行风潮与男孩团体",
+      "badge": "90回忆",
+      "id": "f_m_17"
+    },
+    {
+      "name": "1.FM Blues Radio (纯正美式布鲁斯蓝调)",
+      "url": "https://strm112.1.fm/blues_mobile_mp3",
+      "type": "mp3",
+      "desc": "芝加哥与三角洲纯正灵魂布鲁斯吉他",
+      "badge": "灵魂蓝调",
+      "id": "f_m_18"
+    },
+    {
+      "name": "1.FM Country One (美国乡村音乐经典)",
+      "url": "https://strm112.1.fm/country_mobile_mp3",
+      "type": "mp3",
+      "desc": "纳什维尔纯正美式西部乡村、班卓琴与吉他",
+      "badge": "乡村民谣",
+      "id": "f_m_19"
+    },
+    {
+      "name": "SomaFM PopTron (独立电音流行 PopTron)",
+      "url": "https://ice1.somafm.com/poptron-128-mp3",
+      "type": "mp3",
+      "desc": "时髦跳动、复古独立电子流行乐",
+      "badge": "电子流行",
+      "id": "f_m_20"
+    },
+    {
+      "name": "Japan Hits - Asia DREAM (东京流行榜)",
+      "url": "http://quincy.torontocast.com:2020/stream.mp3",
+      "type": "mp3",
+      "desc": "J-Pop 热门公信榜单曲、二次元及动漫精选",
+      "badge": "日本",
+      "id": "f_m_21"
+    },
+    {
+      "name": "Shonan Beach FM 78.9 (湘南海岸爵士)",
+      "url": "http://shonanbeachfm.out.airtime.pro:8000/shonanbeachfm_a",
+      "type": "mp3",
+      "desc": "神奈川湘南浪漫海滨、经典爵士与慢调",
+      "badge": "日本",
+      "id": "f_m_22"
+    },
+    {
+      "name": "J-Pop Sakura (樱花流行音乐台)",
+      "url": "http://kathy.torontocast.com:3330/stream/1/?esPlayer&cb=82181.mp3",
+      "type": "mp3",
+      "desc": "跨年代经典昭和名曲与令和最新热播",
+      "badge": "日本",
+      "id": "f_m_23"
+    },
+    {
+      "name": "Big B Radio - KPOP (首尔流行韩流台)",
+      "url": "https://stream.bigbradio.com/kpop.mp3",
+      "type": "mp3",
+      "desc": "防弹少年团、BLACKPINK等顶流K-Pop热单",
+      "badge": "韩国",
+      "id": "f_m_24"
+    },
+    {
+      "name": "KBS Cool FM (韩国首尔动感流行音乐)",
+      "url": "https://kbscoolfm.streaming.kbs.co.kr/live/cool.m3u8",
+      "type": "m3u8",
+      "desc": "韩国爱豆偶像首播打歌专属流行电台",
+      "badge": "韩国",
+      "id": "f_m_25"
+    },
+    {
+      "name": "YES 933 (新加坡顶尖华语流行音乐台)",
+      "url": "https://mediacorp.sg/yes933/live.m3u8",
+      "type": "m3u8",
+      "desc": "新马地区收听率第一华语潮流音乐台",
+      "badge": "东南亚",
+      "id": "f_m_26"
+    },
+    {
+      "name": "LOVE 972 (新加坡最爱经典老歌台)",
+      "url": "https://mediacorp.sg/love972/live.m3u8",
+      "type": "m3u8",
+      "desc": "经典华语金曲、陪伴慢调与城市记忆",
+      "badge": "东南亚",
+      "id": "f_m_27"
+    },
+    {
+      "name": "Suriya FM (泰国芭提雅动感海滩音乐)",
+      "url": "http://stream.suriyafm.com:8000/live",
+      "type": "mp3",
+      "desc": "热带度假海岛电音、T-Pop 与热歌",
+      "badge": "东南亚",
+      "id": "f_m_28"
+    },
+    {
+      "name": "Prambors FM (印尼第一年轻潮流音乐台)",
+      "url": "https://stream.pramborsfm.com/live.mp3",
+      "type": "mp3",
+      "desc": "雅加达Z世代热榜、欧美前沿与流行",
+      "badge": "东南亚",
+      "id": "f_m_29"
+    },
+    {
+      "name": "Monster RX 93.1 (菲律宾冠军流行榜)",
+      "url": "https://stream.monsterrx931.com/live.mp3",
+      "type": "mp3",
+      "desc": "马尼拉年度最佳电台、欧美流行打歌台",
+      "badge": "东南亚",
+      "id": "f_m_30"
+    }
+  ]
+}

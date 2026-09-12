@@ -8,6 +8,10 @@ export type RadioStation = {
   bitrate: number
   codec: string
   homepage: string
+  /** 板块电台徽标（如「国家台」）；RadioBrowser 来源无此字段 */
+  badge?: string
+  /** 板块电台一句话描述；RadioBrowser 来源无此字段 */
+  desc?: string
 }
 
 export type PlayMode = 'sequential' | 'shuffle' | 'single'
