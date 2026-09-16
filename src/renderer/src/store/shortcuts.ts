@@ -74,3 +74,10 @@ const shortcutsSlice = createSlice({
 export const { updateShortcut, toggleShortcut, resetShortcuts, mergeDefaults } = shortcutsSlice.actions
 export default shortcutsSlice.reducer
 export { initialState }
+
+/**
+ * 语音输入是否启用：就是 voice_input 快捷键的 enabled。
+ * 模型设置页的开关与快捷键设置页共用这一份状态，故统一从这里读。
+ */
+export const selectVoiceInputEnabled = (state: { shortcuts: ShortcutsState }): boolean =>
+  state.shortcuts.shortcuts.find((s) => s.key === 'voice_input')?.enabled ?? true

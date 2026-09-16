@@ -1,19 +1,15 @@
-import { InfoCircleOutlined, UndoOutlined } from '@ant-design/icons' // 导入重置图标和Info图标
-import Selector from '@renderer/components/Selector'
+import { ExclamationCircleOutlined, UndoOutlined } from '@ant-design/icons'
 import { allMinApps } from '@renderer/config/minapps'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { SettingDescription, SettingDivider, SettingRowTitle, SettingTitle } from '@renderer/pages/settings'
-import type { RootState } from '@renderer/store'
-import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { useAppDispatch } from '@renderer/store'
 import {
   setMaxKeepAliveMinapps,
-  setMinAppRegion,
   setMinappsOpenLinkExternal,
   setShowOpenedMinappsInSidebar
 } from '@renderer/store/settings'
-import type { MinAppRegionFilter } from '@renderer/types'
-import { Button, Flex, message, Slider, Switch, Tooltip } from 'antd'
+import { Button, message, Slider, Switch, Tooltip } from 'antd'
 import type { FC } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
@@ -22,24 +18,6 @@ import MiniAppIconsManager from './MiniAppIconsManager'
 
 // 默认小程序缓存数量
 const DEFAULT_MAX_KEEPALIVE = 3
-
-// Region selector component with defensive default value
-const RegionSelector: FC = () => {
-  const dispatch = useAppDispatch()
-  const minAppRegion = useAppSelector((state: RootState) => state.settings.minAppRegion) ?? 'auto'
-
-  const onMinAppRegionChange = (value: MinAppRegionFilter) => {
-    dispatch(setMinAppRegion(value))
-  }
-
-  const minAppRegionOptions: { value: MinAppRegionFilter; label: string }[] = [
-    { value: 'auto', label: '自动检测' },
-    { value: 'CN', label: '中国' },
-    { value: 'Global', label: '全球' }
-  ]
-
-  return <Selector size={14} value={minAppRegion} onChange={onMinAppRegionChange} options={minAppRegionOptions} />
-}
 
 const MiniAppSettings: FC = () => {
   const dispatch = useAppDispatch()
@@ -51,27 +29,39 @@ const MiniAppSettings: FC = () => {
   const [messageApi, contextHolder] = message.useMessage()
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // 当 store 数据变化时（例如切换地区）同步本地状态
+  // 当 store 数据变化时同步本地状态
   useEffect(() => {
     setVisibleMiniApps(minapps)
     setDisabledMiniApps(disabled || [])
   }, [minapps, disabled])
 
   const handleResetMinApps = useCallback(() => {
-    // 仅重置为当前地区可见的应用，以避免混淆
+    // 清空隐藏区，全部应用回到显示区
     setVisibleMiniApps(minapps)
     setDisabledMiniApps([])
     updateMinapps(allMinApps)
     updateDisabledMinapps([])
   }, [minapps, updateDisabledMinapps, updateMinapps])
 
+  // 交换会把当前显示区整个搬进隐藏区；若隐藏区为空，结果就是「一个都不剩」，
+  // 因此必须先确认，否则容易被当成小程序凭空消失。
   const handleSwapMinApps = useCallback(() => {
-    const temp = visibleMiniApps
-    setVisibleMiniApps(disabledMiniApps)
-    setDisabledMiniApps(temp)
-    // 同时落盘 store：否则只改本地 state，关闭弹窗/地区切换后交换结果丢失
-    updateMinapps(disabledMiniApps)
-    updateDisabledMinapps(temp)
+    window.modal.confirm({
+      title: '交换显示区与隐藏区',
+      icon: <ExclamationCircleOutlined />,
+      content: `将把当前 ${visibleMiniApps.length} 个应用移入隐藏区，并把隐藏区的 ${disabledMiniApps.length} 个放回显示区。`,
+      okText: '交换',
+      cancelText: '取消',
+      centered: true,
+      onOk: () => {
+        const temp = visibleMiniApps
+        setVisibleMiniApps(disabledMiniApps)
+        setDisabledMiniApps(temp)
+        // 同时落盘 store：否则只改本地 state，关闭弹窗后交换结果丢失
+        updateMinapps(disabledMiniApps)
+        updateDisabledMinapps(temp)
+      }
+    })
   }, [disabledMiniApps, visibleMiniApps, updateDisabledMinapps, updateMinapps])
 
   // 恢复默认缓存数量
@@ -123,17 +113,6 @@ const MiniAppSettings: FC = () => {
           setDisabledMiniApps={setDisabledMiniApps}
         />
       </BorderedContainer>
-      <SettingDivider />
-      {/* 小程序地区设置 */}
-      <SettingRow style={{ height: 40, alignItems: 'center' }}>
-        <Flex align="center" gap={4}>
-          <SettingRowTitle>{'小程序区域筛选'}</SettingRowTitle>
-          <Tooltip title={'根据所在地区过滤不支持的小程序'} placement="right">
-            <InfoCircleOutlined style={{ cursor: 'pointer' }} />
-          </Tooltip>
-        </Flex>
-        <RegionSelector />
-      </SettingRow>
       <SettingDivider />
       <SettingRow style={{ height: 40, alignItems: 'center' }}>
         <SettingLabelGroup>

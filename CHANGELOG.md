@@ -5,6 +5,35 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.10.3] - 2026-09-17
+
+### 核心主题：语音输入新增总开关 + 快捷键写死 `Ctrl + \``、小程序取消地区隐藏 + 双轴审查修复
+
+**1. 语音输入总开关（设置 → 默认模型 → 语音输入模型）**
+
+- 服务商下拉框右侧新增 Switch，关闭后按住快捷键**不再录音**（不是只隐藏 UI）。
+- 开关状态**就是快捷键表 `voice_input` 的 `enabled`**，与「设置 → 快捷键 → 语音输入法」是同一份状态、互相联动。刻意**没有**给 `VoiceInputConfig` 另加 `enabled` 字段——reducer 内已自带 `window.api.shortcuts.update()` → IPC → 主进程重注册 → `voiceKeyboardManager.sync()` → 钩子 dispose，无需新增 IPC。
+- 新增 `selectVoiceInputEnabled` selector，避免 `'voice_input'` magic string 散布。
+
+**2. 语音输入快捷键写死 `Ctrl + \``（含一个真实 bug 修复）**
+
+- 默认快捷键由 `Win + Shift + \`` 改为 **`Ctrl + \``**；代码里所有写死的 `Win+Shift+\``（默认值、设置页提示文案、两处注释）一并清除。
+- **修复「修饰键被静默丢弃」**：`keyboardHook.ts` 的 `KEYCODE_MAP` 原本只认 `Meta/Shift/Ctrl/Alt/\``，未收录的键名会被 `parseShortcutToKeycodes` 过滤掉，于是 `['CommandOrControl','\`']` **退化成只按反引号就触发录音**（在聊天框打 `` ` `` 写代码块就会开始录音）。现按平台补上 `CommandOrControl → Meta/Ctrl` 兜底映射，老配置无需迁移即自动修正。
+- `mergeDefaultShortcuts()` 增加升级特例：把仍是旧默认值 `['Meta','Shift','\`']` 的老配置改写为 `Ctrl+\``；用户自定义的组合保留不动。
+
+**3. 小程序不再按地区隐藏**
+
+- 移除「按地区过滤」机制：无论地区如何，**一律显示全部小程序**（内置 57 + 自定义），是否隐藏只由用户在设置页拖到「隐藏区」决定。原先 17 个标记为「仅中国」的应用（豆包 / 通义 / 讯飞星火 / 文心 / 智谱 / 百川 / 阶跃 / 海螺 / ima / 天工 / 纳米 / 小艺 / WPS AI / 知乎直答 / 商汤 / 百度 AI 搜索 / Minimax）会在地区判定为「全球」时（含挂代理被判境外）被静默隐藏，表现为「小程序凭空消失」。
+- 设置页移除「小程序区域筛选」下拉框；「交换」按钮加二次确认（隐藏区为空时点它会把全部应用搬进隐藏区，页面变空）。
+
+**4. 代码清理**
+
+- 删除死代码链：`main/utils/ipService.ts`、IPC `App_GetIpCountry`、preload `api.getIpCountry`、`IpcChannel.App_GetIpCountry`。
+- 删除死字段：`settings.minAppRegion` + `setMinAppRegion`、`runtime.detectedRegion` + `setDetectedRegion`、类型 `MinAppRegionFilter`。
+- 保留 `supportedRegions` 数据与 `MinAppRegion` 类型（纯标注，无消费者）。
+
+**质量验证**：tsgo web/node 类型检查 0 错误；改动文件 biome format / biome lint / oxlint / eslint 全绿；单测 renderer **119** + main **340** = **459 项 0 失败**（新增 `voiceKeyboardManager.test.ts` 5 例、`useMinapps.allVisible.test.tsx` 2 例、`keyboardHook` 键码 2 例、快捷键升级 2 例）；完整构建通过。
+
 ## [1.10.2] - 2026-09-13
 
 ### 核心主题：FM 电台重构为「国内 / 国外 × 综合 / 音乐」四大板块（121 台精选内置 + hls.js 播放 m3u8 流）+ 双轴审查修复

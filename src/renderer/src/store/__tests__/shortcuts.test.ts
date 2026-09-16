@@ -29,13 +29,14 @@ describe('shortcuts store', () => {
     expect(desktopWidget?.shortcut).toEqual(['Alt', '`'])
   })
 
-  it('DEFAULT_SHORTCUTS contains the voice input shortcut (Win + Shift + `), enabled by default', () => {
+  it('DEFAULT_SHORTCUTS contains the voice input shortcut (Ctrl + `), enabled by default', () => {
     const voiceInput = DEFAULT_SHORTCUTS.find((s) => s.key === 'voice_input')
     expect(voiceInput).toBeDefined()
     expect(voiceInput?.enabled).toBe(true)
     expect(voiceInput?.editable).toBe(true)
     expect(voiceInput?.system).toBe(true)
-    expect(voiceInput?.shortcut).toEqual(['Meta', 'Shift', '`'])
+    // 必须是 'Ctrl'：语音输入由 uiohook 钩子实现，只认 KEYCODE_MAP 里的键名
+    expect(voiceInput?.shortcut).toEqual(['Ctrl', '`'])
   })
 
   it('initialState uses the shared DEFAULT_SHORTCUTS list', () => {
@@ -51,6 +52,22 @@ describe('shortcuts store', () => {
     const screenshot = merged.find((s) => s.key === 'screenshot')
     expect(screenshot?.enabled).toBe(true)
     expect(merged.length).toBe(DEFAULT_SHORTCUTS.length)
+  })
+
+  it('mergeDefaultShortcuts 把老配置里的 Win+Shift+` 升级为写死的 Ctrl+`', () => {
+    const legacy = DEFAULT_SHORTCUTS.map((s) =>
+      s.key === 'voice_input' ? { ...s, shortcut: ['Meta', 'Shift', '`'] } : s
+    )
+    const merged = mergeDefaultShortcuts(legacy)
+    expect(merged.find((s) => s.key === 'voice_input')?.shortcut).toEqual(['Ctrl', '`'])
+  })
+
+  it('mergeDefaultShortcuts 保留用户自定义的语音输入快捷键', () => {
+    const customized = DEFAULT_SHORTCUTS.map((s) =>
+      s.key === 'voice_input' ? { ...s, shortcut: ['CommandOrControl', '`'] } : s
+    )
+    const merged = mergeDefaultShortcuts(customized)
+    expect(merged.find((s) => s.key === 'voice_input')?.shortcut).toEqual(['CommandOrControl', '`'])
   })
 
   it('mergeDefaultShortcuts is idempotent', () => {
@@ -115,6 +132,16 @@ describe('shortcuts store', () => {
     expect(state.shortcuts.length).toBe(DEFAULT_SHORTCUTS.length)
   })
 
+  it('toggleShortcut flips voice_input enabled (模型设置页语音输入开关依赖此状态)', () => {
+    const disabled = shortcutsReducer(initialState, { type: 'shortcuts/toggleShortcut', payload: 'voice_input' })
+    expect(disabled.shortcuts.find((s) => s.key === 'voice_input')?.enabled).toBe(false)
+
+    const reEnabled = shortcutsReducer(disabled, { type: 'shortcuts/toggleShortcut', payload: 'voice_input' })
+    expect(reEnabled.shortcuts.find((s) => s.key === 'voice_input')?.enabled).toBe(true)
+    // 只动目标项
+    expect(reEnabled.shortcuts.length).toBe(DEFAULT_SHORTCUTS.length)
+  })
+
   it('mergeDefaultShortcuts deduplicates keys duplicated by legacy migrations (keeps first occurrence)', () => {
     // legacy migrations (migrate 48/49/54/57/58/215) pushed shortcut entries with
     // push() without checking whether the key already existed -> duplicated keys
@@ -174,7 +201,8 @@ describe('shortcuts store', () => {
     // difference by content and heal the list instead of skipping it.
     const missing = DEFAULT_SHORTCUTS.slice(0, 8) // 8 defaults absent from the list
     const base = DEFAULT_SHORTCUTS.filter((s) => !missing.some((m) => m.key === s.key)) // 13 unique
-    const duplicated = [...base, ...DEFAULT_SHORTCUTS.slice(8, 16).map((s) => ({ ...s, shortcut: ['Ctrl', 'X'] }))]
+    // 污染标记用 F13：默认值里绝不会出现，避免与真实快捷键撞车
+    const duplicated = [...base, ...DEFAULT_SHORTCUTS.slice(8, 16).map((s) => ({ ...s, shortcut: ['F13'] }))]
     expect(duplicated.length).toBe(DEFAULT_SHORTCUTS.length) // 21 === 21, length check alone would skip
 
     const state = shortcutsReducer({ shortcuts: duplicated }, mergeDefaults())
@@ -183,7 +211,7 @@ describe('shortcuts store', () => {
     const counts = new Map<string, number>()
     for (const s of state.shortcuts) counts.set(s.key, (counts.get(s.key) ?? 0) + 1)
     expect([...counts.values()].every((c) => c === 1)).toBe(true)
-    expect(state.shortcuts.some((s) => s.shortcut[0] === 'Ctrl')).toBe(false)
+    expect(state.shortcuts.some((s) => s.shortcut[0] === 'F13')).toBe(false)
   })
 
   it('mergeDefaultShortcuts does not mutate the input list', () => {

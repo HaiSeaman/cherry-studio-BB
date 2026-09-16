@@ -238,9 +238,10 @@ export const DEFAULT_SHORTCUTS = [
     system: true
   },
   {
-    //全局语音输入（按住 Win+Shift+` 说话，松开打字；由 uiohook 键盘钩子实现，不走 globalShortcut）
+    //全局语音输入（按住 Ctrl+` 说话，松开打字；由 uiohook 键盘钩子实现，不走 globalShortcut）
+    // 注意：必须写成 'Ctrl' 而非 'CommandOrControl'，见 keyboardHook.ts 的 KEYCODE_MAP 说明
     key: 'voice_input',
-    shortcut: ['Meta', 'Shift', '`'],
+    shortcut: ['Ctrl', '`'],
     editable: true,
     enabled: true,
     system: true
@@ -342,10 +343,19 @@ export const DEFAULT_SHORTCUTS = [
  *    NOT user-editable, and migrate 48 rewrote system=true for nearly everything;
  * 3. appends missing defaults (e.g. newly added "screenshot").
  *
- * User-editable fields (`shortcut`, `enabled`) are always preserved, and the
- * input list is never mutated.
+ * User-editable fields (`shortcut`, `enabled`) are preserved — with one exception:
+ * `voice_input` is pinned to Ctrl+`, so a legacy Win+Shift+` entry is upgraded.
+ * The input list is never mutated.
  */
-export const mergeDefaultShortcuts = <T extends { key: string; system: boolean; editable: boolean }>(
+/** 语音输入快捷键的历史默认值，用于把老配置升级到写死的 Ctrl+` */
+const LEGACY_VOICE_INPUT_SHORTCUT = ['Meta', 'Shift', '`']
+
+const isSameShortcut = (a: string[] | undefined, b: string[]): boolean =>
+  !!a && a.length === b.length && a.every((key, i) => key === b[i])
+
+export const mergeDefaultShortcuts = <
+  T extends { key: string; shortcut?: string[]; system: boolean; editable: boolean }
+>(
   shortcuts: T[]
 ): T[] => {
   const byDefault = new Map(DEFAULT_SHORTCUTS.map((d) => [d.key, d]))
@@ -355,11 +365,16 @@ export const mergeDefaultShortcuts = <T extends { key: string; system: boolean; 
     if (seen.has(s.key)) continue
     seen.add(s.key)
     const def = byDefault.get(s.key)
+    let next = s
     if (def && (s.system !== def.system || s.editable !== def.editable)) {
-      merged.push({ ...s, system: def.system, editable: def.editable })
-    } else {
-      merged.push(s)
+      next = { ...s, system: def.system, editable: def.editable }
     }
+    // 语音输入的快捷键已写死为 Ctrl+`：把仍是旧默认值（Win+Shift+`）的老配置一并升级，
+    // 否则存量用户永远停留在已被删除的旧组合上。用户自定义的组合保持不动。
+    if (def && s.key === 'voice_input' && isSameShortcut(s.shortcut, LEGACY_VOICE_INPUT_SHORTCUT)) {
+      next = { ...next, shortcut: [...(def.shortcut as string[])] }
+    }
+    merged.push(next)
   }
   for (const def of DEFAULT_SHORTCUTS) {
     if (!seen.has(def.key)) {

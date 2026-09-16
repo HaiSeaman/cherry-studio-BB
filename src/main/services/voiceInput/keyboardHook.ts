@@ -5,12 +5,16 @@ import { createPressHoldDetector } from './pressHoldDetector'
 /**
  * 项目快捷键表键名 → uiohook keycode。
  * Meta 即 Windows 键（设置页录入/显示为 Win），反引号为 '`'（与 desktop_widget 一致）。
+ *
+ * 曾经踩过的坑：CommandOrControl 未收录时，parseShortcutToKeycodes 会把修饰键静默丢弃，
+ * 于是 ['CommandOrControl', '`'] 退化成只按 '`' 就触发录音。这里按平台补上兜底映射。
  */
 const KEYCODE_MAP: Record<string, number> = {
   Meta: UiohookKey.Meta,
   Shift: UiohookKey.Shift,
   Ctrl: UiohookKey.Ctrl,
   Alt: UiohookKey.Alt,
+  CommandOrControl: process.platform === 'darwin' ? UiohookKey.Meta : UiohookKey.Ctrl,
   '`': UiohookKey.Backquote
 }
 
@@ -26,7 +30,11 @@ export interface VoiceKeyboardHook {
 }
 
 /** 键盘钩子薄壳：把 uiohook 的全局 keydown/keyup 喂给 pressHoldDetector，输出 start/stop */
-export function createVoiceKeyboardHook(shortcut: string[], onStart: () => void, onStop: () => void): VoiceKeyboardHook {
+export function createVoiceKeyboardHook(
+  shortcut: string[],
+  onStart: () => void,
+  onStop: () => void
+): VoiceKeyboardHook {
   let detector = createPressHoldDetector({ targetKeys: parseShortcutToKeycodes(shortcut), onStart, onStop })
   let started = false
 

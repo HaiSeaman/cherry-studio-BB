@@ -9,7 +9,7 @@ vi.mock('uiohook-napi', async () => {
   }
 })
 
-import { uIOhook,UiohookKey } from 'uiohook-napi'
+import { uIOhook, UiohookKey } from 'uiohook-napi'
 
 import { createVoiceKeyboardHook, parseShortcutToKeycodes } from '../keyboardHook'
 
@@ -39,6 +39,17 @@ describe('parseShortcutToKeycodes', () => {
 
   it('未知键名被过滤掉', () => {
     expect(parseShortcutToKeycodes(['Meta', 'NotAKey'])).toEqual([UiohookKey.Meta])
+  })
+
+  it('Ctrl+` 映射为 Ctrl + 反引号', () => {
+    expect(parseShortcutToKeycodes(['Ctrl', '`'])).toEqual([UiohookKey.Ctrl, UiohookKey.Backquote])
+  })
+
+  it('CommandOrControl 不会被静默丢弃（否则退化成单按反引号就录音）', () => {
+    const codes = parseShortcutToKeycodes(['CommandOrControl', '`'])
+    expect(codes).toHaveLength(2)
+    expect(codes).toContain(process.platform === 'darwin' ? UiohookKey.Meta : UiohookKey.Ctrl)
+    expect(codes).not.toEqual(parseShortcutToKeycodes(['`']))
   })
 })
 

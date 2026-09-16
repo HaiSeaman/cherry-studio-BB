@@ -341,7 +341,7 @@ export type MinAppType = {
   name: string
   /** i18n key for translatable names */
   nameKey?: string
-  /** Regions where this app is available. If includes 'Global', shown to international users. */
+  /** 该应用支持的地区。仅作数据标注，UI 不再据此过滤——所有小程序一律显示。 */
   supportedRegions?: MinAppRegion[]
   logo?: string
   url: string
@@ -353,10 +353,10 @@ export type MinAppType = {
   type?: 'Custom' | 'Default' // Added the 'type' property
 }
 
-/** Region types for miniapps visibility */
+/**
+ * 小程序支持的地区。仅作为数据标注保留，UI 不再据此过滤——所有小程序一律显示。
+ */
 export type MinAppRegion = 'CN' | 'Global'
-
-export type MinAppRegionFilter = 'auto' | MinAppRegion
 
 export enum ThemeMode {
   light = 'light',

@@ -9,12 +9,13 @@ import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
-import { useAppDispatch } from '@renderer/store'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setTranslateModelPrompt } from '@renderer/store/settings'
+import { selectVoiceInputEnabled, toggleShortcut } from '@renderer/store/shortcuts'
 import type { Model } from '@renderer/types'
 import { DEFAULT_VOICE_INPUT_CONFIG } from '@shared/config/constant'
 import type { VoiceInputConfig, VoiceInputProvider } from '@shared/config/types'
-import { Button, Select, Tooltip } from 'antd'
+import { Button, Select, Switch, Tooltip } from 'antd'
 import { find } from 'lodash'
 import { Languages, MessageSquareMore, Mic, Rocket, Settings2 } from 'lucide-react'
 import type { FC } from 'react'
@@ -45,6 +46,9 @@ const ModelSettings: FC<ModelSettingsProps> = ({
   const { translateModelPrompt } = useSettings()
 
   const dispatch = useAppDispatch()
+
+  // 语音输入总开关：复用快捷键表 voice_input 的 enabled（与快捷键设置页同一份状态）
+  const voiceInputEnabled = useAppSelector(selectVoiceInputEnabled)
 
   const modelPredicate = useCallback(
     (m: Model) => !isEmbeddingModel(m) && !isRerankModel(m) && !isTextToImageModel(m),
@@ -184,7 +188,13 @@ const ModelSettings: FC<ModelSettingsProps> = ({
           <HStack alignItems="center" gap={10}>
             <Mic size={18} color="var(--color-text)" />
             {'语音输入模型'}
-            <InfoTooltip title={'按住 Win+Shift+` 说话，松开后识别文字并打字到鼠标光标处'} />
+            <InfoTooltip
+              title={
+                voiceInputEnabled
+                  ? '按住 Ctrl+` 说话，松开后识别文字并打字到鼠标光标处'
+                  : '语音输入已关闭，打开右侧开关后按住 Ctrl+` 即可说话'
+              }
+            />
           </HStack>
         </SettingTitle>
         <HStack alignItems="center">
@@ -198,9 +208,19 @@ const ModelSettings: FC<ModelSettingsProps> = ({
           {showSettingsButton && (
             <Button icon={<Settings2 size={16} />} style={{ marginLeft: 8 }} onClick={openVoiceInputSettings} />
           )}
+          <Tooltip title={voiceInputEnabled ? '关闭后按住快捷键也不会录音' : '开启后按住快捷键即可说话'}>
+            <Switch
+              size="small"
+              checked={voiceInputEnabled}
+              onChange={() => dispatch(toggleShortcut('voice_input'))}
+              style={{ marginLeft: 8 }}
+            />
+          </Tooltip>
         </HStack>
         {showDescription && (
-          <SettingDescription>{'语音输入的识别服务商；API 地址固定，密钥与模型名称在右侧设置中填写'}</SettingDescription>
+          <SettingDescription>
+            {'语音输入的识别服务商；API 地址固定，密钥与模型名称在右侧设置中填写'}
+          </SettingDescription>
         )}
       </SettingGroup>
     </SettingContainer>

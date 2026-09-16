@@ -10,7 +10,6 @@ import type {
   CodeStyleVarious,
   LanguageVarious,
   MathEngine,
-  MinAppRegionFilter,
   NotificationSource,
   OpenAIServiceTier,
   S3Config,
@@ -185,8 +184,6 @@ export interface SettingsState {
   maxKeepAliveMinapps: number
   showOpenedMinappsInSidebar: boolean
   minappsOpenLinkExternal: boolean
-  /** Mini app region filter: 'auto' (detect from IP), 'CN', or 'Global' */
-  minAppRegion: MinAppRegionFilter
   // 隐私设置
   privacyPolicyVersion?: string
   enableSpellCheck: boolean
@@ -363,7 +360,6 @@ export const initialState: SettingsState = {
   maxKeepAliveMinapps: 3,
   showOpenedMinappsInSidebar: true,
   minappsOpenLinkExternal: false,
-  minAppRegion: 'auto',
   privacyPolicyVersion: LATEST_PRIVACY_POLICY_VERSION,
   enableSpellCheck: false,
   spellCheckLanguages: [],
@@ -780,9 +776,6 @@ const settingsSlice = createSlice({
     setMinappsOpenLinkExternal: (state, action: PayloadAction<boolean>) => {
       state.minappsOpenLinkExternal = action.payload
     },
-    setMinAppRegion: (state, action: PayloadAction<MinAppRegionFilter>) => {
-      state.minAppRegion = action.payload
-    },
     setPrivacyPolicyVersion: (state, action: PayloadAction<string>) => {
       state.privacyPolicyVersion = action.payload
     },
@@ -961,7 +954,6 @@ export const {
   setMaxKeepAliveMinapps,
   setShowOpenedMinappsInSidebar,
   setMinappsOpenLinkExternal,
-  setMinAppRegion,
   setPrivacyPolicyVersion,
   setEnableSpellCheck,
   setSpellCheckLanguages,

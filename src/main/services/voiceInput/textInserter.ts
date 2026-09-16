@@ -31,7 +31,7 @@ function writeKeyRecord(buffer: Buffer, index: number, vk: number, scan: number,
 /**
  * 构造「逐字输入」的 INPUT 记录：每个 UTF-16 码元一条按下 + 一条抬起。
  * 用 KEYEVENTF_UNICODE 而不是剪贴板粘贴，一是能逐字上屏，二是走 WM_CHAR 通道，
- * 不受物理按住的修饰键影响（按住 Win+Shift 说话时不会被拼成 Ctrl+Shift+V 之类的组合键）。
+ * 不受物理按住的修饰键影响（按住 Ctrl 说话时不会被拼成 Ctrl+V 之类的组合键）。
  */
 export function buildUnicodeRecords(text: string): Buffer {
   const units: number[] = []
