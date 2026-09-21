@@ -33,6 +33,7 @@ app-builds/
 *.zip
 *.tar.gz
 *.7z
+*.asar
 stats.html
 
 # ---------- 缓存与临时文件 ----------
@@ -78,7 +79,9 @@ secrets.json
 coverage/
 .nyc_output/
 .vitest-cache/
-vitest.config.*.timestamp-*
+# vite / electron-vite / vitest 加载 TS 配置文件时会在根目录生成
+# <config>.ts.timestamp-<ts>.mjs 临时文件（此前只覆盖了 vitest.config，现统一覆盖 vite / electron.vite.config / vitest.config）
+*.config.*.timestamp-*
 playwright-report/
 test-results/
 tests/e2e/.artifacts/
@@ -127,6 +130,7 @@ AGENTS.override.md
 subagent/
 .workbuddy
 .dsh-notes
+.commandcode
 
 # ---------- 本地数据与运行时目录 ----------
 local/

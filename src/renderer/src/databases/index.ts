@@ -5,7 +5,6 @@ import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMes
 import { Dexie, type EntityTable, type Table } from 'dexie'
 
 import type { Habit, HabitRecord } from '../pages/habits/types'
-import type { IptvChannel, IptvFavorite, IptvHistory, IptvLocalVideo, IptvPlaylist } from '../pages/iptv/types'
 import type { KBChunk, KBFile, KnowledgeBase } from '../pages/knowledge/types'
 import type { MusicTrack, RadioStation } from '../pages/music/types'
 import type { HubActivity, HubAlarm, HubDayNote, HubNote, HubNoteSnapshot, HubTodo } from '../pages/notes/types'
@@ -40,12 +39,6 @@ export const db = new Dexie('CherryStudio', {
   kb_files: EntityTable<KBFile, 'id'>
   kb_chunks: EntityTable<KBChunk, 'id'>
   kb_search_index: EntityTable<{ base_id: string; payload: string; updated_at: string }, 'base_id'>
-  // IPTV Tab（播放列表/频道缓存/收藏快照/最近观看快照）
-  iptv_playlists: EntityTable<IptvPlaylist, 'id'>
-  iptv_channels: EntityTable<IptvChannel, 'id'>
-  iptv_favorites: EntityTable<IptvFavorite, 'url'>
-  iptv_history: EntityTable<IptvHistory, 'url'>
-  iptv_locals: EntityTable<IptvLocalVideo, 'id'>
 }
 
 db.version(1).stores({
@@ -214,6 +207,17 @@ db.version(15).stores({
 // &path 唯一索引：同一文件重复添加自动去重；断点续播字段 positionSec/durationSec 播放时回填
 db.version(16).stores({
   iptv_locals: '++id, &path'
+})
+
+// --- NEW VERSION 17：「电视」（IPTV）功能整体下线，删除其 5 张表 ---
+// version 15/16 保留为历史，保证任意版本的老存档都能平滑升到 17；此处显式删表。
+// Dexie 的 stores() 是逐版本累积合并语义（未声明=继承），故必须显式赋 null 才会真正删除对象仓库。
+db.version(17).stores({
+  iptv_playlists: null,
+  iptv_channels: null,
+  iptv_favorites: null,
+  iptv_history: null,
+  iptv_locals: null
 })
 
 export default db

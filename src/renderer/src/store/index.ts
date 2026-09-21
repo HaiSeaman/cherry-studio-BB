@@ -5,7 +5,6 @@ import { useDispatch, useSelector, useStore } from 'react-redux'
 import { FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, REHYDRATE } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 
-import iptvSettings, { mergeDefaults as mergeIptvDefaults } from '../pages/iptv/store/iptvSettingsSlice'
 import musicSettings from '../pages/music/store/musicSettingsSlice'
 import hubSettings from '../pages/notes/store/hubSettingsSlice'
 import paint from '../pages/paint/store/paintSlice'
@@ -47,7 +46,6 @@ const rootReducer = combineReducers({
   paint,
   musicSettings,
   hubSettings,
-  iptvSettings,
   translate,
   toolPermissions
 })
@@ -61,13 +59,14 @@ const rootReducer = combineReducers({
 //     migrate 累积原则：对任何旧版本只调用本函数一次，须覆盖全部历史净效果——
 //     三个已删入口直接从持久化列表过滤即可，天然覆盖 v0~v3 所有老用户。
 //     实现见 migrate.ts（纯函数，单测覆盖各历史版本升级路径）。
+// v5: 「电视」（IPTV）入口下线，/iptv 移除；iptv 并入 DEPRECATED_SIDEBAR_ICONS 作废。
 import { migrate } from './migrate'
 
 const persistedReducer = persistReducer(
   {
     key: 'cherry-studio',
     storage,
-    version: 4,
+    version: 5,
     migrate,
     blacklist: ['runtime', 'messages', 'messageBlocks', 'tabs', 'toolPermissions', 'paint']
   },
@@ -110,8 +109,6 @@ export const persistor = persistStore(store, undefined, () => {
   // initialState and hiding newly added defaults like "screenshot". Dispatch a
   // merge right after rehydration so new shortcuts appear in the settings UI.
   store.dispatch(mergeDefaults())
-  // 同理：老存档没有 iptvSettings 新增字段（如 localPlayMode），补回默认值防止读成 undefined
-  store.dispatch(mergeIptvDefaults())
 
   // Notify main process that Redux store is ready
   void window.electron?.ipcRenderer?.invoke(IpcChannel.ReduxStoreReady)

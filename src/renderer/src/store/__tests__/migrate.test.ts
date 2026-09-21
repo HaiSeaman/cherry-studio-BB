@@ -11,17 +11,17 @@ function stateWith(visible: string[] | undefined, disabled?: string[]) {
   }
 }
 
-describe('persist migrate — 侧边栏图标（v0~v3 → v4 各历史升级路径）', () => {
-  it('v1 老数据（含 music/paint/automation）：过滤后 notes 保留，并默认补入 habits/knowledge/iptv', async () => {
+describe('persist migrate — 侧边栏图标（v0~v5 各历史升级路径）', () => {
+  it('v1 老数据（含 music/paint/automation）：过滤后 notes 保留，并默认补入 habits/knowledge', async () => {
     const s = stateWith(['assistants', 'minapp', 'paint', 'music', 'notes', 'automation'])
     const out: any = await migrate(s)
-    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits', 'knowledge', 'iptv'])
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits', 'knowledge'])
   })
 
-  it('v0 极老数据（无 paint/automation，仅 music）：notes 保留，并默认补入 habits/knowledge/iptv', async () => {
+  it('v0 极老数据（无 paint/automation，仅 music）：notes 保留，并默认补入 habits/knowledge', async () => {
     const s = stateWith(['assistants', 'minapp', 'music', 'notes'])
     const out: any = await migrate(s)
-    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits', 'knowledge', 'iptv'])
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits', 'knowledge'])
   })
 
   it('disabled 列表中的死图标同样被清除', async () => {
@@ -30,10 +30,10 @@ describe('persist migrate — 侧边栏图标（v0~v3 → v4 各历史升级路�
     expect(out.settings.sidebarIcons.disabled).toEqual([])
   })
 
-  it('已是最新格式（3 图标）：原样放行 + 默认补入 habits/knowledge/iptv，notes 不丢', async () => {
+  it('已是最新格式（3 图标）：原样放行 + 默认补入 habits/knowledge，notes 不丢', async () => {
     const s = stateWith(['assistants', 'minapp', 'notes'])
     const out: any = await migrate(s)
-    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits', 'knowledge', 'iptv'])
+    expect(out.settings.sidebarIcons.visible).toEqual(['assistants', 'minapp', 'notes', 'habits', 'knowledge'])
   })
 
   it('用户已显式禁用 knowledge：不强行补入 visible', async () => {
@@ -49,17 +49,11 @@ describe('persist migrate — 侧边栏图标（v0~v3 → v4 各历史升级路�
     expect(out.settings.sidebarIcons.visible.filter((i: string) => i === 'knowledge')).toHaveLength(1)
   })
 
-  it('用户已显式禁用 iptv：不强行补入 visible', async () => {
-    const s = stateWith(['assistants', 'minapp', 'notes', 'habits', 'knowledge'], ['iptv'])
+  it('v5 下线：老存档 visible/disabled 里残留的 iptv 均被清除，且不再补入', async () => {
+    const s = stateWith(['assistants', 'minapp', 'notes', 'iptv'], ['iptv'])
     const out: any = await migrate(s)
     expect(out.settings.sidebarIcons.visible).not.toContain('iptv')
-    expect(out.settings.sidebarIcons.disabled).toContain('iptv')
-  })
-
-  it('visible 已含 iptv：不重复添加', async () => {
-    const s = stateWith(['assistants', 'minapp', 'notes', 'habits', 'knowledge', 'iptv'])
-    const out: any = await migrate(s)
-    expect(out.settings.sidebarIcons.visible.filter((i: string) => i === 'iptv')).toHaveLength(1)
+    expect(out.settings.sidebarIcons.disabled).not.toContain('iptv')
   })
 
   it('settings 无 sidebarIcons 字段（更老的数据）：不崩溃、原样返回', async () => {

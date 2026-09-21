@@ -5,6 +5,46 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.11.0] - 2026-09-21
+
+### 核心主题：「电视」（IPTV）TAB 整体下线 + 死代码清理 + 开发者文档同步
+
+**1. 移除「电视」（IPTV）功能**
+
+- 删除整个 `src/renderer/src/pages/iptv/`（页面 / 类型 / Redux 切片 / 6 个服务 / 9 个组件 / 11 个测试文件，共 29 个文件、约 4300 行）
+- 侧边栏 6 处接线同步拆除：`types/index.ts` 的 `SidebarIcon` 联合类型、`config/sidebar.ts` 默认图标、`Sidebar.tsx` 的 iconMap/pathMap、`Router.tsx` 懒加载与 `/iptv` 路由、`i18n/label.ts` 中文名、`SidebarIconsManager.tsx` 图标管理项
+- Redux：移除 `iptvSettings` 切片注册与 `mergeIptvDefaults()` 调用
+- **老存档安全**：redux-persist `version` 4 → 5，`iptv` 加入 `DEPRECATED_SIDEBAR_ICONS`，老用户可见/隐藏列表里残留的「电视」入口在升级时自动清除
+- **数据库安全**：Dexie 新增 `version(17)`，以显式 `null` 删除 5 张 `iptv_*` 表。`version(15)` / `version(16)` 声明**保留为历史**，保证任意版本老存档都能平滑升级；Dexie 的 `stores()` 是逐版本累积合并语义（未声明=继承），必须显式赋 `null` 才会真正删除对象仓库
+- 专用依赖移除：`mpegts.js`、`iptv-playlist-parser`；**`hls.js` 保留**（FM 电台的 HLS 播放仍在用），`window.api.file.download` / `fs.readText` 等通用能力未动
+
+**2. 死代码清理**
+
+- 删除零引用的导出常量 `REQUIRED_SIDEBAR_ICONS`（`config/sidebar.ts`）——其「必显图标」语义实际由 `SidebarIconsManager` 内联实现，该常量从未被任何代码使用
+- 删除 `store/settings.ts` 中零消费者的向后兼容转发 `export { DEFAULT_SIDEBAR_ICONS }`
+- 修复 `Router.tsx` 既有的 `simple-import-sort` 报错（此前会让 `pnpm lint` / `pnpm build:check` 整体失败）
+
+**3. 开发者文档同步**
+
+- `docs/wiki/` 五篇文档 + 索引页逐条纠正：删除已不存在的 `/iptv` 路由行、`pages/iptv/` 目录条目、「网络电视」产品定位与功能表条目、`iptvSettings` 切片条目、IPTV 数据写入约定、IPTV 模块测试约定；Dexie schema 版本更正为 v17、持久化迁移模型更正为 v5
+- `docs/wiki/README.md` 按「每版本文档变更表」约定新增本版本变更节
+- `docs/IPTV开发计划.md` 顶部加「已下线」横幅，避免后续开发者误当作在册功能
+
+### 验证
+
+| 项目 | 结果 |
+|---|---|
+| TypeScript 类型检查（node / web / aiCore） | ✅ 三项全部通过 |
+| 单元测试（main / shared / aiCore / scripts 四个 project） | ✅ 902 项全绿（main 462 / shared 72 / aiCore 360 / scripts 8） |
+| 渲染层测试 project | ⚠️ 本机无法收集：`tests/renderer.setup.ts` 的 `createRequire` 在 jsdom + rolldown-vite 下被 externalize 成 undefined。经 `git stash` 对照实验确认**改动前即如此**，与本次改动无关 |
+| biome / eslint（本次改动文件） | ✅ 0 问题（typecheck 已通过；此前失败的那处 import 排序已修） |
+| 迁移函数逻辑 | ✅ 用 Node 原生 TS 直跑真实 `migrate.ts` 的 11 项断言全部通过 |
+
+### 说明
+
+- 「电视」专属数据（播放列表 / 收藏 / 最近观看 / 本地视频记录）随表删除**永久清空、不可恢复**
+- 本地构建前请先 `cp .env.example .env`：构建链路依赖其中的 `NODE_OPTIONS=--max-old-space-size=8000`
+
 ## [1.10.3] - 2026-09-17
 
 ### 核心主题：语音输入新增总开关 + 快捷键写死 `Ctrl + \``、小程序取消地区隐藏 + 双轴审查修复

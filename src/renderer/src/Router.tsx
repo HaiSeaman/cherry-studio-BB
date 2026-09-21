@@ -9,8 +9,8 @@ import NavigationHandler from './handler/NavigationHandler'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import HomePage from './pages/home/HomePage'
 import LaunchpadPage from './pages/launchpad/LaunchpadPage'
-import { OnboardingPage } from './pages/onboarding'
 import AlarmEngineHost from './pages/notes/components/AlarmEngineHost'
+import { OnboardingPage } from './pages/onboarding'
 
 // 懒加载的非首屏页面（减少首屏 JS 解析量）
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
@@ -19,7 +19,6 @@ const MinAppsPage = lazy(() => import('./pages/minapps/MinAppsPage'))
 const NotesPage = lazy(() => import('./pages/notes/NotesPage'))
 const HabitsPage = lazy(() => import('./pages/habits/HabitsPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
-const IptvPage = lazy(() => import('./pages/iptv/IptvPage'))
 const Router: FC = () => {
   const { onboardingCompleted, completeOnboarding } = useOnboardingState()
 
@@ -34,7 +33,6 @@ const Router: FC = () => {
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/habits" element={<HabitsPage />} />
             <Route path="/knowledge" element={<KnowledgePage />} />
-            <Route path="/iptv" element={<IptvPage />} />
             <Route path="/settings/*" element={<SettingsPage />} />
             <Route path="/launchpad" element={<LaunchpadPage />} />
           </Routes>

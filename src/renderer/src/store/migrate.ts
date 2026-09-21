@@ -3,8 +3,9 @@
  * redux-persist 对任何旧版本只调用最新 migrate 一次，本函数须覆盖全部历史版本的净效果：
  * - v0 → v1 曾为老用户补「自动化」图标（v4 已随入口下线反转，不再补）
  * - v2/v3/v4 陆续下线 music / paint / automation 侧边栏入口（并入中控台与助手工作台）
+ * - v5 下线 iptv（电视）入口
  */
-export const DEPRECATED_SIDEBAR_ICONS = ['music', 'paint', 'automation']
+export const DEPRECATED_SIDEBAR_ICONS = ['music', 'paint', 'automation', 'iptv']
 
 export const migrate = async (state: any) => {
   if (!state) return state
@@ -22,10 +23,6 @@ export const migrate = async (state: any) => {
       // 新增知识库入口默认补入（老用户持久化 settings 的 visible 里没有 knowledge；用户已显式禁用的不强行加回）
       if (!icons.visible.includes('knowledge') && !(icons.disabled ?? []).includes('knowledge')) {
         icons.visible.push('knowledge')
-      }
-      // 新增电视（IPTV）入口默认补入（同上：显式禁用的不强行加回）
-      if (!icons.visible.includes('iptv') && !(icons.disabled ?? []).includes('iptv')) {
-        icons.visible.push('iptv')
       }
     }
     if (Array.isArray(icons.disabled)) {

@@ -38,9 +38,6 @@ export type NotificationSettings = Record<NotificationSource, NotificationSettin
 /** 通知声音文件允许的扩展名（与闹钟自定义声音一致） */
 export const NOTIFICATION_SOUND_EXTENSIONS = ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac']
 
-// Re-export for backward compatibility
-export { DEFAULT_SIDEBAR_ICONS }
-
 export type AssistantIconType = 'model' | 'emoji' | 'none'
 
 export type UserTheme = {
