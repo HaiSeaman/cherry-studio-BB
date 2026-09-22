@@ -5,6 +5,77 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.11.1] - 2026-09-22
+
+### 核心主题：知识库检索链路收口 —— 不再把原文灌进用户气泡、引用可溯源、多库公平合并、阈值可调、索引可重建
+
+**1. 注入位置修正（根治「AI 回答前先冒出一大段非对话内容」）**
+
+- 症状与根因：发送时把检索到的 chunk 拼成 `[文件名] 片段` 前缀塞进**用户消息正文**（原 `Inputbar.tsx`），于是用户气泡里先出现一大段原文 +「【用户问题】」；该文本还**随历史消息每轮重发**，上下文越聊越胖
+- 改为**请求时接缝**：新增 `pages/knowledge/knowledgeContext.ts` 的 `attachKnowledgeContext(query, model, sink)`
+  - 参考资料文本追加到 `effectiveAssistant.prompt` → 由 `prepareParams/parameterBuilder.ts` 落到 `params.system`，用户气泡里只剩用户原话
+  - 命中片段挂成助手消息上的 `CitationBlock`
+  - 专用图像生成模型（`isDedicatedImageGenerationModel`）直接跳过检索，不产生无意义引用与提示
+- 单一入口：`ApiService.transformMessagesAndFetch` 调用该接缝；`Inputbar` 只保留 `content: text`
+
+**2. 引用溯源气泡（复用既有 citation block 体系）**
+
+- `CitationMessageBlock` 新增 `knowledge?: KnowledgeItem[]`；`formatCitationsFromBlock` 产出 `citation.type = 'knowledge'`（标题=文件名、正文=片段、`url`=原文件路径 → 点击 `window.api.file.openPath` 打开原文件）
+- `CitationsList` 渲染该类型；列表 key 改用重编后的唯一序号 `number` —— **同一文件的多条片段不再撞 React key**
+- 该数据只落库供界面与 Markdown 导出：`messageConverter` 只取 main-text/file/image/thinking 块，**引用块从不发给模型**（`getCitationContent` 仅被 `utils/export.ts` 调用，已核实）
+
+**3. 多知识库公平合并 + 跨库内容去重**
+
+- 原实现是"第一个库吃满配额"；改为**各库分别检索 → 按名次 RRF 融合 → 内容去重 → 上限 8 块**
+- 为什么按名次而非分数：不同库可绑定不同嵌入模型，**相似度不可比、名次可比**
+
+**4. 相关性门槛挡住"硬塞资料"，并支持每库可调**
+
+- `search.ts` 新增 `MIN_RELEVANCE = 0.3`：余弦低于阈值不进候选（关键词路同样受限）；**向量路失败时降级为纯关键词且不做门槛**（否则词面命中会被整体误杀）
+- 新增 `KnowledgeBase.min_relevance?` 与唯一入口 `relevanceThreshold(base)`；设置弹窗可调（0.05~0.95）、顶部徽标实时显示、召回页空态区分"未检索"与"检索了但全不过线"
+- 彻底无命中不再静默：聊天侧给轻提示「知识库中未找到与本次提问相关的内容」
+
+**5. 切块带上标题层级上下文（零成本版 Contextual Retrieval）**
+
+- `chunker.ts` 新增 `headingPathsOf`：按文档自身标题结构给每块加 `手册 > 保修` 前缀，让脱离上下文的片段同时被 BM25 与向量命中；标题块只带父级路径（不重复自己）、无标题文本不加前缀
+- 前缀最多 6 级，不参与 chunkSize 预算
+
+**6. 重排候选池 12 → 50**
+
+- 配了重排模型时把候选池扩到 50 再精排（未配重排时保持 TopK×2，不为融合多花算力）
+
+**7. 重建索引（让参数对存量文件生效）**
+
+- `KnowledgeService.rebuildBase(baseId)`：先整体清掉旧切块 → 按当前参数逐文件重新解析/切块/向量化；源文件已移动/删除的文件单独标 error，不影响其余
+- 界面：文件抽屉新增按钮（二次确认 + 实时刷新进度）。**此前的坑**：切块参数只影响之后新加的文件，而重复导入同一文件会被"内容重复"跳过 → 用户没有任何办法刷新老文件
+- 重建后清空召回区（旧结果指向的切块已被删除）
+
+**8. 双轴代码审计后的修复**
+
+- 抽出 `attachKnowledgeContext` 接缝并补 3 个测试 —— 此前它是**唯一零测试的生产路径**（违反 CONTRIBUTING「Features without tests are considered non-existent」）
+- 修 `KnowledgePage` 检索**抛错时**仍渲染"没有达到阈值"空态（与报错提示互相矛盾）
+- 修向量检索降级时界面笃定显示 `0.0%` → 卡片显示 `—`、详情显示"相似度：不可用（向量检索降级）"
+- 修改完设置后顶部参数徽标不刷新（`refresh()` 原样返回旧对象）；`.param-badges` 补 `flex-wrap: wrap`
+- 修 `chunker` 注释与代码不符（"绝不产生超限块" → 限定为正文块）、清理 `search.ts` 陈旧注释
+- 修**既有 bug**：`citationCallbacks.ts` 写 `citationReferences` 时字段名写成 `blockId`，而类型定义、消费方与同文件另一分支均为 `citationBlockId`
+
+### 验证
+
+| 项目 | 结果 |
+|---|---|
+| TypeScript 类型检查（web） | ✅ 通过 |
+| 单元测试（main / shared / aiCore / scripts） | ✅ **902 项全绿**（462 / 72 / 360 / 8，与 1.11.0 基线一致，本版未触碰这四个工程） |
+| 单元测试（渲染层 · 受影响的 24 个文件） | ✅ **252 项全绿**（知识库 9 文件 + 引用格式化 + 受影响链路） |
+| 渲染层测试 project（全量） | ⚠️ 本机无法收集：`tests/renderer.setup.ts` 的 `createRequire` 在 jsdom + rolldown-vite 下被 externalize 成 undefined（1.11.0 已记录为既有问题，与本版无关）。本次用临时 setup 绕过该行后跑通上表 252 项 |
+| oxlint / biome（本次改动文件） | ✅ 0 问题 |
+| 仓库级 `biome format` | ⚠️ 仍有 **67 处既有格式漂移，全部在 v1.10.x 的语音输入相关文件**（`voiceInput*` / `asr/*` / `pressHoldDetector.ts` 等），与本版无关；为保持发布 diff 干净未一并格式化 |
+
+### 说明
+
+- **本版无 Dexie 结构变更**（`message_blocks` / `kb_bases` 只新增可选字段，无需 schema 升级），**无新增依赖**
+- 未做的三项为有意取舍：分块默认值调小（无评测数据，等于换一个猜测）、查询改写（每次提问多一次 LLM 调用且无法验证收益）、Web Worker + 索引落盘（设计文档 §13 已评估否决，个人规模暴力余弦为毫秒级）
+- 已知代价：配了重排模型时每次提问要把 50 条候选发给重排服务（更慢更贵，换更准）；一次提问 @ 多个模型会各检索一次
+
 ## [1.11.0] - 2026-09-21
 
 ### 核心主题：「电视」（IPTV）TAB 整体下线 + 死代码清理 + 开发者文档同步

@@ -7,6 +7,7 @@ import type { AiSdkMiddlewareConfig } from '@renderer/aiCore/types/middlewareCon
 import { buildProviderOptions } from '@renderer/aiCore/utils/options'
 import { isDedicatedImageGenerationModel, isEmbeddingModel, isFunctionCallingModel } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
+import { attachKnowledgeContext } from '@renderer/pages/knowledge/knowledgeContext'
 import store from '@renderer/store'
 import { hubMCPServer } from '@renderer/store/mcp'
 import type { Assistant, MCPServer, MCPTool, Model, Provider } from '@renderer/types'
@@ -148,15 +149,27 @@ export async function transformMessagesAndFetch(
 
   try {
     const { modelMessages, uiMessages } = await ConversationService.prepareMessagesForModel(messages, assistant)
+    const model = assistant.model || getDefaultModel()
+
+    // 知识库引用：检索结果注入 system 提示，命中片段挂成助手消息上的引用块（见 attachKnowledgeContext）
+    const lastUserMessage = uiMessages.findLast((m) => m.role === 'user')
+    const knowledgeText = await attachKnowledgeContext(
+      lastUserMessage ? getMainTextContent(lastUserMessage) : '',
+      model,
+      {
+        assistantMsgId: request.assistantMsgId,
+        blockManager: request.blockManager
+      }
+    )
 
     // replace prompt variables in a copy to avoid mutating store state
+    const systemPrompt = await replacePromptVariables(assistant.prompt, assistant.model?.name)
     const effectiveAssistant = {
       ...assistant,
-      prompt: await replacePromptVariables(assistant.prompt, assistant.model?.name)
+      prompt: [systemPrompt, knowledgeText].filter((part) => part).join('\n\n')
     }
 
     // 专用图像生成模型直接走 fetchImageGeneration
-    const model = effectiveAssistant.model || getDefaultModel()
     if (isDedicatedImageGenerationModel(model)) {
       await fetchImageGeneration({
         messages: uiMessages,

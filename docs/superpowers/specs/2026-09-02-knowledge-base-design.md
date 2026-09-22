@@ -355,3 +355,63 @@ pending → parsing → chunking → embedding → ready
 5. 聊天注入无总量限制 → 引用块**封顶 8 块**
 6. 无扩展名/隐藏文件 ext 提取错误 → `extractExt`（点须在分隔符后且文件名不以点开头）
 7. 检索结果孤儿 chunk 防御（file 缺失跳过）；删除死代码
+
+---
+
+## 15. 增补记录（v1.11.0 / v1.11.1，2026-09-22）
+
+本节记录 §14 之后对知识库链路的三轮改造（A/B/C 档）与随后的双轴代码审计修复。
+**与 §13 一样：本文档与代码不一致时，以代码为准。**
+
+### 15.1 注入位置修正（v1.11.0，A 档）
+
+§6.6 原本规划"拼装 `system` 提示"，§13 的实施记录里退化成了"注入消息内容前缀"。这次把退化改回来：
+
+| 项 | 旧（§13 最小可行） | 新 |
+|---|---|---|
+| 注入位置 | 用户消息 `content` 前缀 | `effectiveAssistant.prompt` → `params.system` |
+| 用户气泡 | 显示一大段原文 + 「【用户问题】」 | **只有用户原话** |
+| 历史影响 | 随历史消息每轮重发，上下文持续膨胀 | **只在当次请求生效** |
+| 相关性 | 无门槛，永远塞满 TopK | 低于阈值不注入；彻底无命中给轻提示 |
+| 图像模型 | 也会检索并注入 | 直接跳过 |
+
+- 接缝落在 `pages/knowledge/knowledgeContext.ts`，由 `ApiService.transformMessagesAndFetch` 调用；`Inputbar` 只保留 `content: text`。
+- §6.6 提到的"消息工具栏开关引用"仍未实现（当前无开关，引用默认展示）。
+
+### 15.2 引用溯源（v1.11.0，B 档）
+
+- 渲染端（`CitationsList` 的 `KnowledgeCitation`、`formatCitationsFromBlock` 的 `memories` 分支）**早已存在但没有生产端**；本次接通：`CitationMessageBlock.knowledge`（`KnowledgeItem[]`）+ `citation.type = 'knowledge'`。
+- 引用挂在**助手消息**上，渲染在回答上方（与既有联网搜索引用一致）；点击用 `path` 调 `window.api.file.openPath` 打开原文件。
+- `type: 'knowledge'` **豁免 url 去重**（否则同一文件的多条片段会被折叠成一条）——`formatCitationsFromBlock` 的去重注释本就写着 "non-knowledge"，即上游预留位。
+- **引用块从不发给模型**：`messageConverter` 只取 main-text/file/image/thinking 块，`getCitationContent` 仅被 `utils/export.ts`（Markdown 导出）使用。§14 里"注入消息前缀"那套做法已被本节取代。
+
+### 15.3 多库合并（v1.11.0，B 档）
+
+§6.4 的多库总控原本是"按库顺序取满 8 块"（先到先得）。改为：**各库分别检索 → 按名次 RRF 融合 → 内容去重 → 上限 8 块**。
+
+> 刻意**不按相似度分数加权**：不同库可绑定不同嵌入模型，分数不在同一坐标系、不可比；名次可比。
+
+### 15.4 检索质量（v1.11.1，C 档 + 审计）
+
+| 项 | 变更 |
+|---|---|
+| 相关性门槛 | `MIN_RELEVANCE = 0.3` 缺省 + `KnowledgeBase.min_relevance` 每库可调；读取统一走 `relevanceThreshold(base)`（唯一入口，避免多处各写一份导致页面文案与徽标自相矛盾） |
+| 向量路降级 | `embedTexts` 失败时降级纯关键词且**不做语义门槛**；此时 `KBHit.score = 0`，界面显示 `—`/"不可用"，不摆出 `0.0%` 这种确定数字 |
+| 候选池 | `RERANK_CANDIDATES = 50`（仅配了重排模型时启用；否则维持 `TopK×2`）。Anthropic 实验用 150，50 为个人库折中 |
+| 切块上下文 | `chunker.ts` 的 `headingPathsOf`：按文档标题结构给每块加 `手册 > 保修` 前缀（标题块只带父级路径）。零 API 成本的 Contextual Retrieval；前缀不参与 chunkSize 预算 |
+| 重建索引 | `KnowledgeService.rebuildBase(baseId)`：先清空该库全部切块 → 按当前参数逐文件重跑状态机；单文件失败标记 error 不中断 |
+| 分块默认值 | **刻意未调**（`defaults.ts` 仍 512/1024）。没有评测数据时改默认值只是换一个猜测——旋钮与重建索引已经给到用户 |
+
+### 15.5 有意未做的三项
+
+| 项 | 原因 |
+|---|---|
+| LLM 版 Contextual Retrieval（逐块让模型写上下文说明） | 每块一次生成调用，需额外选模型 + 失败重试 + 进度 + 成本提示；收益无法在本机评测。升级路径：在 `processFile` 的切块与 embedding 之间插入一次生成 |
+| 查询改写（把口语问题改写成检索词） | 每次提问多一次 LLM 调用（更慢更贵），改错会丢原意，且无评测手段验证 |
+| Web Worker + `kb_search_index` 落盘 | §12/§13 已评估：个人规模（<5 万块）暴力余弦为毫秒级；Worker 内拿不到 `window.api`，搬进去要重写数据访问。**`kb_search_index` 至今仍是"声明未用"状态** |
+
+### 15.6 审计发现的既有问题（本次修掉的）
+
+- `citationCallbacks.ts` 写 `citationReferences` 时字段名误写为 `blockId`（类型定义、消费方、同文件另一分支均为 `citationBlockId`）→ 已修正。影响面：联网搜索的**正文内联上标引用**，该分支此前写入的关联字段无人可读。
+- 召回测试页显示的 `hits.score * 100` 在 §14 的得分语义下是内部融合分（永远 0.1%~3.3% 的假百分比），现改为真实余弦相似度。
+

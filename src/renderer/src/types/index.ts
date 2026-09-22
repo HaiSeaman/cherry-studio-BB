@@ -821,6 +821,20 @@ export interface MemoryItem {
   metadata?: Record<string, any>
 }
 
+/** 知识库检索命中的片段（注入提示词 + 界面引用气泡共用） */
+export interface KnowledgeItem {
+  /** 片段 id（chunk id，全局唯一） */
+  id: string
+  /** 文件名（展示用） */
+  file: string
+  /** 原文件路径（点击可打开原文件） */
+  path: string
+  /** 命中片段原文 */
+  content: string
+  /** 相关度（有重排时为重排模型分，否则为语义相似度） */
+  score: number
+}
+
 export type EditorView = 'preview' | 'source' | 'read' // 实时,源码,预览
 // ========================================================================
 

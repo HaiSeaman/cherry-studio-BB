@@ -69,3 +69,29 @@ describe('chunkText', () => {
     }
   })
 })
+
+describe('chunkText 标题层级上下文', () => {
+  // 标题结构：# 手册 > ## 保修 / ## 退换
+  const md = ['# 手册', '## 保修', '保修期是两年。', '## 退换', '七天内可退换。'].join('\n')
+  const bodyOf = (r: ReturnType<typeof chunkText>, key: string) => r.find((c) => c.text.includes(key))!
+
+  it('标题下的正文块带上标题层级', () => {
+    const r = chunkText(md, 'line', 8, 0)
+    expect(bodyOf(r, '保修期是两年。').text).toBe('手册 > 保修\n保修期是两年。')
+  })
+
+  it('同级标题切换后，正文块改用新的标题路径', () => {
+    const r = chunkText(md, 'line', 8, 0)
+    expect(bodyOf(r, '七天内可退换。').text).toBe('手册 > 退换\n七天内可退换。')
+  })
+
+  it('标题块自身只带父级路径，不重复自己', () => {
+    const r = chunkText(md, 'line', 8, 0)
+    expect(bodyOf(r, '## 退换').text).toBe('手册\n## 退换')
+  })
+
+  it('没有标题的文本不加任何前缀', () => {
+    const r = chunkText('第一行\n第二行', 'line', 100, 0)
+    expect(r[0].text).toBe('第一行\n第二行')
+  })
+})

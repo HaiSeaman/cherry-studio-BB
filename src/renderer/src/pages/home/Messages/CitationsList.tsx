@@ -43,14 +43,15 @@ const CitationsList: React.FC<CitationsListProps> = ({ citations }) => {
 
   const popoverContent = (
     <PopoverContentContainer>
+      {/* number 由 formatCitationsFromBlock 重编为 1..N，唯一；url 对知识库引用可能同文件重复 */}
       {citations.map((citation) => (
-        <PopoverContentItem key={citation.url || citation.number || citation.title}>
+        <PopoverContentItem key={citation.number}>
           {citation.type === 'websearch' && (
             <PopoverContent>
               <WebSearchCitation citation={citation} />
             </PopoverContent>
           )}
-          {citation.type === 'memory' && (
+          {(citation.type === 'memory' || citation.type === 'knowledge') && (
             <KnowledgePopoverContent>
               <KnowledgeCitation citation={{ ...citation }} />
             </KnowledgePopoverContent>

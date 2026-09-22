@@ -42,7 +42,7 @@ import { type FC, useCallback, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 import { KnowledgeService } from './KnowledgeService'
-import { searchKnowledge } from './search'
+import { MIN_RELEVANCE, relevanceThreshold, searchKnowledge } from './search'
 import type { KBFile, KBFileStatus, KBHit, KnowledgeBase } from './types'
 
 const STATUS_CONFIG: Record<KBFileStatus, { color: string; label: string }> = {
@@ -88,6 +88,7 @@ const KnowledgePage: FC = () => {
   const [activeBase, setActiveBase] = useState<KnowledgeBase | null>(null)
   const [files, setFiles] = useState<KBFile[]>([])
   const [busy, setBusy] = useState(false)
+  const [rebuilding, setRebuilding] = useState(false)
   const [fileFilter, setFileFilter] = useState('')
 
   // 建库弹窗
@@ -100,6 +101,7 @@ const KnowledgePage: FC = () => {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<KBHit[]>([])
   const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)
   const [selectedHit, setSelectedHit] = useState<KBHit | null>(null)
 
   // 设置弹窗
@@ -107,20 +109,47 @@ const KnowledgePage: FC = () => {
   const [chunkSize, setChunkSize] = useState(1024)
   const [chunkOverlap, setChunkOverlap] = useState(200)
   const [topK, setTopK] = useState(6)
+  const [minRelevance, setMinRelevance] = useState(MIN_RELEVANCE)
   const [rerankModel, setRerankModel] = useState<Model | undefined>()
 
   const refresh = useCallback(async () => {
     const list = await KnowledgeService.listBases()
     setBases(list)
     setActiveBase((prev) => {
-      if (prev && list.some((b) => b.id === prev.id)) return prev
-      return list[0] ?? null
+      // 同一库时返回列表里的新对象（否则改完参数后顶部徽标还是旧值）
+      const same = prev && list.find((b) => b.id === prev.id)
+      return same ?? list[0] ?? null
     })
   }, [])
 
   const refreshFiles = useCallback(async (baseId: string) => {
     setFiles(await KnowledgeService.listFiles(baseId))
   }, [])
+
+  /** 按当前切块参数重新处理全部文件（改过切块参数/升级程序后，让已有文件也生效） */
+  const rebuildIndex = async () => {
+    if (!activeBase) return
+    setRebuilding(true)
+    try {
+      const res = await KnowledgeService.rebuildBase(activeBase.id, () => {
+        if (activeBase) void refreshFiles(activeBase.id)
+      })
+      // 旧切块已被整体清空，之前的召回结果指向的是不存在的块，必须丢弃
+      setHits([])
+      setSelectedHit(null)
+      setSearched(false)
+      if (res.failed > 0) {
+        message.warning(`重建完成：成功 ${res.rebuilt} 个，失败 ${res.failed} 个（多为原文件已移动或删除）`)
+      } else {
+        message.success(`重建完成：已重新处理 ${res.rebuilt} 个文件`)
+      }
+      await refreshFiles(activeBase.id)
+    } catch (error) {
+      message.error(`重建失败：${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setRebuilding(false)
+    }
+  }
 
   useEffect(() => {
     void refresh()
@@ -135,6 +164,7 @@ const KnowledgePage: FC = () => {
   const selectBase = (b: KnowledgeBase) => {
     setActiveBase(b)
     setHits([])
+    setSearched(false)
     setSelectedHit(null)
     setFileFilter('')
   }
@@ -226,11 +256,9 @@ const KnowledgePage: FC = () => {
     try {
       const result = await searchKnowledge(activeBase, query.trim())
       setHits(result)
-      if (result.length > 0) {
-        setSelectedHit(result[0])
-      } else {
-        setSelectedHit(null)
-      }
+      setSelectedHit(result[0] ?? null)
+      // 只有真正检索成功才算"已检索"：否则出错时也会渲染"没有达到阈值"的空态，与报错互相矛盾
+      setSearched(true)
     } catch (error) {
       message.error(`检索失败：${error instanceof Error ? error.message : String(error)}`)
     } finally {
@@ -243,6 +271,7 @@ const KnowledgePage: FC = () => {
     setChunkSize(activeBase.chunk_size)
     setChunkOverlap(activeBase.chunk_overlap)
     setTopK(activeBase.top_k)
+    setMinRelevance(relevanceThreshold(activeBase))
     setRerankModel(
       activeBase.rerank_model_id ? rerankModels.find((m) => m.id === activeBase.rerank_model_id) : undefined
     )
@@ -255,10 +284,11 @@ const KnowledgePage: FC = () => {
       chunk_size: chunkSize,
       chunk_overlap: chunkOverlap,
       top_k: topK,
+      min_relevance: minRelevance,
       rerank_model_id: rerankModel?.id,
       rerank_provider_id: rerankModel?.provider
     })
-    message.success('设置已保存（重排模型即时生效，切块参数只影响之后新添加的内容）')
+    message.success('设置已保存（重排与阈值即时生效，切块参数需「重建索引」才对已有内容生效）')
     setSettingsOpen(false)
     await refresh()
   }
@@ -384,6 +414,9 @@ const KnowledgePage: FC = () => {
                   <span className="param-item">
                     TopK: <strong>{activeBase.top_k || 6}</strong>
                   </span>
+                  <span className="param-item">
+                    阈值: <strong>{relevanceThreshold(activeBase)}</strong>
+                  </span>
                   {activeBase.rerank_model_id && (
                     <span className="param-item rerank">
                       重排: <strong>{activeBase.rerank_model_id}</strong>
@@ -443,26 +476,35 @@ const KnowledgePage: FC = () => {
                     <div className="empty-icon-circle">
                       <Zap size={32} color="var(--color-primary)" />
                     </div>
-                    <h3>智能语义检索沙箱</h3>
-                    <p>
-                      在上方输入任何问题或核心词，系统将自动使用 <strong>{activeBase.embedding_model_id}</strong>{' '}
-                      模型提取语义特征，并在毫秒级内从右侧 <strong>{files.length}</strong> 个文档（共{' '}
-                      <strong>{totalChunks}</strong> 个切块）中召回最匹配的段落。
-                    </p>
-                    <div className="quick-guide">
-                      <div className="guide-item">
-                        <span className="num">1</span>
-                        <span>在右侧添加或导入你的知识文档</span>
+                    <h3>{searched ? '没有达到相似度阈值的内容' : '智能语义检索沙箱'}</h3>
+                    {searched ? (
+                      <p>
+                        本次检索没有任何片段的相似度达到阈值 {MIN_RELEVANCE}
+                        （这类内容不会注入到聊天）。可能是提问与本库内容无关，换个问法再试，或检查切块大小与嵌入模型是否匹配。
+                      </p>
+                    ) : (
+                      <p>
+                        在上方输入任何问题或核心词，系统将自动使用 <strong>{activeBase.embedding_model_id}</strong>{' '}
+                        模型提取语义特征，并在毫秒级内从右侧 <strong>{files.length}</strong> 个文档（共{' '}
+                        <strong>{totalChunks}</strong> 个切块）中召回最匹配的段落。
+                      </p>
+                    )}
+                    {!searched && (
+                      <div className="quick-guide">
+                        <div className="guide-item">
+                          <span className="num">1</span>
+                          <span>在右侧添加或导入你的知识文档</span>
+                        </div>
+                        <div className="guide-item">
+                          <span className="num">2</span>
+                          <span>等待文档解析与向量化完成</span>
+                        </div>
+                        <div className="guide-item">
+                          <span className="num">3</span>
+                          <span>在上方输入提问，验证 AI 回答所依据的段落</span>
+                        </div>
                       </div>
-                      <div className="guide-item">
-                        <span className="num">2</span>
-                        <span>等待文档解析与向量化完成</span>
-                      </div>
-                      <div className="guide-item">
-                        <span className="num">3</span>
-                        <span>在上方输入提问，验证 AI 回答所依据的段落</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </WorkspaceEmpty>
               ) : (
@@ -476,8 +518,8 @@ const KnowledgePage: FC = () => {
                     <div className="hits-scroll">
                       {hits.map((h, idx) => {
                         const isCur = selectedHit?.chunk.id === h.chunk.id
-                        const scorePercent = (h.score * 100).toFixed(1)
-                        const isHigh = Number(scorePercent) > 75
+                        // 得分为 0 说明向量检索降级（拿不到余弦），此时不该摆出"0.0%"这种确定数字
+                        const hasScore = h.score > 0
                         return (
                           <HitCard key={h.chunk.id} $active={isCur} onClick={() => setSelectedHit(h)}>
                             <div className="hit-card-top">
@@ -485,7 +527,9 @@ const KnowledgePage: FC = () => {
                               <span className="file-name" title={h.file.name}>
                                 {h.file.name}
                               </span>
-                              <Tag color={isHigh ? 'green' : 'blue'}>{scorePercent}%</Tag>
+                              <Tag color={hasScore && h.score > 0.75 ? 'green' : 'blue'}>
+                                {hasScore ? `${(h.score * 100).toFixed(1)}%` : '—'}
+                              </Tag>
                             </div>
                             <div className="hit-preview">{h.chunk.text}</div>
                             <div className="hit-card-bottom">
@@ -511,7 +555,15 @@ const KnowledgePage: FC = () => {
                             <div className="source-row">
                               <span className="source-badge">{sourceLabel(selectedHit)}</span>
                               <span className="score-badge">
-                                相似度得分：<strong>{(selectedHit.score * 100).toFixed(2)}%</strong>
+                                {selectedHit.score > 0 ? (
+                                  <>
+                                    相似度得分：<strong>{(selectedHit.score * 100).toFixed(2)}%</strong>
+                                  </>
+                                ) : (
+                                  <>
+                                    相似度：<strong>不可用</strong>（向量检索降级，请检查嵌入模型服务）
+                                  </>
+                                )}
                               </span>
                             </div>
                           </div>
@@ -556,6 +608,16 @@ const KnowledgePage: FC = () => {
                 导入 <ChevronDown size={11} />
               </Button>
             </Dropdown>
+            <Popconfirm
+              title="重建该知识库的索引？"
+              description="会清空现有切块，并按当前切块参数重新解析全部文件（文件多/体积大时需要等一会儿）。"
+              okText="开始重建"
+              cancelText="取消"
+              onConfirm={() => void rebuildIndex()}>
+              <Tooltip title="按当前切块参数重新处理全部文件">
+                <Button size="small" icon={<Database size={13} />} loading={rebuilding} disabled={files.length === 0} />
+              </Tooltip>
+            </Popconfirm>
             <Tooltip title="刷新文件">
               <Button
                 size="small"
@@ -728,6 +790,9 @@ const KnowledgePage: FC = () => {
                 { value: 2048, label: '2048 Tokens（超长篇幅/学术论文）' }
               ]}
             />
+            <FieldHint>
+              改这里只影响之后新导入的文件；要让已有文件也按新参数重切，请点右侧文件抽屉的「重建索引」。
+            </FieldHint>
           </div>
           <div>
             <FieldLabel>切块重叠度 (Overlap / Token)</FieldLabel>
@@ -756,6 +821,22 @@ const KnowledgePage: FC = () => {
               ]}
             />
             <FieldHint>TopK 决定单次检索最终返回的片段数量（若有重排模型，则为重排后取前 TopK）。</FieldHint>
+          </div>
+          <div>
+            <FieldLabel>相关性门槛 (Min Relevance)（即时生效）</FieldLabel>
+            <InputNumber
+              min={0.05}
+              max={0.95}
+              step={0.05}
+              size="middle"
+              style={{ width: '100%' }}
+              value={minRelevance}
+              onChange={(v) => setMinRelevance(v ?? MIN_RELEVANCE)}
+            />
+            <FieldHint>
+              片段的语义相似度低于此值就不参与结果。提问与库内容无关时靠它挡住"硬塞资料"；若明显相关的内容却召回不到，把它调低（如
+              0.2）。
+            </FieldHint>
           </div>
           <div>
             <FieldLabel>重排模型 (Rerank Model)（可选，保存后即时生效）</FieldLabel>
@@ -957,6 +1038,7 @@ const HeaderBar = styled.div`
 
     .param-badges {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 10px;
       font-size: 12px;

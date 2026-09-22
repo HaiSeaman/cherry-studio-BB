@@ -1,7 +1,7 @@
 # Cherry Studio BB · Code Wiki
 
 > 本 Wiki 基于 2026-08 对仓库源码的静态分析生成，基线版本 **v1.6.1**（fork：`CherryHQ/cherry-studio` 的中文增强分支 `Cherry-Studio-BB`）。
-> 2026-09 起随版本增量维护（闹钟 / 语音输入 / FM 电台 / 打包链路等），当前对应 **v1.11.0**。
+> 2026-09 起随版本增量维护（闹钟 / 语音输入 / FM 电台 / 打包链路 / 知识库检索链路等），当前对应 **v1.11.1**。
 
 ## v1.10.3 文档变更
 
@@ -21,6 +21,15 @@
 | [06-数据存储与状态管理](./06-数据存储与状态管理.md) | persist `version` 4→5；移除 `iptvSettings` slice 条目与「IPTV 数据写入约定」；Dexie 版本 15→17，五张 `iptv_*` 表列入已废弃 |
 | [07-依赖关系](./07-依赖关系.md) | 移除 `mpegts.js` / `iptv-playlist-parser`（`hls.js` 保留，仅服务 FM 电台） |
 | [08-构建运行与测试](./08-构建运行与测试.md) | 移除「IPTV 模块测试约定」段落（测试目录 `pages/iptv/__tests__/` 已随模块删除） |
+
+## v1.11.1 文档变更（知识库：检索链路收口 + 引用溯源 + 重建索引）
+
+| 文档 | 变更 |
+|---|---|
+| [04-渲染进程模块](./04-渲染进程模块.md) | 路由表补 `/knowledge`；pages 目录新增 `pages/knowledge/` 条目（模块结构与多库融合说明） |
+| [05-AI核心体系](./05-AI核心体系.md) | §4 消息链路补「知识库引用」环节（`transformMessagesAndFetch` → `attachKnowledgeContext`）与**三条硬约束**（只注入 system / 只在本次请求生效 / 图像模型跳过）、召回常量清单 |
+| [06-数据存储与状态管理](./06-数据存储与状态管理.md) | `kb_bases` 字段明细与新增 `min_relevance`；`kb_search_index` **声明未落盘**的现状说明；`CitationMessageBlock.knowledge` 字段 |
+| [08-构建运行与测试](./08-构建运行与测试.md) | 新增「知识库模块测试约定」（9 个测试文件覆盖范围 + 改切块须重建索引） |
 
 ## 文档目录
 

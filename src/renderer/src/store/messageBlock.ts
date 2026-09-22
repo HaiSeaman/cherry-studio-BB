@@ -279,11 +279,25 @@ export const formatCitationsFromBlock = (block: CitationMessageBlock | undefined
     )
   }
 
+  if (block.knowledge && block.knowledge.length > 0) {
+    // 6. Handle Knowledge Base References：标题取文件名、url 取原文件路径（点击可打开原文件）
+    formattedCitations.push(
+      ...block.knowledge.map((item, index) => ({
+        number: index + 1,
+        url: item.path,
+        title: item.file,
+        content: item.content,
+        showFavicon: true,
+        type: 'knowledge'
+      }))
+    )
+  }
+
   // 4. Deduplicate non-knowledge citations by URL and Renumber Sequentially
   const urlSet = new Set<string>()
   return formattedCitations
     .filter((citation) => {
-      if (citation.type === 'memory') return true
+      if (citation.type === 'memory' || citation.type === 'knowledge') return true
       if (!citation.url || urlSet.has(citation.url)) return false
       urlSet.add(citation.url)
       return true

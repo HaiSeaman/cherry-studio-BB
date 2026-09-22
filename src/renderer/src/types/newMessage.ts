@@ -5,6 +5,7 @@ import type {
   Assistant,
   FileMetadata,
   GenerateImageResponse,
+  KnowledgeItem,
   MCPServer,
   MCPToolResponse,
   MemoryItem,
@@ -126,6 +127,8 @@ export interface CitationMessageBlock extends BaseMessageBlock {
   type: MessageBlockType.CITATION
   response?: WebSearchResponse
   memories?: MemoryItem[]
+  /** 知识库检索命中的片段（引用气泡展示用） */
+  knowledge?: KnowledgeItem[]
 }
 
 // 文件块

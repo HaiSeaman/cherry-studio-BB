@@ -63,11 +63,14 @@ export const KnowledgeService = {
     return base
   },
 
-  /** 更新库的检索/切块参数（只影响之后新添加的文件；重排模型即时生效） */
+  /** 更新库的检索/切块参数（切块参数只影响之后新添加的文件，可点「重建索引」对已有文件生效；重排与阈值即时生效） */
   async updateBaseSettings(
     baseId: string,
     patch: Partial<
-      Pick<KnowledgeBase, 'chunk_size' | 'chunk_overlap' | 'top_k' | 'rerank_model_id' | 'rerank_provider_id'>
+      Pick<
+        KnowledgeBase,
+        'chunk_size' | 'chunk_overlap' | 'top_k' | 'min_relevance' | 'rerank_model_id' | 'rerank_provider_id'
+      >
     >
   ): Promise<void> {
     // Dexie 的 update() 会跳过值为 undefined 的属性，无法借此"清除"已存字段；
@@ -159,6 +162,46 @@ export const KnowledgeService = {
       }
     }
     return { added, skipped, failed, truncated: res.truncated }
+  },
+
+  /**
+   * 重建整个库的索引：先清掉全部旧切块，再按库当前的切块参数逐文件重新解析/切块/向量化。
+   * 用途：改过切块参数或升级过程序后，让已入库的文件也吃到新逻辑
+   * （否则切块参数只影响之后新添加的文件）。
+   * 源文件已被移动/删除的文件标记为 error，不影响其余文件。
+   */
+  async rebuildBase(
+    baseId: string,
+    onProgress?: (p: KBProgress) => void
+  ): Promise<{ rebuilt: number; failed: number }> {
+    const base = await db.kb_bases.get(baseId)
+    if (!base) throw new Error('知识库不存在，无法重建索引')
+
+    const files = await this.listFiles(baseId)
+    // 先整体清掉旧切块：切块策略变化后新旧块混存会让检索结果自相矛盾
+    await db.kb_chunks.where('base_id').equals(baseId).delete()
+
+    let rebuilt = 0
+    let failed = 0
+    for (const file of files) {
+      try {
+        await this.processFile(base, file, onProgress)
+        rebuilt += 1
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        await db.kb_files.update(file.id, {
+          status: 'error',
+          error_message: message,
+          chunk_count: 0,
+          updated_at: now()
+        })
+        onProgress?.({ fileId: file.id, baseId, status: 'error', ratio: 1, error_message: message })
+        failed += 1
+      }
+    }
+
+    invalidateIndex(baseId)
+    return { rebuilt, failed }
   },
 
   async processFile(base: KnowledgeBase, file: KBFile, onProgress?: (p: KBProgress) => void): Promise<void> {

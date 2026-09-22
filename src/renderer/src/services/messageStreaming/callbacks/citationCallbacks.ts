@@ -85,7 +85,10 @@ export const createCitationCallbacks = (deps: CitationCallbacksDependencies) => 
           const existingMainTextBlock = existingMainTextBlocks[0]
           const currentRefs = existingMainTextBlock.citationReferences || []
           const mainTextChanges = {
-            citationReferences: [...currentRefs, { blockId, citationBlockSource: llmWebSearchResult.source }]
+            citationReferences: [
+              ...currentRefs,
+              { citationBlockId: blockId, citationBlockSource: llmWebSearchResult.source }
+            ]
           }
           blockManager.smartBlockUpdate(existingMainTextBlock.id, mainTextChanges, MessageBlockType.MAIN_TEXT, true)
         }

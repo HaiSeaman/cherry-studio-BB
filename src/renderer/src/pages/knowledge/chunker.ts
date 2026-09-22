@@ -8,6 +8,31 @@ export interface ChunkResult {
 
 const ENGLISH_RX = /[A-Za-z0-9]/
 const SPLIT_RX = /[。！？；，、\s)\]}」』》]/
+const HEADING_RX = /^(#{1,6})\s+(.+?)\s*$/
+
+/**
+ * 逐行计算「标题层级路径」，用作块的上下文前缀（Anthropic Contextual Retrieval 的零成本版）：
+ * 借用文档自身的标题结构，让脱离上下文的片段也能被检索到（例如只有"保修期是两年"的段落，
+ * 带上"手册 > 保修"才好被 BM25 与向量同时命中）。
+ * 规则：标题行先弹出同级/更深的层级并取当前（父级）路径，再把自己入栈——
+ * 于是标题块只带父级路径（不重复自己），正文块带完整层级。
+ */
+function headingPathsOf(lines: string[]): string[] {
+  const stack: { level: number; text: string }[] = []
+  const paths: string[] = []
+
+  for (const line of lines) {
+    const matched = line.match(HEADING_RX)
+    if (matched) {
+      const level = matched[1].length
+      while (stack.length > 0 && stack[stack.length - 1].level >= level) stack.pop()
+    }
+    paths.push(stack.map((h) => h.text).join(' > '))
+    if (matched) stack.push({ level: matched[1].length, text: matched[2] })
+  }
+
+  return paths
+}
 
 /**
  * 粗估 token 数（不引重型 tokenizer）：
@@ -26,16 +51,23 @@ export function estimateTokens(text: string): number {
  * 把文本切成不超过 chunkSize(token) 的若干块，块间按 overlap(token) 重叠。
  * - kind='line'：source 记录真实行号（txt/md 等）
  * - kind='flow'：source 用 para 序号（pdf/docx/xlsx，无真实行号）
- * 单行若本身超过 chunkSize，会在该行内按标点二次细分，绝不产生超限块。
+ * 单行若本身超过 chunkSize，会在该行内按标点二次细分，绝不产生超限的正文块。
+ * 每块文本前会加上所在标题层级路径（见 headingPathsOf），用于提升检索命中率；
+ * 该前缀最多 6 级标题，不参与 chunkSize 预算（预算按正文行累计）。
  */
 export function chunkText(text: string, kind: 'line' | 'flow', chunkSize: number, overlap: number): ChunkResult[] {
   if (!text || text.trim() === '') return []
 
   const lines = text.split('\n')
+  const headingPaths = headingPathsOf(lines)
   const chunks: ChunkResult[] = []
   let idx = 0
   let i = 0
   const n = lines.length
+
+  /** 给块正文加上起始行所处的标题路径（无标题时原样返回） */
+  const withContext = (body: string, startLine: number): string =>
+    headingPaths[startLine] ? `${headingPaths[startLine]}\n${body}` : body
 
   while (i < n) {
     // 贪心累积 [i, end) 的行，使其 token 尽量接近 chunkSize 且不超
@@ -60,7 +92,7 @@ export function chunkText(text: string, kind: 'line' | 'flow', chunkSize: number
       for (const piece of splitLongLine(buffer[0], chunkSize)) {
         chunks.push({
           index: idx++,
-          text: piece,
+          text: withContext(piece, i),
           source:
             kind === 'line'
               ? { type: 'line', lineStart: lineNo, lineEnd: lineNo }
@@ -72,7 +104,7 @@ export function chunkText(text: string, kind: 'line' | 'flow', chunkSize: number
         kind === 'line'
           ? { type: 'line', lineStart: i + 1, lineEnd: end }
           : { type: 'para', paraStart: i + 1, paraEnd: end }
-      chunks.push({ index: idx++, text: joined, source })
+      chunks.push({ index: idx++, text: withContext(joined, i), source })
     }
 
     if (end >= n) break

@@ -39,8 +39,6 @@ import { debounce } from 'lodash'
 import type { FC } from 'react'
 import React, { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 
-import { knowledgeAttachStore } from '../../knowledge/knowledgeAttachStore'
-import { searchKnowledge } from '../../knowledge/search'
 import { InputbarCore } from './components/InputbarCore'
 import InputbarTools from './InputbarTools'
 import MentionModelsInput from './MentionModelsInput'
@@ -226,28 +224,9 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
     try {
       const uploadedFiles = await FileManager.uploadFiles(files)
 
-      // 知识库引用：若已挂载库，先检索并把命中文段注入消息（多库总数封顶，防上下文膨胀）
-      const attachedBases = knowledgeAttachStore.get()
-      let effectiveContent = text
-      const MAX_REF_BLOCKS = 8
-      if (attachedBases.length > 0 && text.trim()) {
-        const refs: string[] = []
-        for (const kb of attachedBases) {
-          if (refs.length >= MAX_REF_BLOCKS) break
-          const hits = await searchKnowledge(kb, text)
-          for (const h of hits) {
-            if (refs.length >= MAX_REF_BLOCKS) break
-            refs.push(`[${h.file.name}] ${h.chunk.text}`)
-          }
-        }
-        if (refs.length > 0) {
-          effectiveContent = `请优先依据以下参考资料回答，资料不足时请明确说明。参考资料间以空行分隔：\n${refs.join(
-            '\n\n'
-          )}\n\n【用户问题】${text}`
-        }
-      }
-
-      const baseUserMessage: MessageInputBaseParams = { assistant, topic, content: effectiveContent }
+      // 知识库检索结果不在此处拼接：只保留用户原文，检索在请求阶段注入 system 提示
+      // （见 knowledgeContext.buildKnowledgeContext），避免污染用户气泡与历史上下文。
+      const baseUserMessage: MessageInputBaseParams = { assistant, topic, content: text }
       if (uploadedFiles) {
         baseUserMessage.files = uploadedFiles
       }

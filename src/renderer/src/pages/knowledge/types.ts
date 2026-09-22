@@ -13,6 +13,8 @@ export interface KnowledgeBase {
   chunk_overlap: number
   /** 每次检索返回的引用块数 */
   top_k: number
+  /** 相关性及格线（余弦相似度 0~1）：低于此值的片段不参与结果；缺省时用 MIN_RELEVANCE 常量 */
+  min_relevance?: number
   /** 重排模型（可选，查询时精排召回结果；不参与索引构建，可随时更换） */
   rerank_model_id?: string
   rerank_provider_id?: string
@@ -65,6 +67,7 @@ export interface KBChunk {
 export interface KBHit {
   chunk: KBChunk
   file: KBFile
+  /** 相关度：有重排时为重排模型分，否则为语义相似度（余弦，0~1） */
   score: number
 }
 
