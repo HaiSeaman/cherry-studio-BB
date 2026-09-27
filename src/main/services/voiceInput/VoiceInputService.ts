@@ -27,6 +27,12 @@ type FocusGuardFactory = (onUserInput: () => void) => FocusGuard
 export class VoiceInputService {
   private adapter: ASRAdapter | null = null
   private guard: FocusGuard | null = null
+  /**
+   * 单调递增的会话序号。finalize 是异步的（等最终识别文本最长 5 秒），
+   * 期间用户若已松开重按开启新会话，旧 finalize 据序号跳过对新会话的误操作
+   *（误注入旧文本、误停新会话的焦点守卫、误清空新会话打字记录）。
+   */
+  private currentSeq = 0
   private readonly typewriter = new StreamingTypewriter({
     type: typeTextAtCursor,
     backspace: backspaceAtCursor
@@ -40,6 +46,7 @@ export class VoiceInputService {
 
   /** 键盘钩子「按下」：读取配置、校验密钥并按服务商建立识别会话；holdKeys 为按住的快捷键键码 */
   start(holdKeys: number[] = []): void {
+    this.currentSeq++
     const cfg = configManager.getVoiceInputConfig()
 
     const missing = getMissingVoiceInputCredential(cfg)
@@ -87,9 +94,10 @@ export class VoiceInputService {
   /** 渲染进程通知结束：等最终识别文本，把光标处内容校正到最终结果 */
   async finalize(): Promise<string> {
     const adapter = this.adapter
+    const seq = this.currentSeq
     this.adapter = null
     if (!adapter) {
-      this.endSession()
+      this.endSessionIfCurrent(seq)
       return ''
     }
 
@@ -98,17 +106,21 @@ export class VoiceInputService {
       const text = await adapter.stopAndFinalize()
       adapter.close()
       logger.info(`voice input 识别结果：${text}`)
-      // 流式阶段已上屏的内容由差量逻辑复用，这里只补齐/修正尾部
-      this.typewriter.finish(text)
-      this.broadcast('done')
+      // 仍是当前会话才上屏：finalize 异步等待期间若用户已重按开启新会话，
+      // 旧会话的最终文本不应再注入，否则会干扰新会话光标处的内容
+      if (this.currentSeq === seq) {
+        // 流式阶段已上屏的内容由差量逻辑复用，这里只补齐/修正尾部
+        this.typewriter.finish(text)
+        this.broadcast('done')
+      }
       return text
     } catch (error) {
       logger.error(`voice input 结束失败：${(error as Error).message}`)
       adapter.close()
-      this.broadcast('error')
+      if (this.currentSeq === seq) this.broadcast('error')
       return ''
     } finally {
-      this.endSession()
+      this.endSessionIfCurrent(seq)
     }
   }
 
@@ -120,6 +132,12 @@ export class VoiceInputService {
   private endSession(): void {
     this.guard?.stop()
     this.typewriter.reset()
+  }
+
+  /** 仅当仍是 seq 对应的会话时才收尾：避免异步 finalize 误停新会话的焦点守卫、清空新会话打字记录 */
+  private endSessionIfCurrent(seq: number): void {
+    if (this.currentSeq !== seq) return
+    this.endSession()
   }
 
   private getOrCreateGuard(): FocusGuard {

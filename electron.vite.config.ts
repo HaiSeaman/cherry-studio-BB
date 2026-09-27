@@ -16,6 +16,25 @@ const visualizerPlugin = (type: 'renderer' | 'main') => {
 const isDev = process.env.NODE_ENV === 'development'
 const isProd = process.env.NODE_ENV === 'production'
 
+/**
+ * 开发期（仅 serve）为窗口页面放宽 script-src。
+ * 原因：@vitejs/plugin-react-swc 在 dev 会向每个 html 注入一段内联的 react-refresh 引导脚本；
+ * 若沿用生产用的 `script-src 'self' 'unsafe-eval'`，该内联脚本会被 CSP 拦截，
+ * 导致模块抛 "can't detect preamble" 而白屏。生产构建不注入该脚本，
+ * 因此严格 CSP 只在开发期临时补一个 'unsafe-inline'，打包产物不受影响。
+ */
+const devCspRelaxPlugin = {
+  name: 'cherry-dev-csp-relax',
+  apply: 'serve' as const,
+  transformIndexHtml(html: string) {
+    return html.replace(
+      /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")([^"]*)(")/,
+      (_match: string, head: string, policy: string, tail: string) =>
+        head + policy.replace('script-src', "script-src 'unsafe-inline'") + tail
+    )
+  }
+}
+
 export default defineConfig({
   main: {
     plugins: [
@@ -69,6 +88,7 @@ export default defineConfig({
       react({
         tsDecorators: true
       }),
+      devCspRelaxPlugin, // 仅 serve 生效（apply:'serve'），生产构建自动跳过
       ...(isDev ? [CodeInspectorPlugin({ bundler: 'vite' })] : []), // 只在开发环境下启用 CodeInspectorPlugin
       ...visualizerPlugin('renderer')
     ],

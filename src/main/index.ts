@@ -8,7 +8,7 @@ import '@main/config'
 import { loggerService } from '@logger'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { replaceDevtoolsFont } from '@main/utils/windowUtil'
-import { app } from 'electron'
+import { app, session } from 'electron'
 import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer'
 import { isDev, isLinux, isWin } from './constant'
 
@@ -83,7 +83,29 @@ app.commandLine.appendSwitch('enable-features', 'DocumentPolicyIncludeJSCallStac
 // onHeadersReceived 是 per-session 的：按 session 只注册一次，避免每个新 webContents 重复注册导致 handler 无限累积
 const documentPolicySessions = new WeakSet<Electron.Session>()
 
+// H1：webview 挂载前强制剥离危险 webPreferences。
+// 注意 `will-attach-webview` 是「宿主 webContents」的事件（不是 app 事件），
+// 故在 web-contents-created 里为每个宿主窗口挂上监听。
+// 主窗口开启了 webviewTag + webSecurity:false，若不加管制，被加载的远端页面
+// 可通过 <webview preload/nodeintegration> 取得 Node 能力。
+// 小程序需要加载任意远端站点，故这里只剥离危险项并放行加载（不做 URL 阻断，避免误伤）。
+const sanitizeWebviewPreferences = (
+  _event: Electron.Event,
+  webPreferences: Electron.WebPreferences,
+  params: Record<string, string>
+): void => {
+  // 删除自定义 preload（本项目 webview 不使用 preload，桥接走 postMessage）
+  delete webPreferences.preload
+  delete (webPreferences as { preloadURL?: string }).preloadURL
+  webPreferences.nodeIntegration = false
+  webPreferences.nodeIntegrationInSubFrames = false
+  webPreferences.contextIsolation = true
+  webPreferences.sandbox = true
+  logger.debug('will-attach-webview sanitized', { src: params.src })
+}
+
 app.on('web-contents-created', (_, webContents) => {
+  webContents.on('will-attach-webview', sanitizeWebviewPreferences)
   const session = webContents.session
   if (!documentPolicySessions.has(session)) {
     documentPolicySessions.add(session)
@@ -108,6 +130,36 @@ app.on('web-contents-created', (_, webContents) => {
     }
   })
 })
+
+// H4：会话权限白名单（默认 deny）。
+// 仅放行产品功能确实需要的低危权限：
+//  - media/clipboard-read：语音输入录音、快速助手读取剪贴板（defaultSession）
+//  - geolocation/fullscreen/notifications/openExternal：小程序与主窗口常见需求
+// 其余（hid/serial/usb/midi/pointerLock/display-capture 等）一律拒绝。
+const ALLOWED_PERMISSIONS = new Set<string>([
+  'media',
+  'mediaKeySystem',
+  'geolocation',
+  'fullscreen',
+  'clipboard-read',
+  'clipboard-sanitized-write',
+  'notifications',
+  'openExternal'
+])
+
+function isPermissionAllowed(permission: string): boolean {
+  return ALLOWED_PERMISSIONS.has(permission)
+}
+
+function configureSessionPermissions(): void {
+  // defaultSession 承载主窗口/挂件/快速助手；persist:webview 承载小程序 webview
+  for (const sess of [session.defaultSession, session.fromPartition('persist:webview')]) {
+    sess.setPermissionRequestHandler((_wc, permission, callback) => {
+      callback(isPermissionAllowed(permission))
+    })
+    sess.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission))
+  }
+}
 
 // in production mode, handle uncaught exception and unhandled rejection globally
 if (!isDev) {
@@ -139,6 +191,9 @@ if (!app.requestSingleInstanceLock()) {
     initWebviewHotkeys()
     // Set app user model id for windows
     electronApp.setAppUserModelId(import.meta.env.VITE_MAIN_BUNDLE_ID || 'com.kangfenmao.CherryStudioBB')
+
+    // H4：注册会话权限白名单（默认 deny），须在窗口创建前完成
+    configureSessionPermissions()
 
     // Mac: Hide dock icon before window creation when launch to tray is set
     const isLaunchToTray = configManager.getLaunchToTray()

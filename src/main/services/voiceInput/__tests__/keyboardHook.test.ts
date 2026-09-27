@@ -112,4 +112,19 @@ describe('createVoiceKeyboardHook', () => {
     vi.advanceTimersByTime(200)
     expect(onStart).not.toHaveBeenCalled()
   })
+
+  it('start 失败时回滚已注册监听器并向上抛异常（避免泄漏 + 允许重试）', () => {
+    const hook = createVoiceKeyboardHook(['Meta', 'Shift', '`'], vi.fn(), vi.fn())
+    vi.mocked(uIOhook.start).mockImplementationOnce(() => {
+      throw new Error('native 启动失败')
+    })
+
+    expect(() => hook.start()).toThrow('native 启动失败')
+    // 回滚：已注册的 keydown/keyup 监听器被 off 掉，不残留
+    expect(uIOhook.off).toHaveBeenCalledWith('keydown', expect.any(Function))
+    expect(uIOhook.off).toHaveBeenCalledWith('keyup', expect.any(Function))
+    // 可重试：再次 start（这次成功）能重新注册并启动
+    hook.start()
+    expect(uIOhook.start).toHaveBeenCalledTimes(2)
+  })
 })

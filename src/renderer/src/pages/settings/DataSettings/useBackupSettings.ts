@@ -31,6 +31,8 @@ export function useBackupSettings(options: {
       stopAutoSync(options.channel)
     } else {
       dispatch(options.setAutoSyncAction(true))
+      // 先停再启：startAutoSync 对「已启动」的会话会直接返回，需先复位才能让新间隔生效
+      stopAutoSync(options.channel)
       startAutoSync(false, options.channel)
     }
   }

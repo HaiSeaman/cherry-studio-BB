@@ -4,7 +4,6 @@ import { DEFAULT_CONTEXTCOUNT, MAX_CONTEXT_COUNT, UNLIMITED_CONTEXT_COUNT } from
 import { getTopicById } from '@renderer/hooks/useTopic'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
 import store from '@renderer/store'
-import { removeManyBlocks } from '@renderer/store/messageBlock'
 import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import type { Assistant, FileMetadata, Model, Topic, Usage } from '@renderer/types'
 import { FILE_TYPE } from '@renderer/types'
@@ -176,25 +175,6 @@ export function getMessageModelId(message: Message) {
   return message?.model?.id || message.modelId
 }
 
-export function resetAssistantMessage(message: Message, model?: Model): Message {
-  const blockIdsToRemove = message.blocks
-  if (blockIdsToRemove.length > 0) {
-    store.dispatch(removeManyBlocks(blockIdsToRemove))
-  }
-
-  return {
-    ...message,
-    model: model || message.model,
-    modelId: model?.id || message.modelId,
-    status: AssistantMessageStatus.PENDING,
-    useful: undefined,
-    askId: undefined,
-    mentions: undefined,
-    blocks: [],
-    createdAt: new Date().toISOString()
-  }
-}
-
 export async function getMessageTitle(message: Message, length = 30): Promise<string> {
   const content = getMainTextContent(message)
 
@@ -231,21 +211,21 @@ export async function getMessageTitle(message: Message, length = 30): Promise<st
   return title
 }
 
-export function checkRateLimit(assistant: Assistant): boolean {
+export function checkRateLimit(assistant: Assistant, topicId?: string): boolean {
   const provider = getAssistantProvider(assistant)
 
   if (!provider?.rateLimit) {
     return false
   }
 
-  // 防御：topics 可能为空数组（useAssistant 对缺失/非数组归一化为 []），
-  // 直接取 [0].id 会抛 TypeError 且调用点在 try 外 → 每次发送静默失败
-  const topicId = assistant.topics?.[0]?.id
-  if (!topicId) {
+  // 优先用调用方传入的当前话题；缺失时才回退到 assistant.topics[0]。
+  // 直接用 topics[0] 会按「另一个话题」的最后一条消息判定，限流结果与当前会话无关。
+  const currentTopicId = topicId || assistant.topics?.[0]?.id
+  if (!currentTopicId) {
     return false
   }
 
-  const messages = selectMessagesForTopic(store.getState(), topicId)
+  const messages = selectMessagesForTopic(store.getState(), currentTopicId)
 
   if (!messages || messages.length <= 1) {
     return false

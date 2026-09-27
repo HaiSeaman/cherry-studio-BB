@@ -70,6 +70,8 @@ const S3Settings: FC = () => {
     if (value === 0) {
       stopAutoSync('s3')
     } else {
+      // 先停再启：startAutoSync 对「已启动」的会话会直接返回，需先复位才能让新间隔生效
+      stopAutoSync('s3')
       startAutoSync(false, 's3')
     }
   }

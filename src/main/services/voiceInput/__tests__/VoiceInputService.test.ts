@@ -266,6 +266,31 @@ describe('VoiceInputService', () => {
     expect(typeMock).toHaveBeenCalledWith('新的')
   })
 
+  it('finalize 异步期间重按开新会话：旧 finalize 不再注入旧文本、不误停新会话焦点守卫', async () => {
+    const service = buildService()
+    service.start()
+    asrCallbacks().onResult?.('上一轮中间')
+
+    // finalize1：stopAndFinalize 挂起，模拟等最终文本的网络延迟
+    let resolveFinalize!: (text: string) => void
+    adapter.stopAndFinalize = vi.fn(() => new Promise<string>((r) => { resolveFinalize = r }))
+    const finalizePromise = service.finalize()
+    await Promise.resolve() // 进入 finalize 的 await
+
+    // 期间用户已松开重按，开启新会话（reset 打字器、复用焦点守卫）
+    service.start()
+    typeMock.mockClear()
+    expect(guard.stop).not.toHaveBeenCalled() // 新会话期间守卫必须仍在运行
+
+    // 旧会话的最终文本到达
+    resolveFinalize('上一轮最终')
+    await finalizePromise
+
+    // 旧最终文本不应注入到新会话光标处，旧会话也不应停掉新会话的焦点守卫
+    expect(typeMock).not.toHaveBeenCalled()
+    expect(guard.stop).not.toHaveBeenCalled()
+  })
+
   it('默认单例：状态广播已接到主窗口（渲染错误提示链路可用）', () => {
     vi.spyOn(configManager, 'getVoiceInputConfig').mockReturnValue(structuredClone(qwenConfig))
     voiceInputService.start()

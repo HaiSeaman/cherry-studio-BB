@@ -23,7 +23,9 @@ export function resampleTo16k(samples: Float32Array, inputRate: number): Int16Ar
     const end = Math.min(Math.floor((i + 1) * ratio), samples.length)
     let sum = 0
     for (let j = start; j < end; j++) sum += samples[j]
-    const avg = sum / (end - start)
+    const span = end - start
+    // 极低采样率（ratio<1）时某段可能 end==start，除零会得到 NaN 污染整段 PCM，防御为 0
+    const avg = span > 0 ? sum / span : 0
     const clamped = Math.max(-1, Math.min(1, avg))
     out[i] = clamped < 0 ? Math.round(clamped * 32768) : Math.round(clamped * 32767)
   }

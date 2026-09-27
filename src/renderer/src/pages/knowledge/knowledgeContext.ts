@@ -1,5 +1,5 @@
-import { isDedicatedImageGenerationModel } from '@renderer/config/models'
 import { loggerService } from '@logger'
+import { isDedicatedImageGenerationModel } from '@renderer/config/models'
 import type { KnowledgeItem, Model } from '@renderer/types'
 import type { MessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockType } from '@renderer/types/newMessage'

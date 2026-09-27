@@ -170,3 +170,6 @@ latest-linux.yml
 clipboard_history.db
 clipboard_images/
 clipboard_error.log
+
+# 审计临时产物（静态检查/测试日志）
+.audit-tmp/

@@ -253,14 +253,30 @@ export const formatCitationsFromBlock = (block: CitationMessageBlock | undefined
         break
       case WEB_SEARCH_SOURCE.AISDK:
         formattedCitations =
-          (block.response?.results as AISDKWebSearchResult[])?.map((result, index) => ({
-            number: index + 1,
-            url: result.url,
-            title: result.title || new URL(result.url).hostname,
-            showFavicon: true,
-            type: 'websearch',
-            providerMetadata: result?.providerMetadata
-          })) || []
+          (block.response?.results as AISDKWebSearchResult[])?.map((result, index) => {
+            const url = result.url
+            try {
+              // 畸形 url 且无 title 时 new URL 会抛错（在 useSelector 内执行会导致整页白屏）
+              const hostname = new URL(url).hostname
+              return {
+                number: index + 1,
+                url,
+                title: result.title || hostname,
+                showFavicon: true,
+                type: 'websearch',
+                providerMetadata: result?.providerMetadata
+              }
+            } catch {
+              return {
+                number: index + 1,
+                url,
+                title: result.title || url,
+                showFavicon: true,
+                type: 'websearch',
+                providerMetadata: result?.providerMetadata
+              }
+            }
+          }) || []
         break
     }
   }

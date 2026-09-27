@@ -59,9 +59,16 @@ describe('voiceKeyboardManager.sync — 开关是否真的启停全局钩子', (
     expect(createVoiceKeyboardHook).not.toHaveBeenCalled()
   })
 
-  it('已启动时再 sync 只更新按键，不重复创建', () => {
+  it('已启动且快捷键未变时再 sync：不重建、不重连钩子（避免窗口 focus/blur 反复重连丢事件）', () => {
     voiceKeyboardManager.sync(makeShortcut(true))
     voiceKeyboardManager.sync(makeShortcut(true))
+    expect(createVoiceKeyboardHook).toHaveBeenCalledTimes(1)
+    expect(hookMock.updateShortcut).not.toHaveBeenCalled()
+  })
+
+  it('快捷键真的变了再 sync 才重建检测器', () => {
+    voiceKeyboardManager.sync(makeShortcut(true, ['Ctrl', '`']))
+    voiceKeyboardManager.sync(makeShortcut(true, ['Alt', '`']))
     expect(createVoiceKeyboardHook).toHaveBeenCalledTimes(1)
     expect(hookMock.updateShortcut).toHaveBeenCalledTimes(1)
   })

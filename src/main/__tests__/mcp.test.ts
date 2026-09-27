@@ -42,6 +42,33 @@ describe('toCamelCase', () => {
     expect(toCamelCase('MyServer')).toBe('myserver')
     expect(toCamelCase('myTOOL')).toBe('mytool')
   })
+
+  it('should keep non-ASCII names ASCII-safe, distinct and stable', () => {
+    // 模型服务商只接受 ^[a-zA-Z0-9_-]+$ 的函数名，因此中文不能原样保留
+    const zh = toCamelCase('工具')
+    expect(zh).toMatch(/^_[0-9a-f]{8}$/)
+    // 同一输入稳定
+    expect(zh).toBe(toCamelCase('工具'))
+    // 不同输入不塌缩成同一个名字
+    expect(zh).not.toBe(toCamelCase('功能'))
+    expect(toCamelCase('我的服务器')).not.toBe(zh)
+
+    // 含 ASCII 片段时保留可读部分，再追加哈希
+    const mixed = toCamelCase('我的-server')
+    expect(mixed).toMatch(/^server_[0-9a-f]{8}$/i)
+    expect(toCamelCase('工具-名称')).toMatch(/^_[0-9a-f]{8}$/)
+    expect(toCamelCase('工具_名称')).toMatch(/^_[0-9a-f]{8}$/)
+  })
+
+  it('should fall back to a deterministic hash when no letters/digits remain', () => {
+    const first = toCamelCase('!!!')
+    const second = toCamelCase('!!!')
+    // 非空且稳定：同一输入得到相同结果，不同输入得到不同结果
+    expect(first).toMatch(/^_[0-9a-f]{8}$/)
+    expect(first).toBe(second)
+    expect(first).not.toBe('')
+    expect(toCamelCase('???')).not.toBe(first)
+  })
 })
 
 describe('buildMcpToolName', () => {
@@ -235,6 +262,42 @@ describe('buildFunctionCallToolName', () => {
     it('should handle scoped npm package style names', () => {
       const result = buildFunctionCallToolName('@anthropic/mcp-server', 'chat')
       expect(result).toBe('mcp__AnthropicMcpServer__chat')
+    })
+  })
+
+  describe('non-ASCII names (C3)', () => {
+    it('should not collapse Chinese server/tool names to the bare prefix', () => {
+      const result = buildFunctionCallToolName('我的服务器', '工具')
+      // 必须仍是模型接口可接受的 ASCII 函数名，且不能塌缩成 'mcp__'
+      expect(result).toMatch(/^[a-zA-Z_][a-zA-Z0-9_]*$/)
+      expect(result).not.toBe('mcp__')
+      expect(result.startsWith('mcp__')).toBe(true)
+    })
+
+    it('should keep different Chinese tool names distinct', () => {
+      expect(buildFunctionCallToolName('服务器', '工具')).not.toBe(buildFunctionCallToolName('服务器', '功能'))
+    })
+  })
+
+  describe('collision resolution with existingNames (C3)', () => {
+    it('should disambiguate two long names that truncate to the same 63 chars', () => {
+      // 两个工具名仅在 63 字符截断点之后不同
+      const sharedPrefix = 'x'.repeat(60)
+      const toolA = `${sharedPrefix}${'a'.repeat(10)}`
+      const toolB = `${sharedPrefix}${'b'.repeat(10)}`
+
+      // 不传 existingNames 时会静默塌缩到同一个名字
+      expect(buildFunctionCallToolName('server', toolA)).toBe(buildFunctionCallToolName('server', toolB))
+
+      const existingNames = new Set<string>()
+      const first = buildFunctionCallToolName('server', toolA, existingNames)
+      const second = buildFunctionCallToolName('server', toolB, existingNames)
+
+      expect(first).not.toBe(second)
+      expect(first.length).toBeLessThanOrEqual(63)
+      expect(second.length).toBeLessThanOrEqual(63)
+      expect(existingNames.has(first)).toBe(true)
+      expect(existingNames.has(second)).toBe(true)
     })
   })
 })

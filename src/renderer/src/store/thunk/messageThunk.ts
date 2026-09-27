@@ -19,7 +19,14 @@ import {
   createTranslationBlock,
   resetAssistantMessage
 } from '@renderer/utils/messageUtils/create'
-import { getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
+import {
+  clearTopicQueuePending,
+  getTopicQueue,
+  isAskIdCancelled,
+  markCancelledAskIds,
+  unmarkCancelledAskIds,
+  waitForTopicQueue
+} from '@renderer/utils/queue'
 import { defaultAppHeaders } from '@shared/utils'
 import { throttle } from 'lodash'
 import { LRUCache } from 'lru-cache'
@@ -333,6 +340,13 @@ const fetchAndProcessAssistantResponseImpl = async (
   let abortFn: (() => void) | null = null
   // Hoisted：首 token 看门狗定时器，finally 中兜底清理
   let firstTokenWatchdog: ReturnType<typeof setTimeout> | null = null
+
+  // 入口兜底：该 askId 已被「停止 / 清空话题」取消（队列 pending 已清），
+  // 直接返回，不置 loading、不发起请求，避免排队任务继续烧 token 或写入孤儿块。
+  if (userMessageId && isAskIdCancelled(userMessageId)) {
+    return
+  }
+
   try {
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
@@ -577,6 +591,15 @@ export const clearTopicMessagesThunk =
       for (const askId of askIds) {
         abortCompletion(askId)
       }
+      // 丢弃该话题队列中尚未启动的任务并标记 askId 已取消，否则清空后排队任务
+      // 仍会启动、向已清空的话题写入孤儿块（abort 只能中止已注册的 controller）。
+      if (askIds.length > 0) {
+        markCancelledAskIds(askIds)
+        clearTopicQueuePending(topicId)
+        void getTopicQueue(topicId)
+          .onIdle()
+          .then(() => unmarkCancelledAskIds(askIds))
+      }
 
       const messageIdsToClear = state.messages.messageIdsByTopic[topicId] || []
       const blockIdsToDeleteSet = new Set<string>()
@@ -613,15 +636,6 @@ export const resendMessageThunk =
       const assistantMessagesToReset = allMessagesForTopic.filter(
         (m) => m.askId === userMessageToResend.id && m.role === 'assistant'
       )
-
-      // Clear cached search results for the user message being resent
-      // This ensures that the regenerated responses will not use stale search results
-      try {
-        window.keyv.remove(`web-search-${userMessageToResend.id}`)
-        window.keyv.remove(`knowledge-search-${userMessageToResend.id}`)
-      } catch (error) {
-        logger.warn(`Failed to clear keyv cache for message ${userMessageToResend.id}:`, error as Error)
-      }
 
       const resetDataList: Message[] = []
 

@@ -372,7 +372,7 @@ export const mergeDefaultShortcuts = <
     // 语音输入的快捷键已写死为 Ctrl+`：把仍是旧默认值（Win+Shift+`）的老配置一并升级，
     // 否则存量用户永远停留在已被删除的旧组合上。用户自定义的组合保持不动。
     if (def && s.key === 'voice_input' && isSameShortcut(s.shortcut, LEGACY_VOICE_INPUT_SHORTCUT)) {
-      next = { ...next, shortcut: [...(def.shortcut as string[])] }
+      next = { ...next, shortcut: [...def.shortcut] }
     }
     merged.push(next)
   }

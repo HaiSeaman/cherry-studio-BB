@@ -63,20 +63,14 @@ export function safeSerialize(
  * 适用于调试、日志等非关键场景。
  */
 function tryLenientSerialize(value: unknown, space?: string | number): string {
-  const seen = new WeakSet()
+  // 用「当前递归路径」栈做循环检测：仅当对象出现在自身的祖先链上时才判为循环，
+  // 这样 `{ a: shared, b: shared }` 这类共享引用的 DAG 不会被误判为循环引用。
+  const ancestors: unknown[] = []
 
   const serialized = JSON.stringify(
     value,
-    (_, val: any) => {
-      // 处理循环引用
-      if (typeof val === 'object' && val !== null) {
-        if (seen.has(val)) {
-          return '[Circular]'
-        }
-        seen.add(val)
-      }
-
-      // 处理特殊类型
+    function (this: unknown, _key: string, val: any) {
+      // 特殊类型优先转换（转换结果不再是对象，无需参与循环检测）
       if (val instanceof Date) return val.toISOString()
       if (val instanceof RegExp) return `{RegExp: "${val.toString()}"}`
       if (typeof val === 'function') return `[Function: ${val.name || 'anonymous'}]`
@@ -84,6 +78,17 @@ function tryLenientSerialize(value: unknown, space?: string | number): string {
       if (val instanceof Map) return Object.fromEntries(val.entries())
       if (val instanceof Set) return Array.from(val)
       if (val === undefined) return '[undefined]'
+
+      if (typeof val === 'object' && val !== null) {
+        // `this` 是 val 的直接父对象；把栈收缩回当前递归路径
+        while (ancestors.length > 0 && ancestors[ancestors.length - 1] !== this) {
+          ancestors.pop()
+        }
+        if (ancestors.includes(val)) {
+          return '[Circular]'
+        }
+        ancestors.push(val)
+      }
 
       return val
     },

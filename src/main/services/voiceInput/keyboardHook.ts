@@ -46,8 +46,15 @@ export function createVoiceKeyboardHook(
       if (started) return
       uIOhook.on('keydown', keydown)
       uIOhook.on('keyup', keyup)
-      uIOhook.start()
-      started = true
+      try {
+        uIOhook.start()
+        started = true
+      } catch (error) {
+        // 启动失败（native 模块异常）：回滚已注册的监听器，避免泄漏 + 重复注册；异常向上抛由调用方记日志
+        uIOhook.off('keydown', keydown)
+        uIOhook.off('keyup', keyup)
+        throw error
+      }
     },
 
     stop() {

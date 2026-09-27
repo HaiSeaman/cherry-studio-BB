@@ -38,7 +38,7 @@ export const migrate = async (state: any) => {
     const old = settings.notification
     const isLegacy = (v: unknown) => typeof v === 'boolean'
     settings.notification = Object.fromEntries(
-      (['assistant', 'backup', 'update', 'automation', 'paint'] as const).map((source) => {
+      (['assistant', 'backup', 'update', 'automation', 'paint', 'video'] as const).map((source) => {
         const v = old[source]
         if (v && typeof v === 'object') {
           // 已是新结构（幂等）：原样保留，缺失字段补默认
@@ -61,7 +61,8 @@ export const migrate = async (state: any) => {
       backup: { enabled: false, sound: 'default' },
       update: { enabled: false, sound: 'default' },
       automation: { enabled: true, sound: 'default' },
-      paint: { enabled: false, sound: 'default' }
+      paint: { enabled: false, sound: 'default' },
+      video: { enabled: false, sound: 'default' }
     }
   }
 

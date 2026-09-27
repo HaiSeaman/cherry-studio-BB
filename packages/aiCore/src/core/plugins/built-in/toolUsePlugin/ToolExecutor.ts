@@ -26,9 +26,40 @@ export interface StreamController<TChunk = unknown> {
   enqueue(chunk: TChunk): void
 }
 
+/**
+ * 将 Error 归一化为可读文本。
+ *
+ * JSON.stringify(new Error('x')) === '{}'（message/stack 都是不可枚举属性），
+ * 若直接序列化，模型最终只会收到 <error>{}</error>，拿不到任何失败原因。
+ */
+function normalizeError(error: Error): string {
+  const cause = (error as { cause?: unknown }).cause
+  if (cause === undefined || cause === null) {
+    return error.message
+  }
+  const causeText = stringifyUnknown(cause)
+  return causeText ? `${error.message} (cause: ${causeText})` : error.message
+}
+
+/** 安全地把 unknown 值转为可读文本，避免对象默认的 `[object Object]`。 */
+function stringifyUnknown(value: unknown): string {
+  if (value instanceof Error) {
+    return value.message
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  try {
+    return JSON.stringify(value) ?? ''
+  } catch {
+    return ''
+  }
+}
+
 /** Escape XML special characters so tool output cannot break the <tool_use_result> structure. */
-function escapeXml(value: unknown): string {
-  const text = typeof value === 'string' ? value : JSON.stringify(value)
+export function escapeXml(value: unknown): string {
+  const normalized = value instanceof Error ? normalizeError(value) : value
+  const text = typeof normalized === 'string' ? normalized : JSON.stringify(normalized)
   return String(text ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -142,13 +173,15 @@ export class ToolExecutor {
     error: unknown,
     controller: StreamController
   ): ExecutedResult {
-    // 使用 AI SDK 标准错误格式
+    // 使用 AI SDK 标准错误格式。
+    // 流分片中只放可读的错误文本，避免把可能含有 MCP server URL/headers
+    // 等敏感信息的原始 Error 对象直接暴露出去。
     const toolError: TypedToolError<T> = {
       type: 'tool-error',
       toolCallId: toolUse.id,
       toolName: toolUse.toolName,
       input: toolUse.arguments,
-      error
+      error: error instanceof Error ? normalizeError(error) : stringifyUnknown(error)
     }
 
     controller.enqueue(toolError)

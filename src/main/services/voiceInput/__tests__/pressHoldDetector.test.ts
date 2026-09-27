@@ -145,4 +145,22 @@ describe('createPressHoldDetector', () => {
     vi.advanceTimersByTime(1)
     expect(onStop).toHaveBeenCalledTimes(1)
   })
+
+  it('长按自动重复不重置启动定时器：首次按下后持续重复仍能按时触发 onStart', () => {
+    const onStart = vi.fn()
+    const detector = createPressHoldDetector({
+      targetKeys: [BACKQUOTE],
+      onStart,
+      onStop: vi.fn(),
+      startDelayMs: 20
+    })
+
+    detector.handleKeyDown(keyDown(BACKQUOTE)) // 首次按下，设 20ms 启动定时器
+    vi.advanceTimersByTime(10) // 过 10ms（< 20ms，尚未触发）
+    // 自动重复：同一键持续抛 keydown。修复前会清掉并重设 20ms 定时器，使总等待重新计时、永不到期
+    detector.handleKeyDown(keyDown(BACKQUOTE))
+    detector.handleKeyDown(keyDown(BACKQUOTE))
+    vi.advanceTimersByTime(10) // 累计 20ms：修复后定时器未被重置，此时触发
+    expect(onStart).toHaveBeenCalledTimes(1)
+  })
 })

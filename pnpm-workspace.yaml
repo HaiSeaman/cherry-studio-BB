@@ -45,7 +45,6 @@ patchedDependencies:
 
 onlyBuiltDependencies:
   - '@kangfenmao/keyv-storage'
-  - '@scarf/scarf'
   - '@swc/core'
   - 'electron'
   - 'electron-winstaller'

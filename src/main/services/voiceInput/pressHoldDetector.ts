@@ -56,7 +56,11 @@ export function createPressHoldDetector(options: PressHoldDetectorOptions): Pres
   return {
     handleKeyDown(e) {
       if (disposed) return
+      // 长按会持续抛出自动重复的 keydown：忽略它们，否则每次都会清掉并重设启动定时器，
+      // 在重复延迟极短的键盘上可能让 onStart 永不触发（与 focusGuard 的 isRepeat 处理一致）
+      const isRepeat = pressed.has(e.keycode)
       pressed.add(e.keycode)
+      if (isRepeat) return
       if (!recording && isTargetPressed()) {
         clearStartTimer()
         startTimer = setTimeout(() => {

@@ -76,7 +76,8 @@ describe('persist migrate — 通知设置（老布尔 → 新 { enabled, sound 
       backup: { enabled: true, sound: 'default' },
       update: { enabled: false, sound: 'default' },
       automation: { enabled: true, sound: 'default' },
-      paint: { enabled: false, sound: 'default' }
+      paint: { enabled: false, sound: 'default' },
+      video: { enabled: false, sound: 'default' }
     })
   })
 
@@ -121,7 +122,8 @@ describe('persist migrate — 通知设置（老布尔 → 新 { enabled, sound 
       backup: { enabled: false, sound: 'default' },
       update: { enabled: false, sound: 'default' },
       automation: { enabled: true, sound: 'default' },
-      paint: { enabled: false, sound: 'default' }
+      paint: { enabled: false, sound: 'default' },
+      video: { enabled: false, sound: 'default' }
     })
   })
 

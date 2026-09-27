@@ -19,7 +19,7 @@ import {
   type TranscriptionModelV3
 } from '@ai-sdk/provider'
 import type { FetchFunction } from '@ai-sdk/provider-utils'
-import { loadApiKey, withoutTrailingSlash } from '@ai-sdk/provider-utils'
+import { generateId, loadApiKey, withoutTrailingSlash } from '@ai-sdk/provider-utils'
 
 export const CHERRYIN_PROVIDER_NAME = 'cherryin' as const
 export const DEFAULT_CHERRYIN_BASE_URL = 'https://open.cherryin.net/v1'
@@ -163,7 +163,10 @@ export const createCherryIn = (options: CherryInProviderSettings = {}): CherryIn
         }
       },
       fetch,
-      generateId: () => `${CHERRYIN_PROVIDER_NAME}-${Date.now()}`,
+      // 使用 SDK 默认的随机 ID 生成器（createIdGenerator）；
+      // 之前的 `${cherryin}-${Date.now()}` 在同一毫秒内会重复，
+      // 导致 toolCallId 与 grounding source id 错配或被去重。
+      generateId,
       supportedUrls: () => ({})
     })
 

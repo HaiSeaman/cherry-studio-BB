@@ -119,6 +119,8 @@ const LocalBackupSettings: React.FC = () => {
       setResolvedLocalBackupDir(await window.api.resolvePath(value))
 
       dispatch(setLocalBackupAutoSync(true))
+      // 先停再启：startAutoSync 对「已启动」的会话会直接返回，需先复位才能对新目录立即备份
+      stopAutoSync('local')
       startAutoSync(true, 'local')
       return
     }

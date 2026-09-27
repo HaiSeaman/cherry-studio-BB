@@ -36,20 +36,6 @@ class DbService implements MessageDataSource {
     return this.dexieSource
   }
 
-  /**
-   * Resolve topicId for a message
-   */
-  private resolveMessageTopicId(messageId: string): string | undefined {
-    const state = store.getState()
-
-    const parentMessage = state.messages.entities[messageId]
-    if (parentMessage) {
-      return parentMessage.topicId
-    }
-
-    return undefined
-  }
-
   // ============ Read Operations ============
 
   async fetchMessages(
@@ -100,10 +86,6 @@ class DbService implements MessageDataSource {
       return
     }
 
-    const topicId = this.resolveMessageTopicId(blocks[0].messageId)
-    if (!topicId) {
-      logger.warn(`Unable to resolve topicId for block ${blocks[0].id}, defaulting to Dexie`)
-    }
     await this.dexieSource.updateBlocks(blocks)
   }
 

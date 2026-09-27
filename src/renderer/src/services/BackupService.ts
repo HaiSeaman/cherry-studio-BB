@@ -562,7 +562,9 @@ export function startAutoSync(immediate = false, type?: BackupType) {
     }
 
     webdavAutoSyncStarted = true
-    stopAutoSync('webdav')
+    // 此处绝不能调用 stopAutoSync：它会强制把 isWebdavAutoBackupRunning 置 false，
+    // 使 performAutoBackup 的并发守卫失效（备份进行中改设置会启动第二个备份并发上传互相覆盖）。
+    // scheduleNextBackup 自身会清理旧定时器，无需在此重复清理。
     scheduleNextBackup(immediate ? 'immediate' : 'fromLastSyncTime', 'webdav')
   } else if (type === 's3') {
     if (s3AutoSyncStarted) {
@@ -578,7 +580,7 @@ export function startAutoSync(immediate = false, type?: BackupType) {
     }
 
     s3AutoSyncStarted = true
-    stopAutoSync('s3')
+    // 同 webdav：不要在 start 路径重置 isS3AutoBackupRunning（见上）
     scheduleNextBackup(immediate ? 'immediate' : 'fromLastSyncTime', 's3')
   } else if (type === 'local') {
     if (localAutoSyncStarted) {
@@ -594,7 +596,7 @@ export function startAutoSync(immediate = false, type?: BackupType) {
     }
 
     localAutoSyncStarted = true
-    stopAutoSync('local')
+    // 同 webdav：不要在 start 路径重置 isLocalAutoBackupRunning（见上）
     scheduleNextBackup(immediate ? 'immediate' : 'fromLastSyncTime', 'local')
   }
 

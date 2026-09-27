@@ -248,12 +248,16 @@ class McpService {
   }
 
   private getServerKey(server: MCPServer): string {
+    // server.env 可能包含 API Key 等敏感信息，这里只取其哈希，避免明文进入日志/缓存 key
+    const envHash = server.env
+      ? crypto.createHash('sha256').update(JSON.stringify(server.env)).digest('hex').slice(0, 16)
+      : undefined
     return JSON.stringify({
       baseUrl: server.baseUrl,
       command: server.command,
       args: Array.isArray(server.args) ? server.args : [],
       registryUrl: server.registryUrl,
-      env: server.env,
+      envHash,
       id: server.id
     })
   }
@@ -319,6 +323,10 @@ class McpService {
 
         let args = [...(server.args || [])]
 
+        // 记录 in-memory 内建 server 的 server 端 transport：连接失败时用于释放其占位，
+        // 避免单例 Server 残留 _transport 导致后续每次连接都报 "Already connected"
+        let memoryServerTransport: InMemoryTransport | undefined
+
         // let transport: StdioClientTransport | SSEClientTransport | InMemoryTransport | StreamableHTTPClientTransport
         const authProvider = new McpOAuthClientProvider({
           serverUrlHash: crypto
@@ -370,6 +378,8 @@ class McpService {
               getServerLogger(server).error(`Error starting in-memory server`, error as Error)
               throw new Error(`Failed to start in-memory server: ${error.message}`)
             }
+            // 记录 server 端 transport，供连接失败时清理（见下方 catch）
+            memoryServerTransport = serverTransport
             // set the client transport to the client
             return clientTransport
           } else if (server.baseUrl) {
@@ -419,7 +429,7 @@ class McpService {
 
             // Get login shell environment first - needed for command detection and server execution
             // Note: getLoginShellEnvironment() is memoized, so subsequent calls are fast
-            const loginShellEnv = await getLoginShellEnvironment()
+            let loginShellEnv = await getLoginShellEnvironment()
 
             // For DXT servers, use resolved configuration with platform overrides and variable substitution
             if (server.dxtPath) {
@@ -537,6 +547,9 @@ class McpService {
 
             // Bun not support proxy https://github.com/oven-sh/bun/issues/16812
             if (cmd.includes('bun')) {
+              // 在副本上移除代理变量：loginShellEnv 是被 memoize 的共享缓存对象，
+              // 直接改写会永久污染其后所有 stdio 子进程的代理配置
+              loginShellEnv = { ...loginShellEnv }
               removeEnvProxy(loginShellEnv)
             }
 
@@ -677,6 +690,16 @@ class McpService {
           })
           return client
         } catch (error) {
+          // 释放 in-memory server 端 transport，避免内建单例 Server 永久占用 _transport
+          if (memoryServerTransport) {
+            try {
+              await memoryServerTransport.close()
+            } catch (closeError) {
+              getServerLogger(server).debug(`Failed to close in-memory server transport`, {
+                error: (closeError as Error)?.message
+              })
+            }
+          }
           getServerLogger(server).error(`Error activating server ${server.name}`, error as Error)
           this.emitServerLog(server, {
             timestamp: Date.now(),
@@ -917,12 +940,22 @@ class McpService {
     const client = await this.initClient(server)
     try {
       const { tools } = await client.listTools()
+      // per-server 的已用工具名集合：用于检测并自动解决名称碰撞（如超长名截断后相同）
+      const existingNames = new Set<string>()
       const serverTools: MCPTool[] = tools.map((tool: SDKTool) => {
+        const candidate = buildFunctionCallToolName(server.name, tool.name)
+        if (existingNames.has(candidate)) {
+          getServerLogger(server).warn(`MCP tool name collision detected, appending unique suffix`, {
+            serverName: server.name,
+            toolName: tool.name,
+            collisionName: candidate
+          })
+        }
         const serverTool: MCPTool = {
           ...tool,
           inputSchema: MCPToolInputSchema.parse(tool.inputSchema),
           outputSchema: tool.outputSchema ? MCPToolOutputSchema.parse(tool.outputSchema) : undefined,
-          id: buildFunctionCallToolName(server.name, tool.name),
+          id: buildFunctionCallToolName(server.name, tool.name, existingNames),
           serverId: server.id,
           serverName: server.name,
           type: 'mcp'

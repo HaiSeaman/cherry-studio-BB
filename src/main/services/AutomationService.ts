@@ -4,6 +4,9 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
 import { loggerService } from '@logger'
+import { isWin } from '@main/constant'
+import { validatePath } from '@main/mcpServers/filesystem/types'
+import { writeWithLock } from '@main/utils/file'
 import type {
   AutomationRun,
   AutomationRunStatus,
@@ -31,6 +34,32 @@ const MAX_RUNS = 200
 const RUN_TIMEOUT_MS = 10 * 60_000
 /** 全局最大并行运行数 */
 const MAX_CONCURRENT_RUNS = 2
+
+/** C1：拒绝写入的危险可执行/脚本扩展名（防持久化 RCE） */
+const BLOCKED_WRITE_EXTENSIONS = new Set([
+  '.exe',
+  '.bat',
+  '.cmd',
+  '.com',
+  '.scr',
+  '.pif',
+  '.msi',
+  '.msp',
+  '.ps1',
+  '.psm1',
+  '.vbs',
+  '.vbe',
+  '.js',
+  '.jse',
+  '.wsf',
+  '.wsh',
+  '.hta',
+  '.cpl',
+  '.dll',
+  '.sys',
+  '.lnk',
+  '.reg'
+])
 
 /** daily/once 时间解析：HH:mm → 当天秒数 */
 function parseDailyTime(time: string): number | null {
@@ -64,6 +93,8 @@ export function normalizeTaskSchedules(tasks: AutomationTask[]): void {
 interface StoreData {
   tasks: AutomationTask[]
   runs: AutomationRun[]
+  /** C1：已授权的根目录（由任务中用户选择的 workDir/linkedFiles 派生并持久化） */
+  authorizedRoots?: string[]
 }
 
 interface FinishRunPayload {
@@ -93,10 +124,25 @@ export class AutomationService {
   }
 
   private async load(): Promise<void> {
+    let raw: string
     try {
-      const raw = await fsp.readFile(this.storePath, 'utf8')
+      raw = await fsp.readFile(this.storePath, 'utf8')
+    } catch (error) {
+      // 首次运行时文件尚不存在属正常情况；其它读取错误（权限/磁盘）需要留痕
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.error('Failed to read automation store', error as Error)
+      }
+      this.data = { tasks: [], runs: [], authorizedRoots: [] }
+      return
+    }
+
+    try {
       const parsed = JSON.parse(raw) as StoreData
-      this.data = { tasks: parsed.tasks ?? [], runs: parsed.runs ?? [] }
+      this.data = {
+        tasks: parsed.tasks ?? [],
+        runs: parsed.runs ?? [],
+        authorizedRoots: parsed.authorizedRoots ?? []
+      }
       normalizeTaskSchedules(this.data.tasks)
       // 崩溃残留的 running 记录：标记为 failed
       for (const run of this.data.runs) {
@@ -106,19 +152,31 @@ export class AutomationService {
           run.error = '应用重启导致运行中断'
         }
       }
-    } catch {
-      this.data = { tasks: [], runs: [] }
+    } catch (error) {
+      // 解析失败时**不再静默清空**：先备份损坏文件再以空数据继续运行。
+      // 否则紧随其后的 save() 会把原文件直接覆盖，用户的任务/授权目录将永久丢失。
+      const backupPath = `${this.storePath}.bak`
+      try {
+        await fsp.copyFile(this.storePath, backupPath)
+        logger.warn('Automation store 解析失败，已备份损坏文件后以空数据启动', {
+          backupPath
+        })
+      } catch (backupError) {
+        logger.error('Failed to back up corrupt automation store', backupError as Error)
+      }
+      logger.error('Failed to parse automation store', error as Error)
+      this.data = { tasks: [], runs: [], authorizedRoots: [] }
     }
   }
 
-  /** 防抖写盘 */
+  /** 防抖写盘（原子写：先写 .tmp 再 rename，避免中断/断电留下半截 JSON） */
   private save(): void {
     if (this.saveTimer) clearTimeout(this.saveTimer)
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null
-      fsp
-        .writeFile(this.storePath, JSON.stringify(this.data, null, 2), 'utf8')
-        .catch((e) => logger.error('Failed to persist automation store', e as Error))
+      writeWithLock(this.storePath, JSON.stringify(this.data, null, 2), { atomic: true, encoding: 'utf8' }).catch((e) =>
+        logger.error('Failed to persist automation store', e as Error)
+      )
     }, 500)
   }
 
@@ -326,6 +384,8 @@ export class AutomationService {
         updatedAt: now
       })
       this.sanitizeSchedule(existing)
+      // C1：编辑任务时把用户选择的输出目录/关联文件目录收录为授权根
+      this.captureAuthorizedRoots(existing)
       this.save()
       this.notifyChanged()
       return existing
@@ -336,6 +396,8 @@ export class AutomationService {
     const created: AutomationTask = { ...rest, createdAt: now, updatedAt: now }
     this.sanitizeSchedule(created)
     this.data.tasks.push(created)
+    // C1：新建任务时把用户选择的输出目录/关联文件目录收录为授权根
+    this.captureAuthorizedRoots(created)
     this.save()
     this.notifyChanged()
     return created
@@ -369,12 +431,84 @@ export class AutomationService {
 
   // ———————————————— 系统工具 ————————————————
 
+  /**
+   * C1：计算当前生效的授权根目录 = 持久化根 ∪ 当前任务里用户选择的路径。
+   * 根来自用户在任务配置中通过文件夹/文件选择器指定的 workDir 与 linkedFiles 所在目录。
+   * 不信任渲染层传入的 granted 数组，只信任主进程持久化/任务数据。
+   */
+  private getAuthorizedRoots(): string[] {
+    const roots = new Set<string>(this.data.authorizedRoots ?? [])
+    for (const task of this.data.tasks) {
+      if (task.workDir) roots.add(task.workDir)
+      for (const file of task.linkedFiles ?? []) {
+        roots.add(path.dirname(file))
+      }
+    }
+    return [...roots].map((r) => path.resolve(r))
+  }
+
+  /** C1：首次使用某根目录时，将其收录进持久化的已授权根列表 */
+  private captureAuthorizedRoots(task: AutomationTask): void {
+    const additions: string[] = []
+    if (task.workDir) additions.push(path.resolve(task.workDir))
+    for (const file of task.linkedFiles ?? []) additions.push(path.resolve(path.dirname(file)))
+    if (additions.length === 0) return
+    const roots = new Set(this.data.authorizedRoots ?? [])
+    for (const r of additions) roots.add(r)
+    this.data.authorizedRoots = [...roots]
+  }
+
+  /**
+   * C1：路径白名单校验（realpath 后比较，可挡 `..`、绝对路径与符号链接逃逸）。
+   * 兼容策略：尚未配置任何授权根（历史数据/未设置输出目录）时放行，避免打断既有自动化；
+   * 一旦存在授权根，则仅允许落在这些根及其子目录内的路径。
+   */
+  private async resolveAllowedPath(requestedPath: string, action: string): Promise<string> {
+    const roots = this.getAuthorizedRoots()
+    if (roots.length === 0) {
+      logger.warn(`Automation ${action}: 未配置授权根目录，放行路径`, { path: requestedPath })
+      return path.resolve(requestedPath)
+    }
+    for (const root of roots) {
+      try {
+        return await validatePath(requestedPath, root)
+      } catch {
+        // 不在该根内，尝试下一个根
+      }
+    }
+    throw new Error(`路径不在已授权目录内（仅允许任务中指定的输出目录/关联文件所在目录及其子目录）：${requestedPath}`)
+  }
+
+  /** C1-b：拒绝写入系统启动项目录、应用数据目录与危险可执行扩展名 */
+  private assertSafeWriteTarget(resolvedPath: string): void {
+    const ext = path.extname(resolvedPath).toLowerCase()
+    if (BLOCKED_WRITE_EXTENSIONS.has(ext)) {
+      throw new Error(`拒绝写入危险可执行文件类型（${ext}）`)
+    }
+    let blockedDirs: string[] = []
+    try {
+      blockedDirs = [
+        app.getPath('userData'),
+        path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+      ]
+    } catch {
+      // app 未就绪时忽略（正常运行时不会发生）
+    }
+    for (const dir of blockedDirs) {
+      const rel = path.relative(path.resolve(dir), resolvedPath)
+      if (rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))) {
+        throw new Error('拒绝写入系统启动项或应用数据目录')
+      }
+    }
+  }
+
   public async sysFileRead(filePath: string): Promise<AutomationSysFileResult> {
     try {
-      const stat = await fsp.stat(filePath)
+      const safePath = await this.resolveAllowedPath(filePath, 'file_read')
+      const stat = await fsp.stat(safePath)
       if (stat.isDirectory()) return { ok: false, error: '目标是目录，请用 file_list 列出内容' }
       if (stat.size > 1024 * 1024) {
-        const fh = await fsp.open(filePath, 'r')
+        const fh = await fsp.open(safePath, 'r')
         try {
           const buf = Buffer.alloc(1024 * 1024)
           await fh.read(buf, 0, buf.length, 0)
@@ -383,7 +517,7 @@ export class AutomationService {
           await fh.close()
         }
       }
-      return { ok: true, content: await fsp.readFile(filePath, 'utf8') }
+      return { ok: true, content: await fsp.readFile(safePath, 'utf8') }
     } catch (e) {
       return { ok: false, error: `读取失败：${(e as Error).message}` }
     }
@@ -391,9 +525,11 @@ export class AutomationService {
 
   public async sysFileWrite(filePath: string, content: string): Promise<AutomationSysFileResult> {
     try {
-      await fsp.mkdir(path.dirname(filePath), { recursive: true })
-      await fsp.writeFile(filePath, content, 'utf8')
-      return { ok: true, content: `已写入 ${Buffer.byteLength(content, 'utf8')} 字节到 ${filePath}` }
+      const safePath = await this.resolveAllowedPath(filePath, 'file_write')
+      this.assertSafeWriteTarget(safePath)
+      await fsp.mkdir(path.dirname(safePath), { recursive: true })
+      await fsp.writeFile(safePath, content, 'utf8')
+      return { ok: true, content: `已写入 ${Buffer.byteLength(content, 'utf8')} 字节到 ${safePath}` }
     } catch (e) {
       return { ok: false, error: `写入失败：${(e as Error).message}` }
     }
@@ -401,9 +537,10 @@ export class AutomationService {
 
   public async sysFileList(dirPath: string): Promise<AutomationSysFileListResult> {
     try {
-      const stat = await fsp.stat(dirPath)
+      const safePath = await this.resolveAllowedPath(dirPath, 'file_list')
+      const stat = await fsp.stat(safePath)
       if (!stat.isDirectory()) return { ok: false, error: '目标不是目录' }
-      const dirents = await fsp.readdir(dirPath, { withFileTypes: true })
+      const dirents = await fsp.readdir(safePath, { withFileTypes: true })
       const entries = dirents.slice(0, 500).map((d) => ({ name: d.name, isDir: d.isDirectory() }))
       if (dirents.length > 500) {
         entries.push({ name: `…[共 ${dirents.length} 项，仅显示前 500 项]`, isDir: false })
@@ -415,12 +552,20 @@ export class AutomationService {
   }
 
   public sysPower(action: 'shutdown' | 'restart' | 'lock'): AutomationSysPowerResult {
+    // C1-c：非 Windows 平台不支持（命令为 Windows 专用）
+    if (!isWin) {
+      return { ok: false, error: '当前操作系统不支持电源操作（仅支持 Windows）' }
+    }
     const commands: Record<typeof action, string> = {
       shutdown: 'shutdown /s /t 60',
       restart: 'shutdown /r /t 60',
       lock: 'rundll32.exe user32.dll,LockWorkStation'
     }
     const cmd = commands[action]
+    // 运行时兜底：非法 action 会得到 undefined，直接 exec(undefined) 会抛 TypeError
+    if (!cmd) {
+      return { ok: false, error: `不支持的电源操作：${String(action)}` }
+    }
     try {
       exec(cmd, (error) => {
         if (error) logger.error('Automation sysPower failed', error)

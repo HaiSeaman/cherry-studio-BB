@@ -1,4 +1,4 @@
-import { useSyncExternalStore, type FC } from 'react'
+import { type FC,useSyncExternalStore } from 'react'
 import styled from 'styled-components'
 
 import FmRadio from '../music/components/FmRadio'

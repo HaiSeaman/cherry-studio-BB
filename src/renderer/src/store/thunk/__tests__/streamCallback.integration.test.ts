@@ -232,9 +232,14 @@ vi.mock('@renderer/services/TokenService', () => ({
 
 vi.mock('@renderer/utils/queue', () => ({
   getTopicQueue: vi.fn(() => ({
-    add: vi.fn((task) => task())
+    add: vi.fn((task) => task()),
+    onIdle: vi.fn(() => Promise.resolve())
   })),
-  waitForTopicQueue: vi.fn()
+  waitForTopicQueue: vi.fn(),
+  clearTopicQueuePending: vi.fn(),
+  markCancelledAskIds: vi.fn(),
+  isAskIdCancelled: vi.fn(() => false),
+  unmarkCancelledAskIds: vi.fn()
 }))
 
 vi.mock('@renderer/utils/messageUtils/find', () => ({

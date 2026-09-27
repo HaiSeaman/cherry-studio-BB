@@ -34,6 +34,15 @@ describe('resampleTo16k', () => {
     const out = resampleTo16k(new Float32Array(4410), 44100)
     expect(out.length).toBe(1600) // 4410 * 16000/44100 = 1600
   })
+
+  it('低于目标采样率（8kHz 上采样）不产生 NaN（防御 end==start 除零）', () => {
+    const out = resampleTo16k(new Float32Array([0.5, -0.5, 0.25, -0.25]), 8000)
+    expect(out.length).toBe(8) // 4 * 16000/8000 = 8
+    // 8k→16k 上采样 ratio=0.5，部分区间 end==start；修复前 sum/(end-start) 除零得 NaN 污染整段 PCM
+    for (const v of out) {
+      expect(Number.isNaN(v)).toBe(false)
+    }
+  })
 })
 
 describe('concatPcm', () => {

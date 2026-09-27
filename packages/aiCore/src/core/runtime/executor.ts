@@ -136,8 +136,10 @@ export class RuntimeExecutor<
         this.pluginEngine.usePlugins([this.createResolveImageModelPlugin()])
       }
 
-      return this.pluginEngine.executeImageWithPlugins('generateImage', params, (resolvedModel, transformedParams) =>
-        _generateImage({ ...transformedParams, model: resolvedModel })
+      return await this.pluginEngine.executeImageWithPlugins(
+        'generateImage',
+        params,
+        (resolvedModel, transformedParams) => _generateImage({ ...transformedParams, model: resolvedModel })
       )
     } catch (error) {
       if (error instanceof Error) {

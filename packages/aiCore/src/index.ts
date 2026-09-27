@@ -38,6 +38,9 @@ export type {
   ToolFactoryPatch,
   WebSearchToolConfigMap
 } from './core/providers'
+// ProviderError / ProviderInitializationError 是 class：必须按值导出，
+// 否则消费者拿到的是 undefined，无法 instanceof 分类
+export { ProviderError, ProviderInitializationError } from './core/providers'
 
 // ==================== 错误处理 ====================
 export {
@@ -48,3 +51,5 @@ export {
   RecursiveDepthError,
   TemplateLoadError
 } from './core/errors'
+// 图像生成链路抛出的错误（此前未导出，消费者无法用 instanceof 分类）
+export { ImageGenerationError, ImageModelResolutionError } from './core/runtime/errors'

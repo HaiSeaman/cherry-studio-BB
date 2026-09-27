@@ -88,8 +88,14 @@ function send(records: Buffer): void {
   if (records.length === 0) return
   const sendInput = getSendInput()
   if (!sendInput) return
+  const expected = records.length / INPUT_RECORD_SIZE
   try {
-    sendInput(records.length / INPUT_RECORD_SIZE, records)
+    const sent = sendInput(expected, records)
+    // SendInput 返回实际注入条数；部分失败通常是 UIPI（目标窗口提权）或输入被拦截，
+    // 静默会导致「识别出字却没打进去」，记日志便于排查
+    if (sent !== expected) {
+      logger.warn(`SendInput 部分失败：注入 ${sent}/${expected} 条`)
+    }
   } catch (error) {
     logger.error(`模拟输入失败：${(error as Error).message}`)
   }

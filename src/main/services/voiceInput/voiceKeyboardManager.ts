@@ -18,6 +18,8 @@ class VoiceKeyboardManager {
   private hook: VoiceKeyboardHook | null = null
   /** 当前按住的快捷键键码：交给焦点守卫用于忽略长按自动重复 */
   private holdKeys: number[] = []
+  /** 上次 sync 的快捷键：未变则跳过 updateShortcut，避免窗口 focus/blur 反复重连 uiohook 丢事件 */
+  private lastShortcut: string[] | null = null
 
   private readonly onStart = (): void => {
     logger.info('voice input started')
@@ -39,14 +41,18 @@ class VoiceKeyboardManager {
         this.hook.dispose()
         this.hook = null
       }
+      this.lastShortcut = null
       return
     }
 
     if (!this.hook) {
       this.hook = createVoiceKeyboardHook(shortcut.shortcut, this.onStart, this.onStop)
-    } else {
-      // 快捷键配置变了：更新检测目标（保持当前钩子状态）
+      this.lastShortcut = [...shortcut.shortcut]
+    } else if (!sameShortcut(this.lastShortcut, shortcut.shortcut)) {
+      // 仅当快捷键真的变了才重建检测器：ShortcutService 在窗口 focus/blur 时会反复 sync，
+      // 无谓地 stop+off+重连 uiohook 会让按住按键时刚好落在断开窗口内丢 keyup（录音不停止）
       this.hook.updateShortcut(shortcut.shortcut)
+      this.lastShortcut = [...shortcut.shortcut]
     }
 
     this.hook.start()
@@ -57,7 +63,14 @@ class VoiceKeyboardManager {
       this.hook.dispose()
       this.hook = null
     }
+    this.lastShortcut = null
   }
 }
 
 export const voiceKeyboardManager = new VoiceKeyboardManager()
+
+/** 比较两组快捷键是否相同（顺序敏感，与录入一致） */
+function sameShortcut(a: string[] | null, b: string[]): boolean {
+  if (!a || a.length !== b.length) return false
+  return a.every((k, i) => k === b[i])
+}

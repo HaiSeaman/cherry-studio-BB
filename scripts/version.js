@@ -25,7 +25,9 @@ const updatedPackageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
 const newVersion = updatedPackageJson.version
 
 // Git 操作
-exec('git add .')
+// 不再使用 `git add .`：它会把工作区里所有未被 .gitignore 忽略的改动（临时文件、
+// 本机配置等）一起卷进版本提交。这里只显式暂存版本相关文件。
+exec('git add package.json CHANGELOG.md pnpm-lock.yaml')
 exec(`git commit -m "chore(version): ${newVersion}"`)
 exec(`git tag -a v${newVersion} -m "Version ${newVersion}"`)
 

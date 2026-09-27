@@ -1,4 +1,5 @@
 import type { KnowledgeItem } from '@renderer/types'
+import { WEB_SEARCH_SOURCE } from '@renderer/types'
 import type { CitationMessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { describe, expect, it } from 'vitest'
@@ -12,6 +13,15 @@ const citationBlock = (knowledge: KnowledgeItem[]): CitationMessageBlock => ({
   createdAt: '',
   status: MessageBlockStatus.SUCCESS,
   knowledge
+})
+
+const aiSdkBlock = (results: any[]): CitationMessageBlock => ({
+  id: 'blk',
+  messageId: 'msg',
+  type: MessageBlockType.CITATION,
+  createdAt: '',
+  status: MessageBlockStatus.SUCCESS,
+  response: { source: WEB_SEARCH_SOURCE.AISDK, results }
 })
 
 describe('formatCitationsFromBlock —— 知识库引用', () => {
@@ -46,5 +56,25 @@ describe('formatCitationsFromBlock —— 知识库引用', () => {
   it('没有知识库片段时不产生引用', () => {
     expect(formatCitationsFromBlock(citationBlock([]))).toEqual([])
     expect(formatCitationsFromBlock(undefined)).toEqual([])
+  })
+})
+
+describe('formatCitationsFromBlock —— AISDK 网络搜索', () => {
+  it('畸形 url 且无标题时不抛错，用原始 url 兜底作标题', () => {
+    const citations = formatCitationsFromBlock(aiSdkBlock([{ url: 'not a valid url', title: '' }]))
+
+    expect(citations).toHaveLength(1)
+    expect(citations[0]).toMatchObject({
+      number: 1,
+      url: 'not a valid url',
+      title: 'not a valid url',
+      type: 'websearch'
+    })
+  })
+
+  it('合法 url 无标题时用 hostname 作标题', () => {
+    const citations = formatCitationsFromBlock(aiSdkBlock([{ url: 'https://example.com/a', title: '' }]))
+
+    expect(citations[0]).toMatchObject({ title: 'example.com' })
   })
 })

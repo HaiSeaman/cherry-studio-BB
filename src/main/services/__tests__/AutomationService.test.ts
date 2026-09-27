@@ -8,16 +8,19 @@ vi.mock('../WindowService', () => ({
   }
 }))
 
-// saveTask 会触发防抖写盘（500ms 后 fsp.writeFile），mock 掉避免测试环境文件 IO
+// saveTask 会触发防抖写盘（500ms 后 writeWithLock），mock 掉避免测试环境文件 IO
 vi.mock('node:fs/promises', () => ({
   writeFile: vi.fn(async () => {}),
   readFile: vi.fn(async () => ''),
+  copyFile: vi.fn(async () => {}),
   mkdir: vi.fn(async () => ''),
   stat: vi.fn(),
   readdir: vi.fn(),
   open: vi.fn(),
   close: vi.fn()
 }))
+
+import * as fsp from 'node:fs/promises'
 
 import AutomationService, { normalizeTaskSchedules } from '../AutomationService'
 
@@ -297,5 +300,41 @@ describe('saveTask 消毒', () => {
     expect(edited.name).toBe('改名')
     expect(edited.lastRunAt).toBe(111)
     expect(edited.lastTriggerKey).toBe('2026-01-01')
+  })
+})
+
+describe('load() 落盘数据保护', () => {
+  const svcStore = AutomationService as unknown as {
+    storePath: string
+    data: { tasks: AutomationTask[]; runs: unknown[]; authorizedRoots: string[] }
+    load: () => Promise<void>
+  }
+
+  it('JSON 损坏：备份为 .bak 并以空数据启动（不再静默清空原文件）', async () => {
+    svcStore.storePath = 'C:\\tmp\\automation.json'
+    vi.mocked(fsp.readFile).mockResolvedValueOnce('{ 这不是合法 JSON' as never)
+
+    await svcStore.load()
+
+    // 必须先备份，否则紧随其后的 save() 会覆盖掉原文件
+    expect(vi.mocked(fsp.copyFile)).toHaveBeenCalledWith('C:\\tmp\\automation.json', 'C:\\tmp\\automation.json.bak')
+    expect(svcStore.data.tasks).toEqual([])
+    expect(svcStore.data.authorizedRoots).toEqual([])
+  })
+
+  it('JSON 正常：读出任务并保留授权根目录', async () => {
+    svcStore.storePath = 'C:\\tmp\\automation.json'
+    vi.mocked(fsp.readFile).mockResolvedValueOnce(
+      JSON.stringify({
+        tasks: [makeTask({ id: 'task_load' })],
+        runs: [],
+        authorizedRoots: ['C:\\proj']
+      }) as never
+    )
+
+    await svcStore.load()
+
+    expect(svcStore.data.tasks.map((t) => t.id)).toEqual(['task_load'])
+    expect(svcStore.data.authorizedRoots).toEqual(['C:\\proj'])
   })
 })

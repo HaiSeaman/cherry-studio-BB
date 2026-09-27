@@ -9,7 +9,7 @@ import { createMockImageModel, createMockLanguageModel, createMockProviderV3, mo
 import { generateImage, generateText, streamText } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ImageModelResolutionError } from '../errors'
+import { ImageGenerationError, ImageModelResolutionError } from '../errors'
 import { RuntimeExecutor } from '../executor'
 
 // Mock AI SDK
@@ -215,36 +215,39 @@ describe('RuntimeExecutor - Model Resolution', () => {
       expect(mockProvider.imageModel).toHaveBeenCalledWith('aihubmix|openai|dall-e-3')
     })
 
-    it('should throw ImageModelResolutionError on resolution failure', async () => {
+    it('should wrap resolution failure in ImageGenerationError', async () => {
       mockProvider.imageModel.mockImplementation(() => {
         throw new Error('Model not found')
       })
 
-      await expect(
-        executor.generateImage({
+      const thrownError = await executor
+        .generateImage({
           model: 'invalid-model',
           prompt: 'Test'
         })
-      ).rejects.toThrow(ImageModelResolutionError)
+        .catch((error) => error)
+
+      expect(thrownError).toBeInstanceOf(ImageGenerationError)
+      // 原始 ImageModelResolutionError 作为 cause 保留
+      expect(thrownError.cause).toBeInstanceOf(ImageModelResolutionError)
     })
 
-    it('should include modelId and providerId in ImageModelResolutionError', async () => {
+    it('should include modelId and providerId in wrapped ImageGenerationError', async () => {
       mockProvider.imageModel.mockImplementation(() => {
         throw new Error('Not found')
       })
 
-      try {
-        await executor.generateImage({
+      const thrownError = await executor
+        .generateImage({
           model: 'invalid-model',
           prompt: 'Test'
         })
-        expect.fail('Should have thrown ImageModelResolutionError')
-      } catch (error) {
-        expect(error).toBeInstanceOf(ImageModelResolutionError)
-        const imgError = error as ImageModelResolutionError
-        expect(imgError.message).toContain('invalid-model')
-        expect(imgError.providerId).toBe('openai')
-      }
+        .catch((error) => error)
+
+      expect(thrownError).toBeInstanceOf(ImageGenerationError)
+      expect(thrownError.message).toContain('invalid-model')
+      expect(thrownError.providerId).toBe('openai')
+      expect(thrownError.modelId).toBe('invalid-model')
     })
 
     it('should extract modelId from direct model object in error', async () => {

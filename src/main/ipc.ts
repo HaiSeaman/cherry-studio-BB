@@ -403,36 +403,83 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   // automation（AI 自动化定时任务）
-  ipcMain.handle(IpcChannel.Automation_GetTasks, () => automationService.getTasks())
-  ipcMain.handle(IpcChannel.Automation_SaveTask, (_, task: AutomationTask) => automationService.saveTask(task))
-  ipcMain.handle(IpcChannel.Automation_DeleteTask, (_, taskId: string) => automationService.deleteTask(taskId))
-  ipcMain.handle(IpcChannel.Automation_RunTask, (_, taskId: string) => automationService.runTaskNow(taskId))
-  ipcMain.handle(IpcChannel.Automation_GetRuns, (_, limit?: number) => automationService.getRuns(limit ?? 100))
-  ipcMain.handle(IpcChannel.Automation_GetRun, (_, runId: string) => automationService.getRun(runId))
-  ipcMain.handle(IpcChannel.Automation_UpdateRun, (_, runId: string, step: AutomationRunStep) =>
-    automationService.updateRun(runId, step)
-  )
+  // C1-d：自动化接口涉及本地文件/电源等高危能力，仅允许自家窗口的顶层页面调用；
+  // 拒绝 webview（小程序/网页）与子 frame，防止被加载的远端页面借 IPC 越权。
+  const assertAutomationSender = (event: Electron.IpcMainInvokeEvent) => {
+    const sender = event.sender
+    if (!sender || sender.isDestroyed()) {
+      throw new Error('自动化接口拒绝：发送者不可用')
+    }
+    if (sender.getType() === 'webview') {
+      throw new Error('自动化接口拒绝：小程序/网页不可调用')
+    }
+    const frame = event.senderFrame
+    if (frame && frame.parent) {
+      throw new Error('自动化接口拒绝：仅允许顶层页面调用')
+    }
+  }
+
+  ipcMain.handle(IpcChannel.Automation_GetTasks, (event) => {
+    assertAutomationSender(event)
+    return automationService.getTasks()
+  })
+  ipcMain.handle(IpcChannel.Automation_SaveTask, (event, task: AutomationTask) => {
+    assertAutomationSender(event)
+    return automationService.saveTask(task)
+  })
+  ipcMain.handle(IpcChannel.Automation_DeleteTask, (event, taskId: string) => {
+    assertAutomationSender(event)
+    return automationService.deleteTask(taskId)
+  })
+  ipcMain.handle(IpcChannel.Automation_RunTask, (event, taskId: string) => {
+    assertAutomationSender(event)
+    return automationService.runTaskNow(taskId)
+  })
+  ipcMain.handle(IpcChannel.Automation_GetRuns, (event, limit?: number) => {
+    assertAutomationSender(event)
+    return automationService.getRuns(limit ?? 100)
+  })
+  ipcMain.handle(IpcChannel.Automation_GetRun, (event, runId: string) => {
+    assertAutomationSender(event)
+    return automationService.getRun(runId)
+  })
+  ipcMain.handle(IpcChannel.Automation_UpdateRun, (event, runId: string, step: AutomationRunStep) => {
+    assertAutomationSender(event)
+    return automationService.updateRun(runId, step)
+  })
   ipcMain.handle(
     IpcChannel.Automation_FinishRun,
-    (_, runId: string, payload: { status: 'success' | 'failed' | 'timeout'; output?: string; error?: string }) =>
-      automationService.finishRun(runId, payload)
+    (event, runId: string, payload: { status: 'success' | 'failed' | 'timeout'; output?: string; error?: string }) => {
+      assertAutomationSender(event)
+      return automationService.finishRun(runId, payload)
+    }
   )
-  ipcMain.handle(
-    IpcChannel.Automation_SysFileRead,
-    (_, filePath: string): Promise<AutomationSysFileResult> => automationService.sysFileRead(filePath)
-  )
+  ipcMain.handle(IpcChannel.Automation_SysFileRead, (event, filePath: string): Promise<AutomationSysFileResult> => {
+    assertAutomationSender(event)
+    return automationService.sysFileRead(filePath)
+  })
   ipcMain.handle(
     IpcChannel.Automation_SysFileWrite,
-    (_, filePath: string, content: string): Promise<AutomationSysFileResult> =>
-      automationService.sysFileWrite(filePath, content)
+    (event, filePath: string, content: string): Promise<AutomationSysFileResult> => {
+      assertAutomationSender(event)
+      return automationService.sysFileWrite(filePath, content)
+    }
   )
-  ipcMain.handle(
-    IpcChannel.Automation_SysFileList,
-    (_, dirPath: string): Promise<AutomationSysFileListResult> => automationService.sysFileList(dirPath)
-  )
+  ipcMain.handle(IpcChannel.Automation_SysFileList, (event, dirPath: string): Promise<AutomationSysFileListResult> => {
+    assertAutomationSender(event)
+    return automationService.sysFileList(dirPath)
+  })
+  // C1-c：电源操作做运行时枚举校验（非法值会得到 undefined，exec(undefined) 抛 TypeError）
+  const POWER_ACTIONS = ['shutdown', 'restart', 'lock'] as const
   ipcMain.handle(
     IpcChannel.Automation_SysPower,
-    (_, action: 'shutdown' | 'restart' | 'lock'): AutomationSysPowerResult => automationService.sysPower(action)
+    (event, action: 'shutdown' | 'restart' | 'lock'): AutomationSysPowerResult => {
+      assertAutomationSender(event)
+      if (!POWER_ACTIONS.includes(action)) {
+        throw new Error(`不支持的电源操作：${String(action)}`)
+      }
+      return automationService.sysPower(action)
+    }
   )
   // zip
   ipcMain.handle(IpcChannel.Zip_Decompress, (_, text: Buffer) => decompress(text))

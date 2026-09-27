@@ -336,9 +336,18 @@ describe('RuntimeExecutor.generateImage', () => {
         throw modelError
       })
 
-      await expect(executor.generateImage({ model: 'invalid-model', prompt: 'A test image' })).rejects.toThrow(
-        ImageGenerationError
-      )
+      const thrownError = await executor
+        .generateImage({ model: 'invalid-model', prompt: 'A test image' })
+        .catch((error) => error)
+
+      // 错误被包装为 ImageGenerationError，并附带 providerId/modelId 上下文
+      expect(thrownError).toBeInstanceOf(ImageGenerationError)
+      expect(thrownError.providerId).toBe('openai')
+      expect(thrownError.modelId).toBe('invalid-model')
+      expect(thrownError.message).toContain('Failed to resolve image model: invalid-model')
+      // 原始错误沿 cause 链保留
+      expect(thrownError.cause).toBeInstanceOf(ImageModelResolutionError)
+      expect((thrownError.cause as ImageModelResolutionError).cause).toBe(modelError)
     })
 
     it('should handle ImageModelResolutionError correctly', async () => {
@@ -351,11 +360,12 @@ describe('RuntimeExecutor.generateImage', () => {
         .generateImage({ model: 'invalid-model', prompt: 'A test image' })
         .catch((error) => error)
 
-      // Error is thrown from pluginEngine directly as ImageModelResolutionError
-      expect(thrownError).toBeInstanceOf(ImageModelResolutionError)
+      // ImageModelResolutionError 被包装为 ImageGenerationError，并保留 providerId/modelId 上下文
+      expect(thrownError).toBeInstanceOf(ImageGenerationError)
       expect(thrownError.message).toContain('Failed to resolve image model: invalid-model')
       expect(thrownError.providerId).toBe('openai')
       expect(thrownError.modelId).toBe('invalid-model')
+      expect(thrownError.cause).toBeInstanceOf(ImageModelResolutionError)
     })
 
     it('should handle ImageModelResolutionError without provider', async () => {
@@ -373,10 +383,16 @@ describe('RuntimeExecutor.generateImage', () => {
       const apiError = new Error('API request failed')
       vi.mocked(aiGenerateImage).mockRejectedValue(apiError)
 
-      // Error propagates directly from pluginEngine without wrapping
-      await expect(executor.generateImage({ model: 'dall-e-3', prompt: 'A test image' })).rejects.toThrow(
-        'API request failed'
-      )
+      // 错误被包装为 ImageGenerationError，并附带 providerId/modelId 上下文
+      const thrownError = await executor
+        .generateImage({ model: 'dall-e-3', prompt: 'A test image' })
+        .catch((error) => error)
+
+      expect(thrownError).toBeInstanceOf(ImageGenerationError)
+      expect(thrownError.message).toContain('API request failed')
+      expect(thrownError.providerId).toBe('openai')
+      expect(thrownError.modelId).toBe('dall-e-3')
+      expect(thrownError.cause).toBe(apiError)
     })
 
     it('should handle NoImageGeneratedError', async () => {
@@ -388,10 +404,16 @@ describe('RuntimeExecutor.generateImage', () => {
       vi.mocked(aiGenerateImage).mockRejectedValue(noImageError)
       vi.mocked(NoImageGeneratedError.isInstance).mockReturnValue(true)
 
-      // Error propagates directly from pluginEngine
-      await expect(executor.generateImage({ model: 'dall-e-3', prompt: 'A test image' })).rejects.toThrow(
-        'No image generated'
-      )
+      // 错误被包装为 ImageGenerationError，并附带 providerId/modelId 上下文
+      const thrownError = await executor
+        .generateImage({ model: 'dall-e-3', prompt: 'A test image' })
+        .catch((error) => error)
+
+      expect(thrownError).toBeInstanceOf(ImageGenerationError)
+      expect(thrownError.message).toContain('No image generated')
+      expect(thrownError.providerId).toBe('openai')
+      expect(thrownError.modelId).toBe('dall-e-3')
+      expect(thrownError.cause).toBe(noImageError)
     })
 
     it('should execute onError plugin hook on failure', async () => {
@@ -412,7 +434,7 @@ describe('RuntimeExecutor.generateImage', () => {
         [errorPlugin]
       )
 
-      // Error propagates directly from pluginEngine
+      // 原始错误会被包装为 ImageGenerationError，但 onError 插件仍先收到原始错误
       await expect(executorWithPlugin.generateImage({ model: 'dall-e-3', prompt: 'A test image' })).rejects.toThrow(
         'Generation failed'
       )
@@ -435,7 +457,7 @@ describe('RuntimeExecutor.generateImage', () => {
       const abortController = new AbortController()
       setTimeout(() => abortController.abort(), 10)
 
-      // Error propagates directly from pluginEngine
+      // 错误被包装为 ImageGenerationError，消息包含原始 abort 原因
       await expect(
         executor.generateImage({ model: 'dall-e-3', prompt: 'A test image', abortSignal: abortController.signal })
       ).rejects.toThrow('Operation was aborted')

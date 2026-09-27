@@ -4,12 +4,6 @@ const path = require('path')
 const { verify } = require('./verify-asar-integrity')
 
 exports.default = async function (context) {
-  const platform = context.packager.platform.name
-  if (platform === 'windows') {
-    fs.rmSync(path.join(context.appOutDir, 'LICENSE.electron.txt'), { force: true })
-    fs.rmSync(path.join(context.appOutDir, 'LICENSES.chromium.html'), { force: true })
-  }
-
   // 硬校验 app.asar：一旦打包过程被打断或被外部 shell 包装器污染，asar 内的文件
   // 数据就会与头部偏移错位，package.json 首当其冲变成非法 JSON。打包版是 GUI 子系统
   // 程序、没有控制台，这种损坏在用户机上表现为「双击没反应、进程都看不到」，

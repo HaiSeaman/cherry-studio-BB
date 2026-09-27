@@ -1,5 +1,6 @@
 import { loggerService } from '@logger'
 import { createSelector } from '@reduxjs/toolkit'
+import { dbService } from '@renderer/services/db'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { estimateUserPromptUsage } from '@renderer/services/TokenService'
 import store, { type RootState, useAppDispatch, useAppSelector } from '@renderer/store'
@@ -21,8 +22,14 @@ import {
 } from '@renderer/store/thunk/messageThunk'
 import { type Assistant, type Model, objectKeys, type Topic, type TranslateLanguageCode } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
-import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { abortCompletion } from '@renderer/utils/abortController'
+import {
+  clearTopicQueuePending,
+  getTopicQueue,
+  markCancelledAskIds,
+  unmarkCancelledAskIds
+} from '@renderer/utils/queue'
 import { difference, throttle } from 'lodash'
 import { useCallback } from 'react'
 
@@ -141,6 +148,32 @@ export function useMessageOperations(topic: Topic) {
     for (const askId of askIds) {
       abortCompletion(askId)
     }
+
+    // 仅 abort 已注册的 controller 无法阻止 concurrency=1 队列里排队中的第 2..N 个任务
+    // 继续启动烧 token：这里清掉该话题未启动的队列任务，并标记 askId 供入口兜底拦截。
+    if (askIds.length > 0) {
+      markCancelledAskIds(askIds)
+      clearTopicQueuePending(topic.id)
+      // 队列排空后清理标记，避免同一 askId 后续重发被误拦截
+      void getTopicQueue(topic.id)
+        .onIdle()
+        .then(() => unmarkCancelledAskIds(askIds))
+    }
+
+    // 尚未启动的排队助手消息不会再有任何任务处理它们，需将 status 从 pending 归一为 PAUSED，
+    // 否则会一直显示「正在生成」且无法重试。
+    const queuedMessages = topicMessages.filter((m) => m.role === 'assistant' && m.status === 'pending')
+    for (const message of queuedMessages) {
+      dispatch(
+        newMessagesActions.updateMessage({
+          topicId: topic.id,
+          messageId: message.id,
+          updates: { status: AssistantMessageStatus.PAUSED }
+        })
+      )
+      void dbService.updateMessage(topic.id, message.id, { status: AssistantMessageStatus.PAUSED })
+    }
+
     dispatch(newMessagesActions.setTopicLoading({ topicId: topic.id, loading: false }))
   }, [topic.id, dispatch])
 

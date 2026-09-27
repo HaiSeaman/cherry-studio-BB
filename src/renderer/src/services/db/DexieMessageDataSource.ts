@@ -171,7 +171,12 @@ export class DexieMessageDataSource implements MessageDataSource {
 
   async deleteMessage(topicId: string, messageId: string): Promise<void> {
     try {
-      await db.transaction('rw', db.topics, db.message_blocks, db.files, async () => {
+      // 事务内只收集要删的文件元数据，事务外再删物理文件（走 IPC/磁盘 IO）。
+      // 若在事务内 await IPC，Dexie 在无挂起 IDB 请求时会自动提交事务，
+      // 后续 message_blocks.bulkDelete / topics.update 会抛 "transaction already committed"。
+      let files: any[] = []
+
+      await db.transaction('rw', db.topics, db.message_blocks, async () => {
         const topic = await db.topics.get(topicId)
         if (!topic) return
 
@@ -181,18 +186,13 @@ export class DexieMessageDataSource implements MessageDataSource {
         const message = topic.messages[messageIndex]
         const blockIds = message.blocks || []
 
-        // Delete blocks and handle files
+        // Delete blocks and collect associated files
         if (blockIds.length > 0) {
           const blocks = await db.message_blocks.where('id').anyOf(blockIds).toArray()
-          const files = blocks
+          files = blocks
             .filter((block) => block.type === 'file' || block.type === 'image')
             .map((block: any) => block.file)
             .filter((file) => file !== undefined)
-
-          // Clean up files
-          if (!isEmpty(files)) {
-            await Promise.all(files.map((file) => FileManager.deleteFile(file.id, false)))
-          }
 
           await db.message_blocks.bulkDelete(blockIds)
         }
@@ -201,6 +201,11 @@ export class DexieMessageDataSource implements MessageDataSource {
         topic.messages.splice(messageIndex, 1)
         await db.topics.update(topicId, { messages: topic.messages })
       })
+
+      // Delete files outside the transaction (IPC/disk IO)
+      if (!isEmpty(files)) {
+        await Promise.all(files.map((file) => FileManager.deleteFile(file.id, false)))
+      }
 
       store.dispatch(updateTopicUpdatedAt({ topicId }))
     } catch (error) {
@@ -211,36 +216,31 @@ export class DexieMessageDataSource implements MessageDataSource {
 
   async deleteMessages(topicId: string, messageIds: string[]): Promise<void> {
     try {
-      await db.transaction('rw', db.topics, db.message_blocks, db.files, async () => {
+      // 事务内只收集要删的文件元数据，事务外再删物理文件（同 deleteMessage）
+      let files: any[] = []
+
+      await db.transaction('rw', db.topics, db.message_blocks, async () => {
         const topic = await db.topics.get(topicId)
         if (!topic) return
 
         // Collect all block IDs from messages to be deleted
         const allBlockIds: string[] = []
-        const messagesToDelete: Message[] = []
 
         for (const messageId of messageIds) {
           const message = topic.messages.find((m) => m.id === messageId)
-          if (message) {
-            messagesToDelete.push(message)
-            if (message.blocks && message.blocks.length > 0) {
-              allBlockIds.push(...message.blocks)
-            }
+          if (message && message.blocks && message.blocks.length > 0) {
+            allBlockIds.push(...message.blocks)
           }
         }
 
-        // Delete blocks and handle files
+        // Delete blocks and collect associated files
         if (allBlockIds.length > 0) {
           const blocks = await db.message_blocks.where('id').anyOf(allBlockIds).toArray()
-          const files = blocks
+          files = blocks
             .filter((block) => block.type === 'file' || block.type === 'image')
             .map((block: any) => block.file)
             .filter((file) => file !== undefined)
 
-          // Clean up files
-          if (!isEmpty(files)) {
-            await Promise.all(files.map((file) => FileManager.deleteFile(file.id, false)))
-          }
           await db.message_blocks.bulkDelete(allBlockIds)
         }
 
@@ -248,6 +248,12 @@ export class DexieMessageDataSource implements MessageDataSource {
         const remainingMessages = topic.messages.filter((m) => !messageIds.includes(m.id))
         await db.topics.update(topicId, { messages: remainingMessages })
       })
+
+      // Delete files outside the transaction (IPC/disk IO)
+      if (!isEmpty(files)) {
+        await Promise.all(files.map((file) => FileManager.deleteFile(file.id, false)))
+      }
+
       store.dispatch(updateTopicUpdatedAt({ topicId }))
     } catch (error) {
       logger.error(`Failed to delete messages from topic ${topicId}:`, error as Error)

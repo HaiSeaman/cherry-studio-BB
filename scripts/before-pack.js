@@ -110,13 +110,36 @@ function copyKoffiNativeBinding(platform, arch, rootDir = path.join(__dirname, '
   }
 }
 
+/**
+ * resources/scripts 下的 MCP 运行时安装脚本必须随包分发：App_InstallUvBinary /
+ * App_InstallBunBinary 会在运行时直接 spawn 这些脚本（见 src/main/utils/process.ts），
+ * 而 install-uv.js / install-bun.js 首行就 require('./download')。download.js 一旦
+ * 缺失，spawn 出去的进程会立刻抛 Cannot find module，导致 uv/bun 型 MCP server
+ * 100% 无法自动安装。这些脚本此前被误删过，这里硬失败拦住缺文件的打包。
+ */
+function assertRuntimeInstallScripts(rootDir = path.join(__dirname, '..')) {
+  const scriptsDir = path.join(rootDir, 'resources', 'scripts')
+  const required = ['download.js', 'install-uv.js', 'install-bun.js']
+  const missing = required.filter((name) => !fs.existsSync(path.join(scriptsDir, name)))
+  if (missing.length > 0) {
+    throw new Error(
+      `缺少 MCP 运行时安装脚本：${missing.join('、')}（目录：${scriptsDir}）。` +
+        `缺少会导致 uv/bun 型 MCP server 无法自动安装，请从版本库恢复后再打包`
+    )
+  }
+}
+
 exports.getTargetPackageFilters = getTargetPackageFilters
 exports.copyKoffiNativeBinding = copyKoffiNativeBinding
+exports.assertRuntimeInstallScripts = assertRuntimeInstallScripts
 
 exports.default = async function (context) {
   const arch = context.arch === Arch.arm64 ? 'arm64' : 'x64'
   const platformName = context.packager.platform.name
   const platform = platformToArch[platformName]
+
+  // 硬失败：缺少 MCP 运行时安装脚本（download.js / install-uv.js / install-bun.js）时不要出厂
+  assertRuntimeInstallScripts()
 
   // Download rtk binary for the target platform
   try {

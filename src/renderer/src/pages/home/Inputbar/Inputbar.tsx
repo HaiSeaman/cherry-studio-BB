@@ -215,7 +215,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
     : `在这里输入消息，按 ${getSendMessageShortcutLabel(sendMessageShortcut)} 发送`
 
   const sendMessage = useCallback(async () => {
-    if (checkRateLimit(assistant)) {
+    if (checkRateLimit(assistant, topic.id)) {
       return
     }
 

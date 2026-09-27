@@ -79,9 +79,27 @@ const ShortcutSettings: FC = () => {
     return (hasModifier && hasNonModifier && keys.length >= 2) || hasFnKey
   }
 
+  // 兼容旧数据键名：把历史别名（Control/Command/Cmd）归一为录制器产出的规范键名，
+  // 否则新旧键名不同（如旧 Control vs 新 Ctrl）会被误判为不冲突而重复保存。
+  const normalizeShortcutKey = (key: string): string => {
+    switch (key) {
+      case 'Control':
+        return 'Ctrl'
+      case 'Command':
+      case 'Cmd':
+        return 'CommandOrControl'
+      default:
+        return key
+    }
+  }
+
+  // 快捷键是按键集合，顺序无关；归一后排序再比较，避免顺序差异导致的漏判
+  const normalizeShortcut = (keys: string[]): string[] => [...keys].map(normalizeShortcutKey).sort()
+
   const isDuplicateShortcut = (newShortcut: string[], currentKey: string): boolean => {
+    const normalizedNew = normalizeShortcut(newShortcut).join('+')
     return shortcuts.some(
-      (s) => s.key !== currentKey && s.shortcut.length > 0 && s.shortcut.join('+') === newShortcut.join('+')
+      (s) => s.key !== currentKey && s.shortcut.length > 0 && normalizeShortcut(s.shortcut).join('+') === normalizedNew
     )
   }
 
@@ -290,10 +308,12 @@ const ShortcutSettings: FC = () => {
     }
 
     if (!isValidShortcut(keys)) {
+      window.toast.warning('快捷键无效：需包含修饰键 + 普通键，或使用 F1~F19 功能键')
       return
     }
 
     if (isDuplicateShortcut(keys, record.key)) {
+      window.toast.warning('该快捷键已被其他命令占用，请更换')
       return
     }
 

@@ -32,6 +32,36 @@ export const clearTopicQueue = (topicId: string): void => {
 }
 
 /**
+ * Clear only the not-yet-started tasks of a topic queue, keeping the queue
+ * instance (and any running task) intact.
+ * 用于「停止 / 清空话题」时丢弃排队中的生成任务，避免它们照常启动继续烧 token。
+ * @param topicId The ID of the topic
+ */
+export const clearTopicQueuePending = (topicId: string): void => {
+  requestQueues[topicId]?.clear()
+}
+
+/**
+ * askIds 已被「停止 / 清空话题」取消、但可能已从 PQueue 取出尚未进入函数体的标记集合。
+ * concurrency=1 的队列只会丢弃 pending 任务，仍有极小竞态窗口，入口据此兜底直接返回。
+ */
+const cancelledAskIds = new Set<string>()
+
+export const markCancelledAskIds = (askIds: string[]): void => {
+  for (const id of askIds) {
+    cancelledAskIds.add(id)
+  }
+}
+
+export const isAskIdCancelled = (askId: string): boolean => cancelledAskIds.has(askId)
+
+export const unmarkCancelledAskIds = (askIds: string[]): void => {
+  for (const id of askIds) {
+    cancelledAskIds.delete(id)
+  }
+}
+
+/**
  * Check if a topic has pending requests
  * @param topicId The ID of the topic
  * @returns True if the topic has pending requests

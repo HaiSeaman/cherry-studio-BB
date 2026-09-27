@@ -38,19 +38,19 @@ export const compressImage = async (file: File): Promise<File> => {
  */
 export const captureScrollable = async (elRef: React.RefObject<HTMLElement | null>) => {
   if (elRef.current) {
+    const el = elRef.current
+
+    // Save original styles（在 try 外捕获，便于 finally 中无论如何都能恢复）
+    const originalStyle = {
+      height: el.style.height,
+      maxHeight: el.style.maxHeight,
+      overflow: el.style.overflow,
+      position: el.style.position
+    }
+
+    const originalScrollTop = el.scrollTop
+
     try {
-      const el = elRef.current
-
-      // Save original styles
-      const originalStyle = {
-        height: el.style.height,
-        maxHeight: el.style.maxHeight,
-        overflow: el.style.overflow,
-        position: el.style.position
-      }
-
-      const originalScrollTop = el.scrollTop
-
       // Hide scrollbars during capture
       el.classList.add('hide-scrollbar')
 
@@ -67,17 +67,6 @@ export const captureScrollable = async (elRef: React.RefObject<HTMLElement | nul
       // check if the size of the element is too large
       const MAX_ALLOWED_DIMENSION = 32767 // the maximum allowed pixel size
       if (totalHeight > MAX_ALLOWED_DIMENSION || totalWidth > MAX_ALLOWED_DIMENSION) {
-        // restore the original styles
-        el.style.height = originalStyle.height
-        el.style.maxHeight = originalStyle.maxHeight
-        el.style.overflow = originalStyle.overflow
-        el.style.position = originalStyle.position
-
-        // restore the original scroll position
-        setTimeout(() => {
-          el.scrollTop = originalScrollTop
-        }, 0)
-
         window.toast.error('内容尺寸过大')
         return Promise.reject()
       }
@@ -113,26 +102,27 @@ export const captureScrollable = async (elRef: React.RefObject<HTMLElement | nul
           .catch((error) => reject(error))
       })
 
-      // Restore original styles
-      el.style.height = originalStyle.height
-      el.style.maxHeight = originalStyle.maxHeight
-      el.style.overflow = originalStyle.overflow
-      el.style.position = originalStyle.position
-
       const imageData = canvas
-
-      // Restore original scroll position
-      setTimeout(() => {
-        el.scrollTop = originalScrollTop
-      }, 0)
 
       return imageData
     } catch (error) {
       logger.error('Error capturing scrollable element:', error as Error)
       throw error
     } finally {
+      // 无论成功或失败都恢复原始样式，避免 htmlToImage 失败时容器卡在
+      // height:auto / overflow:visible 等临时样式上。
+      el.style.height = originalStyle.height
+      el.style.maxHeight = originalStyle.maxHeight
+      el.style.overflow = originalStyle.overflow
+      el.style.position = originalStyle.position
+
+      // Restore original scroll position
+      setTimeout(() => {
+        el.scrollTop = originalScrollTop
+      }, 0)
+
       // Remove scrollbar hiding class
-      elRef.current?.classList.remove('hide-scrollbar')
+      el.classList.remove('hide-scrollbar')
     }
   }
 
