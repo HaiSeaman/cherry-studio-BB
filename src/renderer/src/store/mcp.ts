@@ -151,7 +151,10 @@ export const builtinMCPServers: BuiltinMCPServer[] = [
     id: nanoid(),
     name: BuiltinMCPServerNames.filesystem,
     type: 'inMemory',
-    args: ['/Users/username/Desktop'],
+    // 不再预置 args：上游给的是 macOS 占位路径 '/Users/username/Desktop'，
+    // 在 Windows 上会变成 mkdir C:\Users\username\Desktop → EPERM（日志里能看到
+    // 「Failed to create filesystem MCP baseDir」）。留空时服务端会退回自己的默认目录
+    // <userData>/Data/Workspace 并自动创建；需要别的目录由用户在设置页里自己填。
     disabledAutoApproveTools: [...filesystemManualApprovalTools],
     shouldConfig: true,
     isActive: false,

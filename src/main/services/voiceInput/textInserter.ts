@@ -67,8 +67,13 @@ export function buildBackspaceRecords(count: number): Buffer {
  * 按住 Ctrl 说话时（默认快捷键就是 Ctrl+`），注入的 VK_BACK 到了 Chromium 那边
  * 就带着 ctrlKey=true，等价于 Ctrl+Backspace = 删一整个词，而打字器是按「删一个字符」算账的，
  * 一错位就会把已经上屏的正确内容一起吃掉。
- * 只松开、不还原：还原会在注入序列里再插一对按下/抬起，而物理键本来就还按着，
- * 反而容易让目标程序看到自相矛盾的键盘状态；主人松手时系统会补一次多余的抬起，无副作用。
+ *
+ * **必须松开后立刻还原（同一批里）**：曾经试过"只松开不还原"，结果目标程序看到的修饰键
+ * 一直是"没按"，主人按住不放的 `` ` `` 开始自动重复、而且重复不再带修饰键，
+ * 于是每个自动重复都被打成真实的 `` ` `` 字符，一整句话被撕成
+ * `我的```语音素无法```输入法就是这样```子` 的样子。
+ * 还原是安全的：录音期间这些修饰键本来就是物理按住的，还原只是让系统状态与物理状态一致；
+ * 反过来，**没按住时一条记录都不许发**（否则会把修饰键卡在按下状态，主人之后打字全变快捷键）。
  * ponytail: 只处理修饰键这一层，够用；真要支持任意「按住期间按键」的语义再考虑别的方案。
  */
 const MODIFIER_KEYS = [
@@ -123,23 +128,28 @@ function getAsyncKeyState(): GetAsyncKeyStateFn | null {
 const isPhysicallyDown = (getState: GetAsyncKeyStateFn, vk: number): boolean => ((getState(vk) ?? 0) & 0x8000) !== 0
 
 /**
- * 收集「此刻物理按住、需要先松开」的修饰键，并生成对应的抬起记录。
- * 返回 null 表示不需要（没有修饰键按住，或 FFI 不可用）。
+ * 收集「此刻物理按住、需要先松开」的修饰键，并生成 **抬起** 与配对的 **按下（还原）** 记录。
+ * 返回 null 表示不需要（没有修饰键按住，或 FFI 不可用）—— 没按住就一条记录都不许发：
+ * 凭空发一条「按下」会把修饰键卡在按下状态，主人之后打字全会变成快捷键。
  */
-function collectModifierReleases(): { buffer: Buffer; echoCodes: number[] } | null {
+function collectModifierReleases(): { release: Buffer; restore: Buffer; echoCodes: number[] } | null {
   const getState = getAsyncKeyState()
   if (!getState) return null
 
   const held = MODIFIER_KEYS.filter((key) => isPhysicallyDown(getState, key.vk))
   if (held.length === 0) return null
 
-  const buffer = Buffer.alloc(held.length * INPUT_RECORD_SIZE)
+  const release = Buffer.alloc(held.length * INPUT_RECORD_SIZE)
+  const restore = Buffer.alloc(held.length * INPUT_RECORD_SIZE)
   const echoCodes: number[] = []
   held.forEach((key, index) => {
-    writeKeyRecord(buffer, index, key.vk, 0, KEYEVENTF_KEYUP | (key.extended ? KEYEVENTF_EXTENDEDKEY : 0))
-    echoCodes.push(key.uiohook)
+    const extended = key.extended ? KEYEVENTF_EXTENDEDKEY : 0
+    writeKeyRecord(release, index, key.vk, 0, KEYEVENTF_KEYUP | extended)
+    writeKeyRecord(restore, index, key.vk, 0, extended)
+    // 抬起与还原两条都会经由系统键盘钩子回来，都要登记成"自己的回声"
+    echoCodes.push(key.uiohook, key.uiohook)
   })
-  return { buffer, echoCodes }
+  return { release, restore, echoCodes }
 }
 
 /** 最近一次注入的时刻，供焦点守卫兜底排除「注入回声」（按时间的粗略判据） */
@@ -195,6 +205,13 @@ export function isInjectedEcho(event: { keycode: number }): boolean {
 
 /**
  * 把一批按键记录交给 SendInput。
+ *
+ * 顺序很关键：**先松开物理按住的修饰键 → 再注入 → 最后把修饰键按回去**，三步在同一批里。
+ * 只松开不还原会造成灾难性后果（v1.11.2 的真实事故）：目标程序看到的修饰键一直是"没按"，
+ * 于是主人按住不放的那个快捷键键（默认 `Ctrl + \`` 里的 `` ` ``）开始"自动重复"，
+ * 而这时的重复不再带修饰键 → 目标程序会把每个重复都当成真实字符打出来。
+ * 实测能把一整句话撕成 `我的```语音素无法```输入法就是这样```子` 的形状。
+ *
  * @param records 要注入的记录
  * @param echoCodes 这些记录对应的 uiohook 键码（每条一个），成功后登记为「自己的回声」；
  *                  字符走 VK_PACKET，uiohook 报什么键码无法预知，因此不登记、由时间窗兜底
@@ -205,7 +222,7 @@ function send(records: Buffer, echoCodes: readonly number[] = []): void {
   if (!sendInput) return
 
   const releases = collectModifierReleases()
-  const batch = releases ? Buffer.concat([releases.buffer, records]) : records
+  const batch = releases ? Buffer.concat([releases.release, records, releases.restore]) : records
   const expected = batch.length / INPUT_RECORD_SIZE
 
   let sent = 0
@@ -213,7 +230,18 @@ function send(records: Buffer, echoCodes: readonly number[] = []): void {
     sent = sendInput(expected, batch)
     // SendInput 返回实际注入条数；部分失败通常是 UIPI（目标窗口提权）或输入被拦截，
     // 静默会导致「识别出字却没打进去」，记日志便于排查
-    if (sent !== expected) logger.warn(`SendInput 部分失败：注入 ${sent}/${expected} 条`)
+    if (sent !== expected) {
+      logger.warn(`SendInput 部分失败：注入 ${sent}/${expected} 条`)
+      // 部分失败时修饰键可能停在"已松开"上（抬起进去了、还原没进去）→ 那正是上面说的灾难路径，
+      // 所以补发一次还原。凭空发「按下」不会有害：这些键此刻本来就是物理按住的。
+      if (releases) {
+        try {
+          sendInput(releases.restore.length / INPUT_RECORD_SIZE, releases.restore)
+        } catch (error) {
+          logger.error(`补发修饰键还原失败：${(error as Error).message}`)
+        }
+      }
+    }
   } catch (error) {
     logger.error(`模拟输入失败：${(error as Error).message}`)
   } finally {

@@ -127,20 +127,72 @@ describe('全局逐字输入', () => {
     backspaceAtCursor(-1)
     expect(sendInputMock).not.toHaveBeenCalled()
   })
+
+  it('SendInput 部分失败时要补一次「还原修饰键」：不能让修饰键停在松开状态', () => {
+    downKeys.add(VK_LCONTROL)
+    sendInputMock.mockReturnValueOnce(1) // 一整批只进去 1 条 → 算部分失败
+
+    backspaceAtCursor(1)
+
+    expect(sendInputMock).toHaveBeenCalledTimes(2) // 第二批只发还原记录
+    const [count, records] = sendInputMock.mock.calls[1]
+    expect(count).toBe(1)
+    expect(parseRecord(records as Buffer, 0)).toMatchObject({ vk: VK_LCONTROL, flags: 0 })
+  })
+
+  it('修饰键没按住时，部分失败也不需要补还原（本来就没动过它）', () => {
+    sendInputMock.mockReturnValueOnce(0)
+
+    backspaceAtCursor(1)
+
+    expect(sendInputMock).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('修饰键释放：退格不能变成「Ctrl+退格」（删一整个词）', () => {
-  it('物理按住左 Ctrl 时，退格记录前面先插一条 Ctrl 抬起', () => {
+  it('物理按住左 Ctrl 时，退格记录前面先插一条 Ctrl 抬起、末尾再把它按回去', () => {
     downKeys.add(VK_LCONTROL)
 
     backspaceAtCursor(2)
 
-    // 1 条 Ctrl 抬起 + 2 次退格 × (按下+抬起)
-    expect(lastSentCount()).toBe(1 + 4)
+    // 1 条 Ctrl 抬起 + 2 次退格 × (按下+抬起) + 1 条 Ctrl 按下（还原）
+    expect(lastSentCount()).toBe(1 + 4 + 1)
     expect(parseRecord(lastSentBuffer(), 0)).toMatchObject({ vk: VK_LCONTROL, flags: KEYEVENTF_KEYUP, type: 1 })
-    // 原有的退格记录仍在，且排在后面
+    // 原有的退格记录仍在，且排在中间
     expect(parseRecord(lastSentBuffer(), 1)).toMatchObject({ vk: 0x08, flags: 0 })
     expect(parseRecord(lastSentBuffer(), 2)).toMatchObject({ vk: 0x08, flags: KEYEVENTF_KEYUP })
+  })
+
+  it('末尾的还原记录必须是「按下」而不是「抬起」', () => {
+    downKeys.add(VK_LCONTROL)
+    backspaceAtCursor(1)
+
+    const restore = parseRecord(lastSentBuffer(), lastSentCount() - 1)
+    expect(restore).toMatchObject({ vk: VK_LCONTROL, type: 1 })
+    expect(restore.flags & KEYEVENTF_KEYUP).toBe(0)
+  })
+
+  it('注入完必须把修饰键按回去：只松开不还原，主人按住的那个键会开始自动重复、被打成真实字符', () => {
+    // 回归：v1.11.2 只松开不还原 → 目标程序看到的 Ctrl 一直是"没按"，
+    // 于是主人按住不放的 ` 的自动重复从「Ctrl+`（不产生字符）」变成「裸 `（直接打出反引号）」，
+    // 实测能把一整句话撕成 `我的```语音素无法```这样` 的形状。
+    downKeys.add(VK_LCONTROL)
+
+    typeTextAtCursor('测试')
+
+    const buffer = lastSentBuffer()
+    const count = lastSentCount()
+    expect(parseRecord(buffer, 0)).toMatchObject({ vk: VK_LCONTROL, flags: KEYEVENTF_KEYUP })
+    expect(parseRecord(buffer, count - 1)).toMatchObject({ vk: VK_LCONTROL, flags: 0 })
+  })
+
+  it('修饰键没按住时绝不注入「按下」记录：否则会把 Ctrl 卡在按下状态，主人之后打字全变快捷键', () => {
+    backspaceAtCursor(1)
+
+    const count = lastSentCount()
+    for (let i = 0; i < count; i++) {
+      expect(parseRecord(lastSentBuffer(), i).vk).toBe(0x08) // 只有退格，没有任何修饰键记录
+    }
   })
 
   it('按住的是 Shift 时同理（左 Shift 不带扩展键标志）', () => {
@@ -150,14 +202,23 @@ describe('修饰键释放：退格不能变成「Ctrl+退格」（删一整个�
     const first = parseRecord(lastSentBuffer(), 0)
     expect(first).toMatchObject({ vk: VK_LSHIFT, flags: KEYEVENTF_KEYUP })
     expect(first.flags & KEYEVENTF_EXTENDEDKEY).toBe(0)
+
+    const restore = parseRecord(lastSentBuffer(), lastSentCount() - 1)
+    expect(restore).toMatchObject({ vk: VK_LSHIFT, flags: 0 })
   })
 
-  it('按住的是右 Ctrl 时，释放记录带扩展键标志', () => {
+  it('按住的是右 Ctrl 时，释放与还原记录都带扩展键标志', () => {
     downKeys.add(VK_RCONTROL)
     backspaceAtCursor(1)
 
-    const first = parseRecord(lastSentBuffer(), 0)
-    expect(first).toMatchObject({ vk: VK_RCONTROL, flags: KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY })
+    expect(parseRecord(lastSentBuffer(), 0)).toMatchObject({
+      vk: VK_RCONTROL,
+      flags: KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY
+    })
+    expect(parseRecord(lastSentBuffer(), lastSentCount() - 1)).toMatchObject({
+      vk: VK_RCONTROL,
+      flags: KEYEVENTF_EXTENDEDKEY
+    })
   })
 
   it('没有修饰键按住时不插入任何额外记录', () => {
@@ -170,7 +231,7 @@ describe('修饰键释放：退格不能变成「Ctrl+退格」（删一整个�
     downKeys.add(VK_LCONTROL)
     typeTextAtCursor('中')
 
-    expect(lastSentCount()).toBe(1 + 2)
+    expect(lastSentCount()).toBe(1 + 2 + 1)
     expect(parseRecord(lastSentBuffer(), 0)).toMatchObject({ vk: VK_LCONTROL, flags: KEYEVENTF_KEYUP })
     expect(parseRecord(lastSentBuffer(), 1).scan).toBe('中'.charCodeAt(0))
   })
@@ -207,10 +268,12 @@ describe('isInjectedEcho：把「自己注入的事件」登记下来，供焦�
     expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(true)
   })
 
-  it('注入的修饰键抬起也登记（否则按住检测器会以为主人松手了）', () => {
+  it('注入的修饰键抬起与还原都登记（否则按住检测器会以为主人松手了）', () => {
     downKeys.add(VK_LCONTROL)
     mod.backspaceAtCursor(1)
 
+    // 抬起 + 按下 两条都登记 → 前两次认得出，第三次才不是回声
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_CTRL })).toBe(true)
     expect(mod.isInjectedEcho({ keycode: UIOHOOK_CTRL })).toBe(true)
     expect(mod.isInjectedEcho({ keycode: UIOHOOK_CTRL })).toBe(false)
   })

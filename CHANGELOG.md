@@ -29,7 +29,8 @@
 
 **1. 修复：退格被当成「Ctrl+退格 = 删一个词」（P0）**
 
-- `voiceInput/textInserter.ts`：注入前查物理按住的 8 个修饰键（左右 Ctrl/Shift/Alt/Win + 是否需要扩展键标志），在**同一次 SendInput 批**里先补抬起记录
+- `voiceInput/textInserter.ts`：注入前查物理按住的 8 个修饰键（左右 Ctrl/Shift/Alt/Win + 是否需要扩展键标志），在**同一次 SendInput 批**里先补抬起记录，**并在末尾把它们原样按回去（三步同一批）**
+- ⚠️ **末尾的还原是必须的（本版修掉的一次严重事故）**：第一版"只松开不还原"，导致目标程序看到的修饰键一直是"没按"，主人**按住不放的 `` ` `` 开始自动重复、而且重复不再带修饰键**，于是每个自动重复都被打成真实的 `` ` `` 字符 —— 一整句话被撕成「我的 + 一串反引号 + 语音素无法 + 一串反引号 + …」的样子。反过来，**修饰键没按住时一条记录都不许发**（否则会把修饰键卡在按下状态，主人之后打字全变快捷键）；SendInput 部分失败时补发一次还原
 - 新增**精确回声登记表**：注入了哪些键码就登记几条，`ECHO_TRACE_MS` 超时作废（宁可少排除，也不吞掉主人真实的按键）
 - `voiceInput/pressHoldDetector.ts` 新增 `shouldIgnoreKeyEvent`：**注入的修饰键抬起不能被当成"主人松手"**，否则录音会被自己的注入中途打断；被忽略的 keyup 也不许把键从"按住集合"里删掉（否则后续长按自动重复会被误判成新的一次输入）
 - `voiceInput/focusGuard.ts`：回声判据从"纯 120ms 时间窗"改为**先按登记表精确判、再用时间窗兜底**（字符走 `VK_PACKET`，uiohook 报什么键码无法预知，只能靠时间窗）
@@ -88,7 +89,13 @@
 - 修法（不削弱 CSP、不加构建配置 hack）：worklet 移入 **`src/renderer/public/`**（Vite 原样拷贝到产物根），运行时用 `new URL('voiceCapture.worklet.js', document.baseURI)` 从同源路径加载
 - 已用构建产物验证：`out/renderer/voiceCapture.worklet.js` 是真实文件（1853 字节）、产物里再无 `data:text/javascript;base64`、编译结果就是同源 `new URL(...)`；并加了一条单测守住"URL 不许是 data:/blob:"
 
-**11. 文档同步**
+**11. 顺带修复：内置 filesystem MCP 预置了一个 macOS 占位路径**
+
+- `src/renderer/src/store/mcp.ts` 里内置 filesystem 服务器带着 `args: ['/Users/username/Desktop']`（上游遗留），在 Windows 上是 `mkdir C:\Users\username\Desktop` → **EPERM**，日志里会在每次启动时留下一条 `Failed to create filesystem MCP baseDir`
+- 改为**不预置 args**：服务端会退回自己的默认目录 `<userData>/Data/Workspace` 并自动创建；需要别的目录由用户在设置页里自己填（该页的 args 本来就是纯文本多行框）
+- 注意：**已经存过旧配置的用户不受影响**（持久化里仍是被写死的那条路径），需要手动把设置里那一行删掉或改成自己的目录
+
+**12. 文档同步**
 
 - `docs/wiki/03-主进程模块.md`（textInserter / focusGuard 两行）、`docs/wiki/04-渲染进程模块.md`（渲染端录音）、`docs/wiki/01-项目概览.md`、`docs/wiki/README.md`
 - 新增 `docs/release-notes-1.11.2.md`；问题报告与官方事实核查原文在 `docs/语音输入诊断/`
