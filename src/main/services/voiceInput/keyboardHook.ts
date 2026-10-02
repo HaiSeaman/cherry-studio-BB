@@ -1,6 +1,7 @@
 import { uIOhook, UiohookKey, type UiohookKeyboardEvent } from 'uiohook-napi'
 
 import { createPressHoldDetector } from './pressHoldDetector'
+import { isInjectedEcho } from './textInserter'
 
 /**
  * 项目快捷键表键名 → uiohook keycode。
@@ -35,7 +36,17 @@ export function createVoiceKeyboardHook(
   onStart: () => void,
   onStop: () => void
 ): VoiceKeyboardHook {
-  let detector = createPressHoldDetector({ targetKeys: parseShortcutToKeycodes(shortcut), onStart, onStop })
+  const makeDetector = (keys: string[]) =>
+    createPressHoldDetector({
+      targetKeys: parseShortcutToKeycodes(keys),
+      onStart,
+      onStop,
+      // 我们自己注入的修饰键抬起 / 退格不能再被当成主人的操作：
+      // 否则按住说话会被自己注入的抬起判成「松手」而中途中断
+      shouldIgnoreKeyEvent: (event) => isInjectedEcho(event)
+    })
+
+  let detector = makeDetector(shortcut)
   let started = false
 
   const keydown = (e: UiohookKeyboardEvent): void => detector.handleKeyDown(e)
@@ -74,7 +85,7 @@ export function createVoiceKeyboardHook(
       const wasStarted = started
       hook.stop()
       detector.dispose()
-      detector = createPressHoldDetector({ targetKeys: parseShortcutToKeycodes(next), onStart, onStop })
+      detector = makeDetector(next)
       if (wasStarted) hook.start()
     }
   }

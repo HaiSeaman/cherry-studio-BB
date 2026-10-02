@@ -225,6 +225,14 @@ describe('VoiceInputService', () => {
     expect(typeMock).not.toHaveBeenCalled()
   })
 
+  it('finalize：当前无会话时也要广播 done —— 渲染层靠它解除「语音输入中」标记，否则输入框会一直不自动增高', async () => {
+    const service = buildService()
+
+    await service.finalize()
+
+    expect(broadcast).toHaveBeenCalledWith('done')
+  })
+
   it('finalize：识别结果为空文本时不打字，也不擦除已上屏内容', async () => {
     adapter.stopAndFinalize.mockResolvedValue('')
     const service = buildService()

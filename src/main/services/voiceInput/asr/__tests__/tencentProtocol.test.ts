@@ -88,7 +88,9 @@ describe('腾讯云实时语音识别（官方 /asr/v2 WebSocket）', () => {
     expect(msg).toEqual({ code: 4002, text: '', final: false, errorMessage: '鉴权失败' })
   })
 
-  it('buildTencentEndMessage：结束消息格式', () => {
-    expect(buildTencentEndMessage()).toBe('{"end":true}')
+  it('buildTencentEndMessage：结束消息必须是官方格式 {"type": "end"}', () => {
+    // 官方原文：音频流上传完成之后，客户端需发送以下内容的 text message，通知后台结束识别。{"type": "end"}
+    // 写错会被服务端当作未知文本消息（错误码 4010）并直接断连。
+    expect(buildTencentEndMessage()).toBe('{"type":"end"}')
   })
 })

@@ -110,3 +110,15 @@ export const isSendMessageKeyPressed = (
   }
   return isSendMessageKeyPressed
 }
+
+/**
+ * 输入框自动高度的参数。
+ * 语音输入期间必须关掉：受控 textarea 每次 value 变化，rc-textarea 都会重算一次 scrollHeight
+ * （强制同步重排），识别结果一次吐几个字就是十几次重排，界面直接被堵住。
+ * 主人自己拖过高度（customHeight 有值）时本来也不该自动增高。
+ */
+export const resolveTextareaAutoSize = (
+  customHeight: number | undefined,
+  voiceInputActive: boolean
+): false | { minRows: number; maxRows: number } =>
+  customHeight || voiceInputActive ? false : { minRows: 2, maxRows: 20 }

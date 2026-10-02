@@ -86,7 +86,7 @@ describe('TencentASRAdapter', () => {
     await connected
 
     const finalText = adapter.stopAndFinalize()
-    expect(sendMock).toHaveBeenCalledWith('{"end":true}')
+    expect(sendMock).toHaveBeenCalledWith('{"type":"end"}')
 
     trigger('message', message(0, '今天天气', { sliceType: 1 }))
     trigger('message', message(0, '今天天气不错。', { sliceType: 2 }))
@@ -94,6 +94,33 @@ describe('TencentASRAdapter', () => {
     trigger('message', message(0, '', { final: 1 }))
 
     await expect(finalText).resolves.toBe('今天天气不错。明天出太阳。')
+  })
+
+  it('服务端报错时不能把已经上屏的预览文本回退缩短（否则打字器会把最后一句退格删掉）', async () => {
+    const adapter = createAdapter()
+    const connected = adapter.connect()
+    trigger('open')
+    await connected
+
+    // 只上屏了"非稳态"预览，还没有任何分句定稿
+    trigger('message', message(0, '今天天气不错', { sliceType: 1 }))
+    const finalText = adapter.stopAndFinalize()
+    trigger('message', message(4010, ''))
+
+    await expect(finalText).resolves.toBe('今天天气不错')
+  })
+
+  it('连接被服务端断开时，同样返回已经上屏的文本而不是更短的稳态文本', async () => {
+    const adapter = createAdapter()
+    const connected = adapter.connect()
+    trigger('open')
+    await connected
+
+    trigger('message', message(0, '今天天气不错', { sliceType: 1 }))
+    const finalText = adapter.stopAndFinalize()
+    trigger('close')
+
+    await expect(finalText).resolves.toBe('今天天气不错')
   })
 
   it('onResult 实时回调累积文本（多段话拼接）', async () => {

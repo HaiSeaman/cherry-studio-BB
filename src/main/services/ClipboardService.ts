@@ -18,6 +18,7 @@ import {
   stripHtmlText,
   upsertAndEvict
 } from './clipboardLogic'
+import { getClipboardSequenceNumber } from './clipboardSequence'
 import { windowService } from './WindowService'
 
 const logger = loggerService.withContext('ClipboardService')
@@ -47,6 +48,8 @@ class ClipboardService {
   private thumbsDir = ''
   /** 轮间变化闸门：与上一轮的快速特征相同则整轮跳过（防静止剪贴板反复入库/广播） */
   private lastCheapKey = ''
+  /** 上一轮读到的 Windows 剪贴板序列号（读不到时为 null，退回逐格式读取） */
+  private lastSequence: number | null = null
   /** 本次轮询待落盘的图片对象（仅新指纹图片才有值；capture 消费后置空） */
   private pendingImage: { image: NativeImage; size: { width: number; height: number }; png: Buffer } | null = null
 
@@ -88,6 +91,15 @@ class ClipboardService {
   /** 轮询一次：构造本轮快速特征 → 与上轮相同则整轮跳过 → 变化才入库（入库内含指纹去重提升） */
   private poll(): void {
     try {
+      // 便宜的前置闸门：剪贴板序列号没变就整轮跳过。
+      // 原来的顺序是先 readImage/toPNG/md5（4K 截图几十毫秒）再比"变没变"，等于白算，
+      // 主进程被占住会连累语音的音频转发与按键注入。序列号读不到（FFI 失败）时退回原逻辑。
+      const sequence = getClipboardSequenceNumber()
+      if (sequence !== null) {
+        if (sequence === this.lastSequence) return
+        this.lastSequence = sequence
+      }
+
       const formats = clipboard.availableFormats()
       let cheap: string | null = null
       let make: (() => ClipboardItem) | null = null

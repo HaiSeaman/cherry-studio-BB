@@ -126,9 +126,13 @@ export function parseTencentMessage(json: string): TencentParsedMessage {
   }
 }
 
-/** 结束消息：通知服务端音频流上传完成 */
+/**
+ * 结束消息：通知服务端音频流上传完成。
+ * 官方原文（识别阶段 → 上传数据）：音频流上传完成之后，客户端需发送以下内容的 text message，
+ * 通知后台结束识别 —— {"type": "end"}。写成别的会被当成未知文本消息（错误码 4010）并直接断连。
+ */
 export function buildTencentEndMessage(): string {
-  return '{"end":true}'
+  return '{"type":"end"}'
 }
 
 /** finalize 后等待 final=1 响应的超时（毫秒），防止连接异常导致悬挂 */
@@ -147,11 +151,17 @@ export interface TencentAdapterOptions {
 
 /**
  * 腾讯云实时语音识别适配器：
- * 握手 URL 带 HMAC 签名 → 直接发二进制 PCM → 收文本消息（slice_type=2 稳态追加）→ 发 {"end":true} → final=1 收尾
+ * 握手 URL 带 HMAC 签名 → 直接发二进制 PCM → 收文本消息（slice_type=2 稳态追加）→ 发 {"type":"end"} → final=1 收尾
  */
 export class TencentASRAdapter implements ASRAdapter {
   private ws: WebSocket | null = null
   private resultText = ''
+  /**
+   * 最近一次回调给上层的文本（= 稳态文本 + 未定稿分句的预览）。
+   * 异常收尾时返回它而不是 resultText：打字器是按"光标处现在是什么"算退格的，
+   * 返回更短的文本会让它把主人已经看到的那句话退格删掉。
+   */
+  private previewText = ''
   private finalizeResolver: ((text: string) => void) | null = null
   private finalizeTimer: ReturnType<typeof setTimeout> | null = null
   /** startSession 完成前的音频缓存（连接建立异步，渲染端可能先推音频） */
@@ -182,7 +192,7 @@ export class TencentASRAdapter implements ASRAdapter {
           const resolve = this.finalizeResolver
           this.finalizeResolver = null
           if (this.finalizeTimer) clearTimeout(this.finalizeTimer)
-          resolve(this.resultText)
+          resolve(this.previewText)
         }
       })
     })
@@ -206,7 +216,7 @@ export class TencentASRAdapter implements ASRAdapter {
   }
 
   stopAndFinalize(): Promise<string> {
-    if (this.finalizeResolver) return Promise.resolve(this.resultText)
+    if (this.finalizeResolver) return Promise.resolve(this.previewText)
     return new Promise((resolve) => {
       this.finalizeResolver = resolve
       try {
@@ -214,12 +224,12 @@ export class TencentASRAdapter implements ASRAdapter {
       } catch {
         // 连接未就绪/已断开：直接返回当前文本，避免悬挂
         this.finalizeResolver = null
-        resolve(this.resultText)
+        resolve(this.previewText)
         return
       }
       this.finalizeTimer = setTimeout(() => {
         this.finalizeTimer = null
-        this.finalizeResolver?.(this.resultText)
+        this.finalizeResolver?.(this.previewText)
         this.finalizeResolver = null
       }, FINALIZE_TIMEOUT_MS)
     })
@@ -241,7 +251,7 @@ export class TencentASRAdapter implements ASRAdapter {
         clearTimeout(this.finalizeTimer)
         this.finalizeTimer = null
       }
-      this.finalizeResolver?.(this.resultText)
+      this.finalizeResolver?.(this.previewText)
       this.finalizeResolver = null
       this.options.onError?.(message.errorMessage ?? `错误码 ${message.code}`)
       return
@@ -250,10 +260,12 @@ export class TencentASRAdapter implements ASRAdapter {
       if (message.sliceType === 2) {
         // 稳态结果：本句已确定，落盘并回调（流式打字以这个位置为准向后追加）
         this.resultText += message.text
+        this.previewText = this.resultText
         this.options.onResult?.(this.resultText)
       } else if (message.sliceType === 0 || message.sliceType === 1) {
         // 中间结果：本句尚未定稿，只作为实时上屏预览（已确定文本 + 当前分句），不落盘
-        this.options.onResult?.(this.resultText + message.text)
+        this.previewText = this.resultText + message.text
+        this.options.onResult?.(this.previewText)
       }
     }
     if (message.final && this.finalizeResolver) {

@@ -10,6 +10,7 @@ import type { ASRAdapter } from './asr/types'
 import { createFocusGuard, type FocusGuard } from './focusGuard'
 import { StreamingTypewriter } from './streamingTypewriter'
 import { backspaceAtCursor, typeTextAtCursor } from './textInserter'
+import { formatVoiceTiming, type VoiceTimingMarks } from './voiceTiming'
 
 const logger = loggerService.withContext('VoiceInput')
 
@@ -33,6 +34,8 @@ export class VoiceInputService {
    *（误注入旧文本、误停新会话的焦点守卫、误清空新会话打字记录）。
    */
   private currentSeq = 0
+  /** 本轮各阶段耗时（按下 → 首块音频 → 首次识别 → 松手 → 最终文本），收尾时打一行日志 */
+  private timing: VoiceTimingMarks = {}
   private readonly typewriter = new StreamingTypewriter({
     type: typeTextAtCursor,
     backspace: backspaceAtCursor
@@ -47,6 +50,7 @@ export class VoiceInputService {
   /** 键盘钩子「按下」：读取配置、校验密钥并按服务商建立识别会话；holdKeys 为按住的快捷键键码 */
   start(holdKeys: number[] = []): void {
     this.currentSeq++
+    this.timing = { start: Date.now() }
     const cfg = configManager.getVoiceInputConfig()
 
     const missing = getMissingVoiceInputCredential(cfg)
@@ -61,7 +65,10 @@ export class VoiceInputService {
 
     const callbacks: ASRAdapterCallbacks = {
       // 中间结果与最终结果都从这里进来：差量上屏由打字器负责
-      onResult: (text) => this.typewriter.commit(text),
+      onResult: (text) => {
+        this.timing.firstResult ??= Date.now()
+        this.typewriter.commit(text)
+      },
       onError: (message) => {
         logger.error(`voice input 识别错误：${message}`)
         this.broadcast('error')
@@ -88,6 +95,9 @@ export class VoiceInputService {
 
   /** 渲染进程推送的音频块转发给识别会话 */
   handleAudio(chunk: Uint8Array): void {
+    // 首块音频的到达时刻 = 「按下快捷键」到「麦克风真的开始出数据」的真实延迟，
+    // 这段时间里说的话是录不到的（开头丢字的嫌疑区间），量出来才好决定要不要预热麦克风
+    this.timing.firstAudio ??= Date.now()
     this.adapter?.sendAudio(chunk)
   }
 
@@ -97,11 +107,15 @@ export class VoiceInputService {
     const seq = this.currentSeq
     this.adapter = null
     if (!adapter) {
+      // 没有识别会话（密钥缺失 / 麦克风被拒 / 启动就失败）也要给出终态：
+      // 渲染进程靠 done 或 error 解除「语音输入中」标记，否则输入框会一直停在"不自动增高"的状态
       this.endSessionIfCurrent(seq)
+      if (this.currentSeq === seq) this.broadcast('done')
       return ''
     }
 
     this.broadcast('inserting')
+    this.timing.finalizeStart = Date.now()
     try {
       const text = await adapter.stopAndFinalize()
       adapter.close()
@@ -111,6 +125,9 @@ export class VoiceInputService {
       if (this.currentSeq === seq) {
         // 流式阶段已上屏的内容由差量逻辑复用，这里只补齐/修正尾部
         this.typewriter.finish(text)
+        this.timing.finalizeEnd = Date.now()
+        // 一行日志量出各阶段耗时，用来判断"开头丢字"是不是麦克风启动太慢造成的
+        logger.info(`voice input 耗时：${formatVoiceTiming(this.timing)}`)
         this.broadcast('done')
       }
       return text

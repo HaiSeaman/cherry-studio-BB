@@ -1,6 +1,6 @@
 import { uIOhook, type UiohookKeyboardEvent } from 'uiohook-napi'
 
-import { getLastInjectionAt } from './textInserter'
+import { getLastInjectionAt, isInjectedEcho } from './textInserter'
 
 /** 注入回声抑制窗口（毫秒）：紧跟在我们自己注入之后的键鼠事件视为回声，不算用户输入 */
 export const INJECTION_ECHO_MS = 120
@@ -9,6 +9,8 @@ export const INJECTION_ECHO_MS = 120
  * 判断一次键鼠事件是否应视为「用户真实输入」。
  * 我们自己用 SendInput 注入的字符/退格同样会经过系统键盘钩子，
  * 靠「距最近一次注入的时间」把它们排除掉。
+ * 这只是兜底：字符走 VK_PACKET，uiohook 报什么键码无法预知，
+ * 精确登记的（退格 / 修饰键抬起）走 isInjectedEcho。
  */
 export function isUserInputEvent(now: number, lastInjectionAt: number): boolean {
   return now - lastInjectionAt > INJECTION_ECHO_MS
@@ -34,10 +36,16 @@ export function createFocusGuard(onUserInput: () => void): FocusGuard {
     const isRepeat = pressed.has(event.keycode)
     pressed.add(event.keycode)
     if (isRepeat) return
+    // 登记在案的回声先判：这里必须无条件判一次（不能放在时间窗后面短路），
+    // 否则回声计数会残留在登记表里，把主人后面真实的按键吞掉
+    if (isInjectedEcho(event)) return
     if (isUserInputEvent(Date.now(), getLastInjectionAt())) onUserInput()
   }
 
   const handleKeyUp = (event: UiohookKeyboardEvent): void => {
+    // 我们自己注入的抬起（修饰键释放/退格）：既不算主人输入，也不能抹掉按住状态，
+    // 否则随后长按的自动重复会被误判成「主人又按了一次」而触发冻结
+    if (isInjectedEcho(event)) return
     pressed.delete(event.keycode)
   }
 

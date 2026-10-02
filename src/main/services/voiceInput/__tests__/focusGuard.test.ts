@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { uiohookMock, lastInjection } = vi.hoisted(() => {
+const { uiohookMock, lastInjection, echoCodes } = vi.hoisted(() => {
   const handlers = new Map<string, Set<(data?: unknown) => void>>()
   return {
     uiohookMock: {
@@ -16,13 +16,16 @@ const { uiohookMock, lastInjection } = vi.hoisted(() => {
       },
       reset: () => handlers.clear()
     },
-    lastInjection: { value: 0 }
+    lastInjection: { value: 0 },
+    /** 被登记为「我们自己注入的回声」的 uiohook 键码 */
+    echoCodes: new Set<number>()
   }
 })
 
 vi.mock('uiohook-napi', () => ({ uIOhook: uiohookMock }))
 vi.mock('../textInserter', () => ({
   getLastInjectionAt: () => lastInjection.value,
+  isInjectedEcho: (event: { keycode: number }) => echoCodes.has(event.keycode),
   typeTextAtCursor: vi.fn(),
   backspaceAtCursor: vi.fn()
 }))
@@ -42,6 +45,7 @@ beforeEach(() => {
   uiohookMock.off.mockClear()
   uiohookMock.reset()
   lastInjection.value = 0
+  echoCodes.clear()
 })
 
 describe('isUserInputEvent', () => {
@@ -121,6 +125,42 @@ describe('createFocusGuard', () => {
 
     uiohookMock.emit('keydown', keydown(14)) // 我们自己发的退格回声
     uiohookMock.emit('mousedown')
+    expect(onUserInput).not.toHaveBeenCalled()
+  })
+
+  it('登记在案的回声即使晚到（超出时间窗）也不触发冻结', () => {
+    const onUserInput = vi.fn()
+    createFocusGuard(onUserInput).start([])
+    noRecentInjection() // 时间窗已经指望不上了
+    echoCodes.add(14) // 但我们明确知道这个键码是自己注入的
+
+    uiohookMock.emit('keydown', keydown(14))
+    expect(onUserInput).not.toHaveBeenCalled()
+  })
+
+  it('回声明细里没有的按键，哪怕刚好紧跟注入，也仍然算主人真实输入（时间窗兜底）', () => {
+    const onUserInput = vi.fn()
+    createFocusGuard(onUserInput).start([])
+    noRecentInjection()
+    echoCodes.add(14)
+
+    uiohookMock.emit('keydown', keydown(30)) // A 键：不是我们注入的
+    expect(onUserInput).toHaveBeenCalledTimes(1)
+  })
+
+  it('回声 keyup 不能把按住键从集合里删掉，否则长按重复会被误判成主人输入', () => {
+    const onUserInput = vi.fn()
+    createFocusGuard(onUserInput).start([41]) // 反引号处于按住状态
+    noRecentInjection()
+
+    echoCodes.add(41)
+    uiohookMock.emit('keyup', keyup(41)) // 我们自己注入的反引号抬起回声
+    echoCodes.delete(41)
+    expect(onUserInput).not.toHaveBeenCalled()
+
+    // 主人仍在长按反引号：自动重复不该算新输入
+    uiohookMock.emit('keydown', keydown(41))
+    uiohookMock.emit('keydown', keydown(41))
     expect(onUserInput).not.toHaveBeenCalled()
   })
 

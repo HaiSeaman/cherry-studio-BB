@@ -163,4 +163,66 @@ describe('createPressHoldDetector', () => {
     vi.advanceTimersByTime(10) // 累计 20ms：修复后定时器未被重置，此时触发
     expect(onStart).toHaveBeenCalledTimes(1)
   })
+
+  describe('自身注入的回声按键（修饰键释放/退格）', () => {
+    it('被判定为回声的 keyup 不算「松手」：录音不会中途停止', () => {
+      const onStart = vi.fn()
+      const onStop = vi.fn()
+      let isEcho = false
+      const detector = createPressHoldDetector({
+        targetKeys: [META, BACKQUOTE],
+        onStart,
+        onStop,
+        shouldIgnoreKeyEvent: () => isEcho
+      })
+
+      detector.handleKeyDown(keyDown(META))
+      detector.handleKeyDown(keyDown(BACKQUOTE))
+      vi.advanceTimersByTime(20)
+      expect(onStart).toHaveBeenCalledTimes(1)
+
+      isEcho = true
+      detector.handleKeyUp(keyUp(BACKQUOTE)) // 我们自己注入的抬起
+      vi.advanceTimersByTime(200)
+      expect(onStop).not.toHaveBeenCalled()
+
+      isEcho = false
+      detector.handleKeyUp(keyUp(BACKQUOTE)) // 主人真实松手
+      vi.advanceTimersByTime(50)
+      expect(onStop).toHaveBeenCalledTimes(1)
+    })
+
+    it('被忽略的 keyup 不改变按住状态：后续自动重复仍算重复、不重设启动定时器', () => {
+      const onStart = vi.fn()
+      let isEcho = false
+      const detector = createPressHoldDetector({
+        targetKeys: [BACKQUOTE],
+        onStart,
+        onStop: vi.fn(),
+        startDelayMs: 20,
+        shouldIgnoreKeyEvent: () => isEcho
+      })
+
+      detector.handleKeyDown(keyDown(BACKQUOTE))
+      vi.advanceTimersByTime(5)
+      isEcho = true
+      detector.handleKeyUp(keyUp(BACKQUOTE)) // 回声：忽略，且不能把键从「按住集合」里删掉
+      isEcho = false
+      detector.handleKeyDown(keyDown(BACKQUOTE)) // 自动重复
+      vi.advanceTimersByTime(15) // 累计 20ms
+      expect(onStart).toHaveBeenCalledTimes(1)
+    })
+
+    it('未提供 shouldIgnoreKeyEvent 时行为与过去一致', () => {
+      const onStart = vi.fn()
+      const onStop = vi.fn()
+      const detector = createPressHoldDetector({ targetKeys: [BACKQUOTE], onStart, onStop })
+
+      detector.handleKeyDown(keyDown(BACKQUOTE))
+      vi.advanceTimersByTime(20)
+      detector.handleKeyUp(keyUp(BACKQUOTE))
+      vi.advanceTimersByTime(50)
+      expect(onStop).toHaveBeenCalledTimes(1)
+    })
+  })
 })

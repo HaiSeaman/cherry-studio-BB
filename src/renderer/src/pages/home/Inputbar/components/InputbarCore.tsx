@@ -8,13 +8,14 @@ import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useTranslate from '@renderer/hooks/useTranslate'
+import { useVoiceInputActive } from '@renderer/hooks/useVoiceInput'
 import PasteService from '@renderer/services/PasteService'
 import { translateText } from '@renderer/services/TranslateService'
 import { useAppDispatch } from '@renderer/store'
 import { setSearching } from '@renderer/store/runtime'
 import type { FileMetadata } from '@renderer/types'
 import { formatQuotedText } from '@renderer/utils/formats'
-import { isSendMessageKeyPressed } from '@renderer/utils/input'
+import { isSendMessageKeyPressed, resolveTextareaAutoSize } from '@renderer/utils/input'
 import { IpcChannel } from '@shared/IpcChannel'
 import { Tooltip } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
@@ -154,6 +155,8 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
   // 全局 QuickPanel Hook (用于控制面板显示状态)
   const quickPanel = useQuickPanel()
   const quickPanelOpen = quickPanel.open
+  // 语音输入期间关掉自动高度：受控 textarea 每变一次值都要重算 scrollHeight（强制重排）
+  const voiceInputActive = useVoiceInputActive()
 
   const textRef = useRef(text)
   useEffect(() => {
@@ -662,7 +665,7 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
             variant="borderless"
             spellCheck={enableSpellCheck}
             rows={2}
-            autoSize={height ? false : { minRows: 2, maxRows: 20 }}
+            autoSize={resolveTextareaAutoSize(height, voiceInputActive)}
             styles={{ textarea: TextareaStyle }}
             style={{
               fontSize,

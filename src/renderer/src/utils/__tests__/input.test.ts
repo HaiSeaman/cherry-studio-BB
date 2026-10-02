@@ -1,7 +1,7 @@
 import type { SendMessageShortcut } from '@renderer/store/settings'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getFilesFromDropEvent, getSendMessageShortcutLabel, isSendMessageKeyPressed } from '../input'
+import { getFilesFromDropEvent, getSendMessageShortcutLabel, isSendMessageKeyPressed, resolveTextareaAutoSize } from '../input'
 
 // Mock 外部依赖
 vi.mock('@renderer/config/logger', () => ({
@@ -177,6 +177,21 @@ describe('input', () => {
       expect(isSendMessageKeyPressed(multiModifierEvent, 'Enter')).toBe(false)
       expect(isSendMessageKeyPressed(multiModifierEvent, 'Ctrl+Enter')).toBe(false)
       expect(isSendMessageKeyPressed(multiModifierEvent, 'Shift+Enter')).toBe(false)
+    })
+  })
+
+  describe('resolveTextareaAutoSize（语音输入期间关掉自动高度）', () => {
+    it('平时开启自动高度：最小 2 行、最多 20 行', () => {
+      expect(resolveTextareaAutoSize(undefined, false)).toEqual({ minRows: 2, maxRows: 20 })
+    })
+
+    it('语音输入期间关掉自动高度：每注入一个字都要重算一遍 scrollHeight（强制重排）太贵', () => {
+      expect(resolveTextareaAutoSize(undefined, true)).toBe(false)
+    })
+
+    it('主人自己拖过高度时本来就不该自动增高', () => {
+      expect(resolveTextareaAutoSize(320, false)).toBe(false)
+      expect(resolveTextareaAutoSize(320, true)).toBe(false)
     })
   })
 })

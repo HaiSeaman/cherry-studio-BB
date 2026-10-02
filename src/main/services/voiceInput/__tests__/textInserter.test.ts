@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { sendInputMock, loadMock } = vi.hoisted(() => {
-  const sendInputMock = vi.fn<(count: number, records: Buffer, size: number) => number>(() => 1)
+const { sendInputMock, getAsyncKeyStateMock, downKeys, loadMock } = vi.hoisted(() => {
+  const downKeys = new Set<number>()
   return {
-    sendInputMock,
-    loadMock: vi.fn(() => ({ func: () => sendInputMock }))
+    sendInputMock: vi.fn<(count: number, records: Buffer, size: number) => number>((count) => count),
+    getAsyncKeyStateMock: vi.fn((vk: number) => (downKeys.has(vk) ? -32768 : 0)),
+    downKeys,
+    loadMock: vi.fn(() => ({
+      func: (signature: string) => (signature.includes('GetAsyncKeyState') ? getAsyncKeyStateMock : sendInputMock)
+    }))
   }
 })
 
@@ -14,7 +18,6 @@ import {
   backspaceAtCursor,
   buildBackspaceRecords,
   buildUnicodeRecords,
-  getLastInjectionAt,
   INPUT_RECORD_SIZE,
   typeTextAtCursor
 } from '../textInserter'
@@ -31,8 +34,29 @@ const parseRecord = (buffer: Buffer, index: number) => {
   }
 }
 
+/** 最近一次 SendInput 真正发出去的记录条数 */
+const lastSentCount = () => sendInputMock.mock.calls.at(-1)?.[0] ?? 0
+const lastSentBuffer = () => sendInputMock.mock.calls.at(-1)?.[1] as Buffer
+
+const VK_LCONTROL = 0xa2
+const VK_RCONTROL = 0xa3
+const VK_LSHIFT = 0xa0
+const KEYEVENTF_KEYUP = 0x0002
+const KEYEVENTF_EXTENDEDKEY = 0x0001
+/** uiohook 的键码（左 Ctrl / 右 Ctrl / 退格） */
+const UIOHOOK_CTRL = 29
+const UIOHOOK_CTRL_RIGHT = 3613
+const UIOHOOK_BACKSPACE = 14
+
 beforeEach(() => {
   sendInputMock.mockClear()
+  getAsyncKeyStateMock.mockClear()
+  downKeys.clear()
+  vi.useRealTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('buildUnicodeRecords（逐字输入的 INPUT 记录）', () => {
@@ -94,7 +118,7 @@ describe('全局逐字输入', () => {
   it('backspaceAtCursor 按次数生成退格记录', () => {
     backspaceAtCursor(3)
     expect(sendInputMock).toHaveBeenCalledTimes(1)
-    expect(sendInputMock.mock.calls[0][0]).toBe(6)
+    expect(lastSentCount()).toBe(6)
   })
 
   it('空文本与零退格不触发系统调用', () => {
@@ -103,10 +127,117 @@ describe('全局逐字输入', () => {
     backspaceAtCursor(-1)
     expect(sendInputMock).not.toHaveBeenCalled()
   })
+})
 
-  it('注入后记录时刻，供焦点守卫区分注入回声', () => {
-    const before = Date.now()
-    typeTextAtCursor('测试')
-    expect(getLastInjectionAt()).toBeGreaterThanOrEqual(before)
+describe('修饰键释放：退格不能变成「Ctrl+退格」（删一整个词）', () => {
+  it('物理按住左 Ctrl 时，退格记录前面先插一条 Ctrl 抬起', () => {
+    downKeys.add(VK_LCONTROL)
+
+    backspaceAtCursor(2)
+
+    // 1 条 Ctrl 抬起 + 2 次退格 × (按下+抬起)
+    expect(lastSentCount()).toBe(1 + 4)
+    expect(parseRecord(lastSentBuffer(), 0)).toMatchObject({ vk: VK_LCONTROL, flags: KEYEVENTF_KEYUP, type: 1 })
+    // 原有的退格记录仍在，且排在后面
+    expect(parseRecord(lastSentBuffer(), 1)).toMatchObject({ vk: 0x08, flags: 0 })
+    expect(parseRecord(lastSentBuffer(), 2)).toMatchObject({ vk: 0x08, flags: KEYEVENTF_KEYUP })
+  })
+
+  it('按住的是 Shift 时同理（左 Shift 不带扩展键标志）', () => {
+    downKeys.add(VK_LSHIFT)
+    backspaceAtCursor(1)
+
+    const first = parseRecord(lastSentBuffer(), 0)
+    expect(first).toMatchObject({ vk: VK_LSHIFT, flags: KEYEVENTF_KEYUP })
+    expect(first.flags & KEYEVENTF_EXTENDEDKEY).toBe(0)
+  })
+
+  it('按住的是右 Ctrl 时，释放记录带扩展键标志', () => {
+    downKeys.add(VK_RCONTROL)
+    backspaceAtCursor(1)
+
+    const first = parseRecord(lastSentBuffer(), 0)
+    expect(first).toMatchObject({ vk: VK_RCONTROL, flags: KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY })
+  })
+
+  it('没有修饰键按住时不插入任何额外记录', () => {
+    backspaceAtCursor(1)
+    expect(lastSentCount()).toBe(2)
+    expect(parseRecord(lastSentBuffer(), 0)).toMatchObject({ vk: 0x08, flags: 0 })
+  })
+
+  it('打字（不是退格）也先松开修饰键：字符通道同样不该带着物理按住的修饰键', () => {
+    downKeys.add(VK_LCONTROL)
+    typeTextAtCursor('中')
+
+    expect(lastSentCount()).toBe(1 + 2)
+    expect(parseRecord(lastSentBuffer(), 0)).toMatchObject({ vk: VK_LCONTROL, flags: KEYEVENTF_KEYUP })
+    expect(parseRecord(lastSentBuffer(), 1).scan).toBe('中'.charCodeAt(0))
+  })
+})
+
+describe('isInjectedEcho：把「自己注入的事件」登记下来，供焦点守卫/按住检测器排除', () => {
+  // 回声登记表是模块级状态：每个用例都取一份全新实例，避免用例之间互相污染
+  let mod: typeof import('../textInserter')
+
+  beforeEach(async () => {
+    vi.resetModules()
+    mod = await import('../textInserter')
+  })
+
+  it('未注入过的键码不是回声', () => {
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(false)
+  })
+
+  it('退格注入后登记「按下 + 抬起」两次，第三次不再是回声', () => {
+    mod.backspaceAtCursor(1)
+
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(true)
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(true)
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(false)
+  })
+
+  it('同一个事件对象被多个监听器问到，只扣一次、都判为回声', () => {
+    mod.backspaceAtCursor(1)
+    const downEvent = { keycode: UIOHOOK_BACKSPACE }
+
+    expect(mod.isInjectedEcho(downEvent)).toBe(true)
+    expect(mod.isInjectedEcho(downEvent)).toBe(true)
+    // 但抬起是另一个事件对象，仍要能认出来
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(true)
+  })
+
+  it('注入的修饰键抬起也登记（否则按住检测器会以为主人松手了）', () => {
+    downKeys.add(VK_LCONTROL)
+    mod.backspaceAtCursor(1)
+
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_CTRL })).toBe(true)
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_CTRL })).toBe(false)
+  })
+
+  it('按住的是右 Ctrl 时，登记的是右 Ctrl 的键码', () => {
+    downKeys.add(VK_RCONTROL)
+    mod.backspaceAtCursor(1)
+
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_CTRL_RIGHT })).toBe(true)
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_CTRL })).toBe(false)
+  })
+
+  it('登记超过追溯时限后自动失效：宁可少排除，也不能把主人真实的按键吞掉', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    mod.backspaceAtCursor(1)
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(true)
+
+    mod.backspaceAtCursor(1)
+    vi.setSystemTime(new Date('2026-01-01T00:00:05.000Z'))
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(false)
+  })
+
+  it('SendInput 整体失败时不登记（避免吞掉主人真实的按键）', () => {
+    sendInputMock.mockReturnValueOnce(0)
+    mod.backspaceAtCursor(1)
+
+    expect(mod.isInjectedEcho({ keycode: UIOHOOK_BACKSPACE })).toBe(false)
   })
 })
