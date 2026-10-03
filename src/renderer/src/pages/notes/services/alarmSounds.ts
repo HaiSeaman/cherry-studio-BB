@@ -241,10 +241,6 @@ class AlarmSounds {
     volumePercent = Math.min(Math.max(percent, 0), 300)
     if (masterGain) masterGain.gain.value = volumePercent / 100
   }
-
-  getVolume(): number {
-    return volumePercent
-  }
 }
 
 export const alarmSounds = new AlarmSounds()

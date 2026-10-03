@@ -1,0 +1,101 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Cherry Studio 核心消息处理与推理流程图",
+    "output": "cherry-studio-workflow.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "main-flow",
+        "label": "主干消息流转链路",
+        "focus": ["user_input", "chat_surface", "prompt_assemble", "llm_inference", "stream_render"],
+        "note": "从用户输入提问，到核心调度、模型推理及前端流式渲染的主流程。"
+      },
+      {
+        "id": "rag-and-plugins",
+        "label": "知识库与联网搜索增强",
+        "focus": ["intent_eval", "rag_search", "web_plugin", "prompt_assemble"],
+        "note": "查看意图判定后，知识库 RAG 向量检索与联网插件的数据注入链路。"
+      },
+      {
+        "id": "tool-calling-loop",
+        "label": "工具调用与 MCP 回环",
+        "focus": ["llm_inference", "tool_mcp", "prompt_assemble"],
+        "note": "展示大模型触发 Function Call 之后，MCP 安全执行并回环重新生成的完整闭环。"
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "ui", "label": "前端交互层 (UI)" },
+    { "id": "core", "label": "核心编排与运行时 (Core & aiCore)" },
+    { "id": "ext", "label": "外部服务与存储 (External & DB)" }
+  ],
+  "phases": [
+    { "id": "p_intake", "label": "输入与解析", "fromCol": 0, "toCol": 1 },
+    { "id": "p_retrieval", "label": "知识检索与增强", "fromCol": 2, "toCol": 2 },
+    { "id": "p_orchestration", "label": "提示词装配", "fromCol": 3, "toCol": 3 },
+    { "id": "p_inference", "label": "推理与工具", "fromCol": 4, "toCol": 4 },
+    { "id": "p_delivery", "label": "渲染与持久化", "fromCol": 5, "toCol": 5 }
+  ],
+  "mainPath": [
+    "user_input",
+    "chat_surface",
+    "intent_eval",
+    "prompt_assemble",
+    "llm_inference",
+    "stream_render"
+  ],
+  "nodes": [
+    { "id": "user_input", "lane": "ui", "col": 0, "type": "external", "label": "用户输入", "sublabel": "文本提问或附件上传", "width": 132 },
+    { "id": "chat_surface", "lane": "ui", "col": 1, "type": "frontend", "label": "会话消息窗口", "sublabel": "解析输入并排队校验", "width": 132 },
+    { "id": "intent_eval", "lane": "core", "col": 1, "type": "backend", "label": "意图与能力判断", "sublabel": "评估知识库与插件", "width": 132 },
+    { "id": "rag_search", "lane": "core", "col": 2, "type": "database", "label": "知识库 RAG 检索", "sublabel": "向量相似度匹配召回", "width": 132 },
+    { "id": "web_plugin", "lane": "ext", "col": 2, "type": "cloud", "label": "联网搜索插件", "sublabel": "Tavily / Exa 搜索引擎", "width": 132 },
+    { "id": "prompt_assemble", "lane": "core", "col": 3, "type": "backend", "label": "提示词组装调度", "sublabel": "人设+记忆+检索上下文", "width": 132 },
+    { "id": "llm_inference", "lane": "ext", "col": 4, "type": "cloud", "label": "大模型推理", "sublabel": "DeepSeek / Claude 等", "width": 132 },
+    { "id": "tool_mcp", "lane": "core", "col": 4, "type": "security", "label": "MCP 工具执行", "sublabel": "执行本地/远程工具", "width": 132 },
+    { "id": "stream_render", "lane": "ui", "col": 5, "type": "frontend", "label": "流式打字机渲染", "sublabel": "实时高亮与状态更新", "width": 132 },
+    { "id": "db_save", "lane": "ext", "col": 5, "type": "database", "label": "本地数据库落盘", "sublabel": "Dexie (IndexedDB) 持久化", "width": 132 }
+  ],
+  "edges": [
+    { "id": "e_user_chat", "from": "user_input", "to": "chat_surface", "variant": "default" },
+    { "id": "e_chat_intent", "from": "chat_surface", "to": "intent_eval", "label": "发起评估", "variant": "default" },
+    { "id": "e_intent_rag", "from": "intent_eval", "to": "rag_search", "label": "检索切片", "variant": "dashed" },
+    { "id": "e_intent_web", "from": "intent_eval", "to": "web_plugin", "label": "联网插件", "variant": "dashed" },
+    { "id": "e_rag_assemble", "from": "rag_search", "to": "prompt_assemble", "label": "注入切片", "variant": "default" },
+    { "id": "e_web_assemble", "from": "web_plugin", "to": "prompt_assemble", "label": "注入搜索", "variant": "default" },
+    { "id": "e_intent_assemble", "from": "intent_eval", "to": "prompt_assemble", "label": "基础上下文", "variant": "default" },
+    { "id": "e_assemble_llm", "from": "prompt_assemble", "to": "llm_inference", "label": "流式请求", "variant": "emphasis" },
+    { "id": "e_llm_tool", "from": "llm_inference", "to": "tool_mcp", "label": "工具调用", "variant": "security" },
+    { "id": "e_tool_assemble", "from": "tool_mcp", "to": "prompt_assemble", "label": "结果回环", "variant": "dashed", "role": "return" },
+    { "id": "e_llm_render", "from": "llm_inference", "to": "stream_render", "label": "逐字回传", "variant": "emphasis" },
+    { "id": "e_render_db", "from": "stream_render", "to": "db_save", "label": "落盘存储", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "输入解析与检索增强",
+      "items": [
+        "接收用户提问与附件并校验格式",
+        "智能检索知识库切片或联网搜索"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "模型推理与工具回环",
+      "items": [
+        "aiCore 调度云端与本地大模型流式推理",
+        "支持 MCP 工具调用与二次回环生成"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "流式渲染与本地落盘",
+      "items": [
+        "前端打字机实时渲染 Markdown 与语法高亮",
+        "问答全量链路持久化至 IndexedDB 数据库"
+      ]
+    }
+  ]
+}

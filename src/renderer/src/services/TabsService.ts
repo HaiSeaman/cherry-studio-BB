@@ -108,36 +108,6 @@ class TabsService {
   public getTabs() {
     return store.getState().tabs.tabs
   }
-
-  /**
-   * 获取当前激活的标签页ID
-   */
-  public getActiveTabId() {
-    return store.getState().tabs.activeTabId
-  }
-
-  /**
-   * 设置激活的标签页
-   * @param tabId 标签页ID
-   */
-  public setActiveTab(tabId: string): boolean {
-    const tabs = store.getState().tabs.tabs
-    const tab = tabs.find((t) => t.id === tabId)
-
-    if (!tab) {
-      logger.warn(`Tab with id ${tabId} not found`)
-      return false
-    }
-
-    store.dispatch(setActiveTab(tabId))
-
-    // 导航到对应页面
-    if (NavigationService.navigate) {
-      NavigationService.navigate(tab.path)
-    }
-
-    return true
-  }
 }
 
 export default new TabsService()

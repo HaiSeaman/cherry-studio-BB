@@ -2,9 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   fetchTrackMetadata,
-  fixHistoryAfterDelete,
-  fixIndexAfterDelete,
-  fixIndexAfterMove,
   formatTime,
   nextIndexInPool,
   prevIndexInPool,
@@ -65,32 +62,6 @@ describe('pushShuffleHistory', () => {
     for (let i = 0; i < 120; i++) h = pushShuffleHistory(h, i + 10)
     expect(h.length).toBe(100)
     expect(h[h.length - 1]).toBe(129)
-  })
-})
-
-describe('fixIndexAfterDelete', () => {
-  it('删前 current 前移；删后不变；删自身返回原位', () => {
-    expect(fixIndexAfterDelete(2, 5)).toBe(4)
-    expect(fixIndexAfterDelete(7, 5)).toBe(5)
-    expect(fixIndexAfterDelete(5, 5)).toBe(5)
-    expect(fixIndexAfterDelete(0, 0)).toBe(0)
-  })
-})
-
-describe('fixHistoryAfterDelete', () => {
-  it('等于 deleted 的删除，大于 deleted 的减一', () => {
-    expect(fixHistoryAfterDelete([1, 3, 5, 7], 3)).toEqual([1, 4, 6])
-    expect(fixHistoryAfterDelete([2, 4], 4)).toEqual([2])
-  })
-})
-
-describe('fixIndexAfterMove', () => {
-  it('当前曲被移动/前移交叉/后移交叉/无关移动 四种情况（照文档 §4.8）', () => {
-    expect(fixIndexAfterMove(2, 6, 2)).toBe(6) // 当前曲被移动
-    expect(fixIndexAfterMove(2, 6, 4)).toBe(3) // 前移越过当前 → current-1
-    expect(fixIndexAfterMove(6, 2, 4)).toBe(5) // 后移到当前前 → current+1
-    expect(fixIndexAfterMove(0, 5, 3)).toBe(2) // [A,B,C,D..]把A移到末尾，D 左移一位
-    expect(fixIndexAfterMove(0, 1, 3)).toBe(3) // 移动完全在 current 之前不交叉 → 不变
   })
 })
 

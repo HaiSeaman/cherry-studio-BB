@@ -14,7 +14,6 @@ import { OnboardingPage } from './pages/onboarding'
 
 // 懒加载的非首屏页面（减少首屏 JS 解析量）
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
-const MinAppPage = lazy(() => import('./pages/minapps/MinAppPage'))
 const MinAppsPage = lazy(() => import('./pages/minapps/MinAppsPage'))
 const NotesPage = lazy(() => import('./pages/notes/NotesPage'))
 const HabitsPage = lazy(() => import('./pages/habits/HabitsPage'))
@@ -28,7 +27,6 @@ const Router: FC = () => {
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/apps/:appId" element={<MinAppPage />} />
             <Route path="/apps" element={<MinAppsPage />} />
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/habits" element={<HabitsPage />} />

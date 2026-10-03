@@ -6,12 +6,10 @@ import { loadCustomMiniApp, ORIGIN_DEFAULT_MIN_APPS, updateAllMinApps } from '@r
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { useNavbarPosition } from '@renderer/hooks/useSettings'
 import type { MinAppType } from '@renderer/types'
 import type { MenuProps } from 'antd'
 import { Dropdown } from 'antd'
 import type { FC } from 'react'
-import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 interface Props {
@@ -27,33 +25,26 @@ const MinApp: FC<Props> = ({ app, onClick, size = 60, isLast }) => {
   const { openMinappKeepAlive, closeMinapp } = useMinappPopup()
   const { minapps, pinned, disabled, updateMinapps, updateDisabledMinapps, updatePinnedMinapps } = useMinapps()
   const { openedKeepAliveMinapps, currentMinappId, minappShow } = useRuntime()
-  const navigate = useNavigate()
   const isPinned = pinned.some((p) => p.id === app.id)
   const isVisible = minapps.some((m) => m.id === app.id)
   // Pinned apps should always be visible regardless of region/locale filtering
   const shouldShow = isVisible || isPinned
   const isActive = minappShow && currentMinappId === app.id
   const isOpened = openedKeepAliveMinapps.some((item) => item.id === app.id)
-  const { isTopNavbar } = useNavbarPosition()
 
   // Calculate display name
   const displayName = isLast ? '自定义' : app.nameKey ? app.nameKey : app.name
 
   const handleClick = () => {
-    if (isTopNavbar) {
-      // 顶部导航栏：导航到小程序页面
-      navigate(`/apps/${app.id}`)
-    } else {
-      // 侧边导航栏：保持原有弹窗行为
-      openMinappKeepAlive(app)
-    }
+    // 侧边导航栏：保持原有弹窗行为
+    openMinappKeepAlive(app)
     onClick?.()
   }
 
   const menuItems: MenuProps['items'] = [
     {
       key: 'togglePin',
-      label: isPinned ? (isTopNavbar ? '从启动台移除' : '从侧边栏移除') : isTopNavbar ? '添加到启动台' : '添加到侧边栏',
+      label: isPinned ? '从侧边栏移除' : '添加到侧边栏',
       onClick: () => {
         const newPinned = isPinned ? pinned.filter((item) => item.id !== app.id) : [...pinned, app]
         updatePinnedMinapps(newPinned)

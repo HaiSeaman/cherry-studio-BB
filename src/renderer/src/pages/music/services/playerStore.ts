@@ -165,10 +165,6 @@ export class PlayerStore {
     this.stations = stations
   }
 
-  getStations(): RadioStation[] {
-    return this.stations
-  }
-
   getSource(): 'local' | 'fm' {
     return this.engine.snapshot().owner ?? (this.fm.url ? 'fm' : 'local')
   }

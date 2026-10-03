@@ -1,5 +1,5 @@
 import { useAppSelector } from '@renderer/store'
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 
 import { playerStore } from '../services/playerStore'
 import type { MusicTrack } from '../types'
@@ -23,30 +23,14 @@ export function useLocalPlayer(tracks: MusicTrack[]) {
     playerStore.getLocalSnapshot
   )
 
-  const favoriteIndices = useMemo(
-    () =>
-      tracks
-        .map((t, i) => ({ t, i }))
-        .filter((x) => x.t.favorite === 1)
-        .map((x) => x.i),
-    [tracks]
-  )
-
-  const currentIndex = useMemo(() => {
-    if (st.currentId == null) return -1
-    return tracks.findIndex((t) => t.id === st.currentId)
-  }, [tracks, st.currentId])
-
   return {
     currentId: st.currentId,
     currentTrack: st.currentTrack,
-    currentIndex,
     isPlaying: st.isPlaying,
     currentTime: st.currentTime,
     duration: st.duration,
     playMode,
     favoritesActive,
-    favoriteCount: favoriteIndices.length,
     tip: st.tip,
     showTip: playerStore.showTip,
     setSeeking: playerStore.setSeeking,

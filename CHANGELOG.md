@@ -5,6 +5,85 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.11.3] - 2026-10-04
+
+### 核心主题：界面微调 + 一次全面的代码审查与清理
+
+**不新增功能、不新增依赖、不改数据结构、用户数据完全兼容**：把「效率助手详情页」的排版调顺、删掉小程序里重复的窗口按键，并对「效率助手」与「小程序」两个模块做一次彻底的代码审查，把查出的 BUG、死代码与重复设计一次清干净。
+
+**1. 界面：效率助手详情页改为「左 4 右 6」**
+
+- `pages/notes/NotesPage.tsx` 的 `MainArea` 网格：`grid-template-columns: 1fr 1fr` → **`2fr 3fr`**（左列闹钟+日历 40%，右列便签/待办+音乐/FM 60%）
+- ⚠️ 没有写成 `40% 60%`：网格有 12px 的 `gap`，百分比是**按容器宽度**算的，会和 gap 叠加导致溢出；`fr` 是先扣掉 gap 再按份数分配剩余空间，2:3 恰好等于 40:60
+
+**2. 界面：删除小程序里多余的第三组窗口按键**
+
+- `components/MinApp/MinappPopupContainer.tsx` 的标题栏原先额外渲染一组 `<WindowControls />`（最小化/最大化/关闭）。实际界面上已有两组：侧边栏右侧竖排（`Sidebar.tsx` 的 `SidebarWindowControls`）+ 小程序自身的工具栏胶囊，这一组是重复的
+- 删除后同时移除 `ButtonsGroup` 上为它预留的 `marginRight: 140px` 与 `WindowControls` 导入。**窗口关闭/最大化/最小化能力不受影响**（侧边栏那组仍在；`WindowControls` 组件本身仍被引导页使用，未成为死文件）
+
+**3. 修复：日历闹钟的未来日期显示误导性倒计时**
+
+- `pages/notes/services/schedule.ts` 的 `nextRingInfo`：原先只判断 `a.date < todayKey`（过去）返回 null，**未来日期**会用"今天的 `nowSec`"去算差值，列表上显示成「今天 X 分 Y 秒后」
+- 改为 `a.date !== todayKey` 一律返回 null；配套单测新增两条未来日期用例（`2026-08-17` / `2026-09-01` 断言 null）
+
+**4. 修复：`useMinappPopup` 在渲染期产生副作用（React 反模式）**
+
+- 原先「缓存容量变化 → 重建 LRU」这段直接写在渲染体内：重建过程会触发 LRU 的 `onInsert` / `disposeAfter` 回调，回调里 `dispatch(setOpenedKeepAliveMinapps(...))` —— **等于在渲染过程中修改 Redux 状态**，可能引发卡顿、告警或渲染循环
+- 现整体挪进 `useEffect`；同时把两个回调里的 `minAppsCache.values()` 改为闭包内的 `cache.values()`（避免回调引用的模块变量已被替换）
+- **顺带修掉一处真实回归**：`closeAllMinapps` 重建缓存后未同步 `TabsService.setMinAppsCache()`，会使 `TabsService` 持有已废弃实例 → 关闭小程序标签页时清理失效、webview 渲染进程残留不释放。现已在重建后立即同步
+
+**5. 修复：两处定时器未在卸载时清理**
+
+- `components/MinApp/WebviewContainer.tsx`：`did-finish-load` 后延迟 100ms 调 `onLoadedCallback` 的 `setTimeout` 未随卸载清理（组件已销毁仍回调）。改用 `loadTimer` 变量追踪并在 cleanup 中 `clearTimeout`
+- `pages/notes/components/NoteEditor.tsx`：卸载 cleanup 原先只清 `saveTimer`，补上 `flashTimer`
+
+**6. 修复：日历翻月可能多加/少减一年**
+
+- `pages/notes/components/CalendarPanel.tsx` 的 `prevMonth` / `nextMonth`：原先在 `setViewMonth` 的 updater 内部再调用 `setViewYear`（**在状态更新函数里触发另一个状态更新**）。React 可能重复执行 updater，年份会被多改
+- 改为在事件处理函数里先读当前 `viewMonth` 再分别 `setViewYear` / `setViewMonth`
+
+**7. 修复：小程序切换时延迟回调的定时器互相顶掉**
+
+- `MinappPopupContainer.tsx` 的 `setTimeoutTimer('handleWebviewLoaded', ...)` 使用固定 key，切换小程序时会覆盖上一个的定时器。改为 `handleWebviewLoaded:${appid}` 按 app 区分
+
+**8. 清理：删除整条「顶部导航」死分支（962 行 + 1 条路由）**
+
+- 全仓无任何 `setNavbarPosition` 调用（`navbarPosition` 恒为 `'left'`），`isTopNavbar` 分支永不可达
+- 删除文件：`pages/minapps/MinAppPage.tsx`(226)、`pages/minapps/components/MinimalToolbar.tsx`(372)、`pages/minapps/components/WebviewSearch.tsx`(364) 及其测试 `__tests__/WebviewSearch.test.tsx`(382)
+- 同步清理：`Router.tsx` 去掉 `/apps/:appId` 路由与 lazy 导入；`MinApp.tsx` / `MinappPopupContainer.tsx` / `useMinappPopup.ts` 去掉 `isTopNavbar` 分支与 `useNavbarPosition` / `NavigationService` / `useNavigate` 依赖；`MinAppsPage.tsx` 去掉 `[navbar-position='top']` 死 CSS；`openSmartMinapp` 简化为 `openMinapp` 的直通包装
+
+**9. 清理：删除无引用的死函数**
+
+- `utils/webviewStateManager.ts`：`clearAllWebviewStates` / `getLoadedAppIds` / `waitForWebviewLoaded`（连同只服务于它的 `onWebviewStateChange` 保留说明）
+- `services/TabsService.ts`：类方法 `getActiveTabId` / `setActiveTab`（顶部 `import { setActiveTab }` 仍被 `closeTab` 使用，保留）
+- `pages/music/services/playLogic.ts`：`fixIndexAfterDelete` / `fixHistoryAfterDelete` / `fixIndexAfterMove` + 对应测试
+- `pages/music/services/playerStore.ts`：`getStations()`
+- `pages/notes/services/alarmSounds.ts`：`getVolume()`（`isRinging()` 仍被使用，保留）
+- `pages/music/hooks/useLocalPlayer.ts`：返回值中无消费方的 `currentIndex`、`favoriteCount` 及两个 `useMemo`
+
+**10. 清理：合并重复实现**
+
+- 新增 `pages/notes/services/hubHelpers.ts`：`bumpActivity(field)`（当日活跃度 +1，Dexie 事务）与 `previewText(text, max)`（去空白后截断）
+- `NoteEditor.tsx` / `TodoPanel.tsx` 原先各自实现了一份 `bumpActivity`、`previewText`；`NotesPanel.tsx` 也各有一份 `previewText`，现统一调用公共实现
+- `AlarmPanel.tsx` 本地的 `pad2` 改为复用 `services/schedule.ts` 中的同名导出
+- `pages/notes/types.ts`：`HubAlarm.triggered` 补注释，标注为**历史/展示兼容字段**（仅写入不再读取，真正去重靠 `lastTriggerKey`，保留以兼容 IndexedDB 已存数据）
+
+---
+
+**质量验证**
+
+- 全仓单元测试：**262 个测试文件 / 4004 项通过 / 8 项跳过 / 0 失败**（`pnpm test`，退出码 0）
+- TypeScript 类型检查（`typecheck:web`）：**0 错误**
+- 代码规范检查（`oxlint`，1031 个文件）：**0 告警 0 错误**
+- 被删除组件/函数全仓搜索**零残留**；完整构建通过，安装包与绿色版均已生成（Windows x64）
+
+---
+
+**升级说明**
+
+- 直接覆盖安装即可，**不需要重新登录、不需要重新配置服务商或 API Key**
+- **无数据库结构变更**，聊天记录 / 助手 / 模型配置 / 知识库 / 便签 / 待办 / 闹钟全部兼容
+
 ## [1.11.2] - 2026-10-02
 
 ### 核心主题：语音输入法体验修复 —— 不再吞字、不再卡顿、音频流更干净

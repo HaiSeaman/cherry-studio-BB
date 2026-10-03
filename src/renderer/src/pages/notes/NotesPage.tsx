@@ -67,7 +67,8 @@ const MainArea = styled.div`
   padding: 12px;
   overflow: hidden;
   background: ${mx.paper};
-  grid-template-columns: 1fr 1fr;
+  /* 左列（闹钟+日历）占 40%，右列（便签/待办+音乐/FM）占 60%：2fr 3fr 按剩余空间分配，避免 gap 溢出 */
+  grid-template-columns: 2fr 3fr;
   grid-template-rows: 1fr 1fr;
   grid-template-areas:
     'alarm notes'

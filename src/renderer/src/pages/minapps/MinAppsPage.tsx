@@ -121,9 +121,6 @@ const AppsContainerWrapper = styled(Scrollbar)`
   padding: 50px 0;
   width: 100%;
   margin-bottom: 20px;
-  [navbar-position='top'] & {
-    padding: 20px 0;
-  }
 `
 
 const AppsContainer = styled.div`

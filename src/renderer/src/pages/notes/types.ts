@@ -27,6 +27,7 @@ export type HubAlarm = {
   m: number
   s: number
   enabled: boolean
+  /** 历史/展示兼容字段：仅写入不再读取，真正去重靠 lastTriggerKey；保留以兼容 IndexedDB 已存数据 */
   triggered: boolean
   label: string
   sound: string

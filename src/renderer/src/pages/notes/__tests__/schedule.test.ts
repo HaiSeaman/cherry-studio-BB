@@ -90,10 +90,15 @@ describe('nextRingInfo', () => {
     expect(nextRingInfo(a, at('2026-08-16', 10, 0, 30))).toBe(24 * 3600 - 30)
   })
 
-  it('disabled / date 已过去 → null；date 是未来 → 按当日时刻差值', () => {
+  it('disabled / date 已过去 → null；date 是当天未来时刻 → 按当日时刻差值', () => {
     expect(nextRingInfo(alarm({ enabled: false }), at('2026-08-16', 9, 0, 0))).toBeNull()
     expect(nextRingInfo(alarm({ date: '2026-08-10', h: 9 }), at('2026-08-16', 9, 0, 0))).toBeNull()
     expect(nextRingInfo(alarm({ date: '2026-08-16', h: 12 }), at('2026-08-16', 11, 0, 0))).toBe(3600)
+  })
+
+  it('date 是未来日期 → null（不能用今天的 nowSec 算倒计时误导"今天就响"）', () => {
+    expect(nextRingInfo(alarm({ date: '2026-08-17', h: 9, m: 0 }), at('2026-08-16', 9, 0, 0))).toBeNull()
+    expect(nextRingInfo(alarm({ date: '2026-09-01', h: 12, m: 0 }), at('2026-08-16', 11, 0, 0))).toBeNull()
   })
 
   it('日历闹钟当天已过到点 → null（单日闹钟明天不会响，不显示误导性"明天"倒计时）', () => {

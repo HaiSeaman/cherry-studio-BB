@@ -11,14 +11,13 @@ import {
   ReloadOutlined
 } from '@ant-design/icons'
 import { loggerService } from '@logger'
-import WindowControls from '@renderer/components/WindowControls'
 import { isDev, isLinux, isMac, isWin } from '@renderer/config/constant'
 import { allMinApps } from '@renderer/config/minapps'
 import { useBridge } from '@renderer/hooks/useBridge'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
+import { useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { useAppDispatch } from '@renderer/store'
 import { setMinappsOpenLinkExternal } from '@renderer/store/settings'
@@ -148,7 +147,6 @@ const MinappPopupContainer: React.FC = () => {
   const { pinned, updatePinnedMinapps } = useMinapps()
   const { windowStyle } = useSettings()
   const backgroundColor = isMac && windowStyle === 'transparent' ? 'transparent' : 'var(--navbar-background)'
-  const { isTopNavbar } = useNavbarPosition()
   const dispatch = useAppDispatch()
 
   /** control the drawer open or close */
@@ -366,7 +364,7 @@ const MinappPopupContainer: React.FC = () => {
     }
     if (appid == currentMinappIdRef.current) {
       setTimeoutTimer(
-        'handleWebviewLoaded',
+        `handleWebviewLoaded:${appid}`,
         () => {
           // 触发时复查：A 加载中切到 B 时，A 的定时器不应让 B 提前显示加载完成
           if (appid === currentMinappIdRef.current) {
@@ -453,8 +451,10 @@ const MinappPopupContainer: React.FC = () => {
     }
   }
 
-  /** Title bar of the popup */
-  const Title = ({ appInfo, url }: { appInfo: AppInfo | null; url: string | null }) => {
+  /** Title bar of the popup（普通渲染函数：避免每次渲染产生新组件类型导致标题栏重挂载） */
+  const renderTitle = () => {
+    const appInfo = currentAppInfo
+    const url = currentUrl
     if (!appInfo) return null
 
     const handleCopyUrl = (event: any, url: string) => {
@@ -497,10 +497,7 @@ const MinappPopupContainer: React.FC = () => {
           </Tooltip>
         )}
         <Spacer />
-        <ButtonsGroup
-          className={isWin || isLinux ? 'windows' : ''}
-          style={{ marginRight: isWin || isLinux ? '140px' : 0 }}
-          isTopNavbar={isTopNavbar}>
+        <ButtonsGroup className={isWin || isLinux ? 'windows' : ''}>
           <Tooltip title={'后退'} mouseEnterDelay={0.8} placement="bottom">
             <TitleButton onClick={() => handleGoBack(appInfo.id)}>
               <ArrowLeftOutlined />
@@ -518,15 +515,7 @@ const MinappPopupContainer: React.FC = () => {
           </Tooltip>
           {appInfo.canPinned && (
             <Tooltip
-              title={
-                appInfo.isPinned
-                  ? isTopNavbar
-                    ? '从启动台移除'
-                    : '从侧边栏移除'
-                  : isTopNavbar
-                    ? '添加到启动台'
-                    : '添加到侧边栏'
-              }
+              title={appInfo.isPinned ? '从侧边栏移除' : '添加到侧边栏'}
               mouseEnterDelay={0.8}
               placement="bottom">
               <TitleButton onClick={() => handleTogglePin(appInfo.id)} className={appInfo.isPinned ? 'pinned' : ''}>
@@ -562,11 +551,6 @@ const MinappPopupContainer: React.FC = () => {
             </TitleButton>
           </Tooltip>
         </ButtonsGroup>
-        {(isWin || isLinux) && (
-          <div style={{ position: 'absolute', right: 0, top: 0, height: '100%' }}>
-            <WindowControls />
-          </div>
-        )}
       </TitleContainer>
     )
   }
@@ -590,22 +574,21 @@ const MinappPopupContainer: React.FC = () => {
 
   return (
     <Drawer
-      title={isTopNavbar ? null : <Title appInfo={currentAppInfo} url={currentUrl} />}
+      title={renderTitle()}
       placement="bottom"
       onClose={handlePopupMinimize}
       open={isPopupShow}
       mask={false}
       rootClassName="minapp-drawer"
       maskClassName="minapp-mask"
-      height={isTopNavbar ? 'calc(100% - var(--navbar-height))' : '100%'}
+      height="100%"
       maskClosable={false}
       closeIcon={null}
       styles={{
         wrapper: {
           position: 'fixed',
           // 侧边栏已在右侧：抽屉恒贴左边缘，右端在侧边栏左缘截断（ant.css .minapp-drawer max-width）
-          marginLeft: 0,
-          marginTop: isTopNavbar ? 'var(--navbar-height)' : 0
+          marginLeft: 0
         },
         content: {
           backgroundColor: window.root.style.background
@@ -645,10 +628,6 @@ const TitleContainer = styled.div`
   [navbar-position='left'] & {
     padding-left: ${isMac ? '40px' : '10px'};
   }
-  [navbar-position='top'] & {
-    padding-left: ${isMac ? '80px' : '10px'};
-    border-bottom: 0.5px solid var(--color-border);
-  }
 `
 
 const TitleText = styled.div`
@@ -668,7 +647,7 @@ const TitleTextTooltip = styled.span`
   }
 `
 
-const ButtonsGroup = styled.div<{ isTopNavbar: boolean }>`
+const ButtonsGroup = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;

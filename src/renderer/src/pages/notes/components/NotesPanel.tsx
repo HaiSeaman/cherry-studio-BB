@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 
+import { previewText } from '../services/hubHelpers'
 import { formatDateTime } from '../services/schedule'
 import type { HubNote } from '../types'
 import FolderModal from './FolderModal'
@@ -96,7 +97,6 @@ const NotesPanel: FC<{ bottomSlot?: ReactNode }> = ({ bottomSlot }) => {
     if (n.id === currentId) setCurrentId(null)
   }
 
-  const previewText = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, 80) || '（空便签）'
   const fmtTime = (t: number) => formatDateTime(t)
 
   // 编辑器内容变化（防抖已落盘）→ 记住最新内容供切换时兜底
@@ -156,7 +156,7 @@ const NotesPanel: FC<{ bottomSlot?: ReactNode }> = ({ bottomSlot }) => {
                     currentNote?.id != null ? pendingContentOf(currentNote.id) : undefined
                   )
                 }>
-                <ItemTitle>{previewText(n.content)}</ItemTitle>
+                <ItemTitle>{previewText(n.content, 80) || '（空便签）'}</ItemTitle>
                 <ItemTime>{fmtTime(n.createdAt)}</ItemTime>
                 <ItemActions>
                   <MiniBtn
@@ -193,7 +193,7 @@ const NotesPanel: FC<{ bottomSlot?: ReactNode }> = ({ bottomSlot }) => {
         emptyHint="归档的便签会出现在这里"
         items={archiveItems.map((n) => ({
           id: n.id!,
-          preview: previewText(n.content),
+          preview: previewText(n.content, 80) || '（空便签）',
           time: n.archivedAt ?? n.updatedAt
         }))}
         onClose={() => setArchiveOpen(false)}
@@ -207,7 +207,7 @@ const NotesPanel: FC<{ bottomSlot?: ReactNode }> = ({ bottomSlot }) => {
         emptyHint="垃圾桶是空的"
         items={trashItems.map((n) => ({
           id: n.id!,
-          preview: previewText(n.content),
+          preview: previewText(n.content, 80) || '（空便签）',
           time: n.trashedAt ?? n.updatedAt
         }))}
         onClose={() => setTrashOpen(false)}

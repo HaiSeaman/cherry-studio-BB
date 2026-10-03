@@ -46,25 +46,6 @@ export function pushShuffleHistory(history: number[], index: number): number[] {
   return next.length > 100 ? next.slice(next.length - 100) : next
 }
 
-/** 删除索引修正：删在 current 之前 → current-1；删自身 → 原位（由调用方决定接续）；删在后 → 不变 */
-export function fixIndexAfterDelete(deleted: number, current: number): number {
-  if (deleted < current) return current - 1
-  return current
-}
-
-/** 删除后修正随机历史栈：等于 deleted 的移除，大于 deleted 的减一 */
-export function fixHistoryAfterDelete(history: number[], deleted: number): number[] {
-  return history.filter((i) => i !== deleted).map((i) => (i > deleted ? i - 1 : i))
-}
-
-/** 拖拽移动后修正 current（照文档 §4.8 三分支） */
-export function fixIndexAfterMove(from: number, to: number, current: number): number {
-  if (current === from) return to
-  if (from < current && to >= current) return current - 1
-  if (from > current && to <= current) return current + 1
-  return current
-}
-
 /** 本地绝对路径 → file:// URL（反斜杠转正斜杠、分段 encodeURIComponent；盘符 D: 的冒号保留） */
 export function toFileUrl(filePath: string): string {
   const normalized = filePath.replace(/\\/g, '/')

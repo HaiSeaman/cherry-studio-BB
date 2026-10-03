@@ -57,26 +57,6 @@ export const clearWebviewState = (appId: string) => {
 }
 
 /**
- * Clear all WebView states
- */
-export const clearAllWebviewStates = () => {
-  const count = globalWebviewStates.size
-  globalWebviewStates.clear()
-  logger.debug(`Cleared all WebView states (${count} apps)`)
-  appListeners.clear()
-}
-
-/**
- * Get all loaded app IDs
- * @returns Array of app IDs that have loaded WebViews
- */
-export const getLoadedAppIds = (): string[] => {
-  return Array.from(globalWebviewStates.entries())
-    .filter(([, loaded]) => loaded)
-    .map(([appId]) => appId)
-}
-
-/**
  * Subscribe to a specific app's webview loaded state changes.
  * Returns an unsubscribe function.
  */
@@ -91,30 +71,4 @@ export const onWebviewStateChange = (appId: string, listener: WebviewStateListen
     listeners.delete(listener)
     if (listeners.size === 0) appListeners.delete(appId)
   }
-}
-
-/**
- * Promise helper: wait until the webview becomes loaded.
- * Optional timeout (ms) to avoid hanging forever; resolves false on timeout.
- */
-export const waitForWebviewLoaded = (appId: string, timeout = 15000): Promise<boolean> => {
-  if (getWebviewLoaded(appId)) return Promise.resolve(true)
-  return new Promise((resolve) => {
-    let done = false
-    const unsubscribe = onWebviewStateChange(appId, (loaded) => {
-      if (!loaded) return
-      if (done) return
-      done = true
-      unsubscribe()
-      resolve(true)
-    })
-    if (timeout > 0) {
-      setTimeout(() => {
-        if (done) return
-        done = true
-        unsubscribe()
-        resolve(false)
-      }, timeout)
-    }
-  })
 }

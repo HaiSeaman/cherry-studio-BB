@@ -5,8 +5,8 @@ import { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import styled from 'styled-components'
 
-import { toISODate } from '../services/calendarUtils'
 import { exportNoteImage } from '../services/exportImage'
+import { bumpActivity } from '../services/hubHelpers'
 import type { HubNote, HubNoteSnapshot } from '../types'
 import { mx } from './mx'
 import NoteHistoryPanel from './NoteHistoryPanel'
@@ -61,15 +61,6 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
     }
   }, [note?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const bumpActivity = useCallback(async () => {
-    const date = toISODate(new Date())
-    await db.transaction('rw', db.hub_activity, async () => {
-      const row = await db.hub_activity.get(date)
-      if (row) await db.hub_activity.update(date, { note: row.note + 1 })
-      else await db.hub_activity.add({ date, note: 1, todo: 0 })
-    })
-  }, [])
-
   const takeSnapshot = useCallback(async (noteId: number, content: string) => {
     const last = lastSnapshotRef.current
     if (last.ts && Date.now() - last.ts < SNAPSHOT_MIN_INTERVAL) return
@@ -90,6 +81,7 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
       const id = noteIdRef.current
       if (id != null && textRef.current)
         void db.hub_notes.update(id, { content: textRef.current, updatedAt: Date.now() })
@@ -110,7 +102,7 @@ const NoteEditor: FC<NoteEditorProps> = ({ note, onContentChange }) => {
       if (scheduledId == null) return
       await db.hub_notes.update(scheduledId, { content: value, updatedAt: Date.now() })
       onContentChange(scheduledId, value)
-      await bumpActivity()
+      await bumpActivity('note')
       await takeSnapshot(scheduledId, value)
     }, AUTOSAVE_DELAY)
   }

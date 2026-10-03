@@ -4,7 +4,7 @@ import { Archive, CheckSquare, Plus, Trash2 } from 'lucide-react'
 import { type FC, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
-import { toISODate } from '../services/calendarUtils'
+import { bumpActivity, previewText } from '../services/hubHelpers'
 import type { HubTodo } from '../types'
 import FolderModal from './FolderModal'
 import {
@@ -49,15 +49,6 @@ const TodoPanel: FC = () => {
   )
   const undone = sorted.filter((t) => !t.done).length
 
-  const bumpActivity = async () => {
-    const date = toISODate(new Date())
-    await db.transaction('rw', db.hub_activity, async () => {
-      const row = await db.hub_activity.get(date)
-      if (row) await db.hub_activity.update(date, { todo: row.todo + 1 })
-      else await db.hub_activity.add({ date, note: 0, todo: 1 })
-    })
-  }
-
   const addTodo = async () => {
     const text = input.trim()
     if (!text) return
@@ -74,7 +65,7 @@ const TodoPanel: FC = () => {
       updatedAt: Date.now(),
       completedAt: done ? Date.now() : undefined
     })
-    if (done && !t.done) await bumpActivity() // 仅 未完成→完成 计入热力图
+    if (done && !t.done) await bumpActivity('todo') // 仅 未完成→完成 计入热力图
   }
 
   const archiveTodo = async (t: HubTodo) => {
@@ -88,7 +79,6 @@ const TodoPanel: FC = () => {
     await db.hub_todos.update(t.id, { status: 'trashed', trashedAt: Date.now() })
   }
 
-  const previewText = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, 60)
   const fmtTime = (t: number) => {
     const d = new Date(t)
     return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -166,7 +156,7 @@ const TodoPanel: FC = () => {
         emptyHint="归档的待办会出现在这里"
         items={archiveItems.map((t) => ({
           id: t.id!,
-          preview: previewText(t.text),
+          preview: previewText(t.text, 60),
           time: t.archivedAt ?? t.updatedAt
         }))}
         onClose={() => setArchiveOpen(false)}
@@ -178,7 +168,7 @@ const TodoPanel: FC = () => {
         open={trashOpen}
         title="待办垃圾桶"
         emptyHint="垃圾桶是空的"
-        items={trashItems.map((t) => ({ id: t.id!, preview: previewText(t.text), time: t.trashedAt ?? t.updatedAt }))}
+        items={trashItems.map((t) => ({ id: t.id!, preview: previewText(t.text, 60), time: t.trashedAt ?? t.updatedAt }))}
         onClose={() => setTrashOpen(false)}
         onRestore={(id) => void db.hub_todos.update(id, { status: 'active', trashedAt: undefined })}
         onDelete={(id) => void db.hub_todos.delete(id)}

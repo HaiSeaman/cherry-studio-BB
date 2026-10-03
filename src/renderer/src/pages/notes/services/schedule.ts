@@ -61,11 +61,12 @@ export function computeDueAlarms(
   return { toFire, crossedDay, todayKey }
 }
 
-/** 距下次响铃秒数（列表「X 分 Y 秒后」提示）；disabled 或日历日期已过 → null */
+/** 距下次响铃秒数（列表「X 分 Y 秒后」提示）；disabled 或日历闹钟非当天（过去或未来）→ null */
 export function nextRingInfo(a: HubAlarm, now: Date): number | null {
   if (!a.enabled) return null
   const todayKey = dateKeyOf(now)
-  if (a.date && a.date < todayKey) return null
+  // 日历闹钟非当天（过去或未来）都返回 null：未来日期不能用今天的 nowSec 算倒计时，否则会显示误导性的「今天 X 分 Y 秒后」
+  if (a.date && a.date !== todayKey) return null
 
   const alarmSec = a.h * 3600 + a.m * 60 + (a.s || 0)
   const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()

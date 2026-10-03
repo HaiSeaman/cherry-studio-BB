@@ -107,22 +107,20 @@ const CalendarPanel: FC = () => {
   }
 
   const prevMonth = () => {
-    setViewMonth((m) => {
-      if (m === 0) {
-        setViewYear((y) => y - 1)
-        return 11
-      }
-      return m - 1
-    })
+    if (viewMonth === 0) {
+      setViewYear(viewYear - 1)
+      setViewMonth(11)
+    } else {
+      setViewMonth(viewMonth - 1)
+    }
   }
   const nextMonth = () => {
-    setViewMonth((m) => {
-      if (m === 11) {
-        setViewYear((y) => y + 1)
-        return 0
-      }
-      return m + 1
-    })
+    if (viewMonth === 11) {
+      setViewYear(viewYear + 1)
+      setViewMonth(0)
+    } else {
+      setViewMonth(viewMonth + 1)
+    }
   }
   const goToday = () => {
     setViewYear(today.getFullYear())

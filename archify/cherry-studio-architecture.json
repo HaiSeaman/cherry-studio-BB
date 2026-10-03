@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Cherry Studio 桌面客户端整体架构图",
+    "output": "cherry-studio-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "full-arch",
+        "label": "主干业务调用链路",
+        "focus": ["ui_chat", "main_core", "ai_runtime", "ext_cloud"],
+        "note": "从用户界面发起会话，经由主进程与核心运行时，连接外部大模型流式响应。"
+      },
+      {
+        "id": "tools-and-mcp",
+        "label": "插件与 MCP 工具生态",
+        "focus": ["main_mcp", "ai_plugins", "ext_search", "ext_local"],
+        "note": "展示 MCP 协议宿主、本地离线推理与联网搜索插件的协同体系。"
+      }
+    ]
+  },
+  "components": [
+    { "id": "ui_chat", "type": "frontend", "label": "对话交互界面", "sublabel": "React 19 + AntD", "pos": [40, 120], "size": [130, 56] },
+    { "id": "ui_knowledge", "type": "frontend", "label": "知识库管理", "sublabel": "RAG 向量检索与分块", "pos": [40, 220], "size": [130, 56] },
+    { "id": "ui_store", "type": "database", "label": "本地持久化存储", "sublabel": "Dexie (IndexedDB)", "pos": [40, 320], "size": [130, 56] },
+    { "id": "main_core", "type": "backend", "label": "Electron 主进程", "sublabel": "窗口与应用生命周期", "pos": [250, 120], "size": [140, 56] },
+    { "id": "main_sys", "type": "backend", "label": "系统底层服务", "sublabel": "快捷键 / 剪贴板 / 托盘", "pos": [250, 220], "size": [140, 56] },
+    { "id": "main_mcp", "type": "security", "label": "MCP 协议宿主", "sublabel": "Model Context Protocol", "pos": [250, 320], "size": [140, 56], "tag": "安全沙箱" },
+    { "id": "ai_runtime", "type": "backend", "label": "aiCore 核心引擎", "sublabel": "流式生成与请求调度", "pos": [470, 160], "size": [140, 56], "tag": "核心调度" },
+    { "id": "ai_plugins", "type": "messagebus", "label": "插件与工具中心", "sublabel": "联网搜索 / 工具调用", "pos": [470, 320], "size": [140, 56] },
+    { "id": "ext_cloud", "type": "external", "label": "云端商业大模型", "sublabel": "DeepSeek / Claude 等", "pos": [690, 120], "size": [150, 56] },
+    { "id": "ext_local", "type": "external", "label": "本地离线模型", "sublabel": "Ollama / 本地推理", "pos": [690, 220], "size": [150, 56] },
+    { "id": "ext_search", "type": "external", "label": "联网搜索服务", "sublabel": "Tavily / Exa 搜索", "pos": [690, 320], "size": [150, 56] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "渲染进程 (Renderer Process)", "wraps": ["ui_chat", "ui_knowledge", "ui_store"] },
+    { "kind": "region", "label": "主进程后台系统 (Main Process)", "wraps": ["main_core", "main_sys", "main_mcp"] },
+    { "kind": "security-group", "label": "AI核心引擎层 (aiCore Package)", "wraps": ["ai_runtime", "ai_plugins"] },
+    { "kind": "region", "label": "外部服务与硬件生态 (External)", "wraps": ["ext_cloud", "ext_local", "ext_search"] }
+  ],
+  "connections": [
+    { "id": "c-chat-know", "from": "ui_chat", "to": "ui_knowledge", "variant": "dashed" },
+    { "id": "c-know-store", "from": "ui_knowledge", "to": "ui_store", "variant": "dashed" },
+    { "id": "c-chat-main", "from": "ui_chat", "to": "main_core", "label": "IPC 桥接", "variant": "default" },
+    { "id": "c-main-sys", "from": "main_core", "to": "main_sys", "variant": "default" },
+    { "id": "c-sys-mcp", "from": "main_sys", "to": "main_mcp", "variant": "default" },
+    { "id": "c-main-runtime", "from": "main_core", "to": "ai_runtime", "variant": "emphasis" },
+    { "id": "c-runtime-plugin", "from": "ai_runtime", "to": "ai_plugins", "variant": "default" },
+    { "id": "c-mcp-plugin", "from": "main_mcp", "to": "ai_plugins", "label": "MCP 通信", "variant": "security" },
+    { "id": "c-runtime-cloud", "from": "ai_runtime", "to": "ext_cloud", "label": "SSE 流式", "variant": "emphasis" },
+    { "id": "c-runtime-local", "from": "ai_runtime", "to": "ext_local", "label": "本地调用", "variant": "dashed" },
+    { "id": "c-plugin-search", "from": "ai_plugins", "to": "ext_search", "label": "实时检索", "variant": "default" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "用户界面与前端层 (Renderer)",
+      "items": [
+        "React 19 + Ant Design 构建的高响应桌面客户端",
+        "Dexie.js 本地持久化保存聊天记录与向量切片"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "系统底座与协议中枢 (Main & MCP)",
+      "items": [
+        "Electron 主进程管理应用生命周期、托盘与快捷键",
+        "集成标准化 MCP 协议服务，安全托管外部工具进程"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "AI 运行时与插件中心 (aiCore)",
+      "items": [
+        "多提供商抽象适配层（兼容 OpenAI、DeepSeek、Claude 等）",
+        "内置实时联网插件与本地离线 Ollama 模型推理"
+      ]
+    }
+  ]
+}

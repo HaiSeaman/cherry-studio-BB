@@ -47,8 +47,6 @@ const WebviewContainer = memo(
     const webContentsIdRef = useRef<number | null>(null)
 
     const setRef = (appid: string) => {
-      onSetRefCallback(appid, null)
-
       return (element: WebviewTag | null) => {
         onSetRefCallback(appid, element)
         if (element) {
@@ -63,6 +61,7 @@ const WebviewContainer = memo(
       if (!webviewRef.current) return
 
       let loadCallbackFired = false
+      let loadTimer: ReturnType<typeof setTimeout> | null = null
 
       const handleLoaded = () => {
         logger.debug(`WebView did-finish-load for app: ${appid}`)
@@ -70,7 +69,7 @@ const WebviewContainer = memo(
         if (!loadCallbackFired) {
           loadCallbackFired = true
           // Small delay to ensure content is actually visible
-          setTimeout(() => {
+          loadTimer = setTimeout(() => {
             logger.debug(`Calling onLoadedCallback for app: ${appid}`)
             onLoadedCallback(appid)
           }, 100)
@@ -120,6 +119,11 @@ const WebviewContainer = memo(
       webviewRef.current.src = getLastUrl(appid) || url
 
       return () => {
+        // 清掉 pending 的 onLoadedCallback 定时器：卸载后再回调会操作已销毁的组件
+        if (loadTimer) {
+          clearTimeout(loadTimer)
+          loadTimer = null
+        }
         // 记录最后导航地址，重开时恢复
         if (lastUrlRef.current) {
           setLastUrl(appid, lastUrlRef.current)

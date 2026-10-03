@@ -8,7 +8,7 @@ import styled, { keyframes } from 'styled-components'
 import { alarmScheduler } from '../services/alarmScheduler'
 import { alarmSounds, soundLabel } from '../services/alarmSounds'
 import { useCountdown } from '../services/countdownEngine'
-import { nextRingInfo } from '../services/schedule'
+import { nextRingInfo, pad2 } from '../services/schedule'
 import { setAlarmVolume } from '../store/hubSettingsSlice'
 import type { HubAlarm } from '../types'
 import { mx, MXGhostPill, MXTabs, reduceMotion } from './mx'
@@ -19,7 +19,6 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * 52
 
 type AlarmTab = 'timer' | 'alarm' | 'calendar'
 
-const pad2 = (n: number) => String(n).padStart(2, '0')
 const clampNum = (v: string, max: number) => Math.min(Math.max(parseInt(v, 10) || 0, 0), max)
 const fmtHMS = (s: number) => `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor((s % 3600) / 60))}:${pad2(s % 60)}`
 const fmtRingInfo = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)} 分 ${sec % 60} 秒后` : `${sec} 秒后`)
