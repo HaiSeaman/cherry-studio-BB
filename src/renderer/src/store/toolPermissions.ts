@@ -112,17 +112,6 @@ const toolPermissionsSlice = createSlice({
 
 export const toolPermissionsActions = toolPermissionsSlice.actions
 
-export const selectActiveToolPermission = (state: ToolPermissionsState): ToolPermissionEntry | null => {
-  const activeEntries = Object.values(state.requests).filter((entry) =>
-    ['pending', 'submitting-allow', 'submitting-deny', 'invoking'].includes(entry.status)
-  )
-
-  if (activeEntries.length === 0) return null
-
-  activeEntries.sort((a, b) => a.createdAt - b.createdAt)
-  return activeEntries[0]
-}
-
 export const selectPendingPermission = (
   state: ToolPermissionsState,
   toolCallId: string

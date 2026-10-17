@@ -53,6 +53,36 @@ async function copyPath(source: string, dest: string, options: fs.CopyOptions = 
   await fsp.cp(source, dest, { recursive: true, ...options })
 }
 
+/**
+ * 用 *.restore 目录整体替换目标目录。
+ *
+ * 先改名旧目录为 *.old（而不是直接删），再把 .restore 改名到位，最后删 *.old。
+ * 这样即使中途失败，旧数据仍在 *.old 里、恢复数据仍在 *.restore 里，两边都不会丢。
+ */
+async function swapInRestoreDir(restoreDir: string, destDir: string): Promise<void> {
+  const backupDir = `${destDir}.old`
+
+  // 上一次失败可能留下 *.old，先清掉（它已经不是唯一副本了）
+  await removePath(backupDir).catch(() => {})
+
+  const hasDest = await pathExists(destDir)
+  if (hasDest) {
+    await fsp.rename(destDir, backupDir)
+  }
+
+  try {
+    await fsp.rename(restoreDir, destDir)
+  } catch (error) {
+    // 改名失败：把旧目录还原回去，保证应用还能以原数据启动
+    if (hasDest) {
+      await fsp.rename(backupDir, destDir).catch(() => {})
+    }
+    throw error
+  }
+
+  await removePath(backupDir).catch(() => {})
+}
+
 interface CopyDirOptions {
   dereferenceSymlinks: boolean
   sourceRootRealPath?: string
@@ -124,31 +154,29 @@ class BackupManager {
       // Restore IndexedDB
       if (hasIndexedDBRestore) {
         logger.info('[handleStartupRestore] Found IndexedDB.restore directories, completing restoration...')
-        await removePath(indexedDBDest).catch(() => {})
-        await fsp.rename(indexedDBRestore, indexedDBDest)
+        await swapInRestoreDir(indexedDBRestore, indexedDBDest)
       }
 
       // Restore Local Storage
       if (hasLocalStorageRestore) {
         logger.info('[handleStartupRestore] Found Local Storage.restore directories, completing restoration...')
-        await removePath(localStorageDest).catch(() => {})
-        await fsp.rename(localStorageRestore, localStorageDest)
+        await swapInRestoreDir(localStorageRestore, localStorageDest)
       }
 
       // Restore Data
       if (hasDataRestore) {
         logger.info('[handleStartupRestore] Found Local Data.restore directories, completing restoration...')
-        await removePath(dataDest).catch(() => {})
-        await fsp.rename(dataRestore, dataDest)
+        await swapInRestoreDir(dataRestore, dataDest)
       }
 
       logger.info('[handleStartupRestore] Restoration completed successfully')
     } catch (error) {
-      logger.error('[handleStartupRestore] Failed to complete restoration:', error as Error)
-      // Clean up restore markers to avoid endless retry loop
-      await removePath(indexedDBRestore).catch(() => {})
-      await removePath(localStorageRestore).catch(() => {})
-      await removePath(dataRestore).catch(() => {})
+      // 注意：这里**不能**再把三个 *.restore 目录删掉。
+      // 旧实现先 removePath(目标) 再 rename；一旦 rename 失败（跨卷、文件被占用、
+      // 权限不足），目标已被删而 .restore 又被 catch 清掉 —— 现有数据和恢复数据会一起丢失。
+      // 保留 .restore 才能让用户重试或手工抢救；分区完成成功的那些已经 rename 走，
+      // 目录自然不存在，不会造成重复恢复。
+      logger.error('[handleStartupRestore] Failed to complete restoration (restore data kept for retry):', error as Error)
     }
   }
 

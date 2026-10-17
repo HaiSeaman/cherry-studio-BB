@@ -79,7 +79,12 @@ export function useInPlaceEdit(options: UseInPlaceEditOptions): UseInPlaceEditRe
     }
   }, [isSaving, trimOnSave, editValue, onSave, onError])
 
+  const cancelingRef = useRef(false)
+
   const cancelEdit = useCallback(() => {
+    // 取消后输入框会失焦，而 blur 的默认语义是「保存」。
+    // 先打标记，让紧随其后的 blur 跳过保存（否则取消会被保存覆盖）。
+    cancelingRef.current = true
     setIsEditing(false)
     setEditValue('')
     onCancel?.()
@@ -105,10 +110,11 @@ export function useInPlaceEdit(options: UseInPlaceEditOptions): UseInPlaceEditRe
   }, [])
 
   const handleBlur = useCallback(() => {
-    // 这里的逻辑需要注意：
-    // 如果点击了“取消”按钮，可能会先触发 Blur 保存。
-    // 通常 InPlaceEdit 的逻辑是 Blur 即 Save。
-    // 如果不想 Blur 保存，可以去掉这一行，或者判断 relatedTarget。
+    // 取消导致的失焦不应触发保存
+    if (cancelingRef.current) {
+      cancelingRef.current = false
+      return
+    }
     if (!isSaving) {
       void saveEdit()
     }

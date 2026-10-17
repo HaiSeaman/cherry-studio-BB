@@ -1,6 +1,32 @@
-import type { DropResult } from '@hello-pangea/dnd'
+import type { DropResult, OnDragEndResponder, ResponderProvided } from '@hello-pangea/dnd'
+import { droppableReorder } from '@renderer/utils'
 import type { Key } from 'react'
 import { useCallback, useMemo } from 'react'
+
+/**
+ * 拖拽结束的统一处理：先透传调用方自己的 onDragEnd，再按需重排列表。
+ *
+ * DraggableList 与 DraggableVirtualList 原本各自抄了一份同样的逻辑，
+ * 任何一处改动（例如增加跨列表拖拽）都要改两遍，故收敛到这里。
+ * 不传 onUpdate 时只透传回调、不改数据（虚拟列表允许只读场景）。
+ */
+export function createDragEndHandler<T>(params: {
+  list: T[]
+  onUpdate?: (newList: T[]) => void
+  onDragEnd?: OnDragEndResponder
+}): (result: DropResult, provided: ResponderProvided) => void {
+  const { list, onUpdate, onDragEnd } = params
+  return (result, provided) => {
+    onDragEnd?.(result, provided)
+    if (!onUpdate || !result.destination) return
+
+    const sourceIndex = result.source.index
+    const destIndex = result.destination.index
+    if (sourceIndex === destIndex) return
+
+    onUpdate(droppableReorder(list, sourceIndex, destIndex))
+  }
+}
 
 interface UseDraggableReorderParams<T> {
   /** 原始的、完整的数据列表 */

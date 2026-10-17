@@ -435,6 +435,11 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
     assertAutomationSender(event)
     return automationService.runTaskNow(taskId)
   })
+  // 渲染层挂好 Automation_TriggerRun 监听后回报就绪；主进程收到才允许派发任务
+  ipcMain.handle(IpcChannel.Automation_RendererReady, (event) => {
+    assertAutomationSender(event)
+    automationService.markRendererReady()
+  })
   ipcMain.handle(IpcChannel.Automation_GetRuns, (event, limit?: number) => {
     assertAutomationSender(event)
     return automationService.getRuns(limit ?? 100)

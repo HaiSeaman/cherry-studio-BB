@@ -202,6 +202,7 @@ export enum IpcChannel {
   Automation_GetRuns = 'automation:get-runs',
   Automation_GetRun = 'automation:get-run',
   Automation_TriggerRun = 'automation:trigger-run',
+  Automation_RendererReady = 'automation:renderer-ready',
   Automation_UpdateRun = 'automation:update-run',
   Automation_FinishRun = 'automation:finish-run',
   Automation_TasksChanged = 'automation:tasks-changed',

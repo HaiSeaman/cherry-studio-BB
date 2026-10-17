@@ -111,6 +111,9 @@ export class AutomationService {
   /** 运行看门狗：runId → timer */
   private watchdogs = new Map<string, ReturnType<typeof setTimeout>>()
   private initialized = false
+  /** 渲染层是否已挂上 Automation_TriggerRun 监听。未就绪时 tick 不触发任务，
+   *  否则启动补跑事件会在监听注册前发出，任务被标成 running 却永远没人执行。 */
+  private rendererReady = false
 
   public async init(): Promise<void> {
     if (this.initialized) return
@@ -121,6 +124,19 @@ export class AutomationService {
     this.tick()
     this.timer = setInterval(() => this.tick(), TICK_MS)
     logger.info('AutomationService initialized', { tasks: this.data.tasks.length })
+  }
+
+  /** 渲染层挂好监听后调用：此后才允许派发任务 */
+  public markRendererReady(): void {
+    if (this.rendererReady) return
+    this.rendererReady = true
+    logger.info('Automation renderer ready, scheduling enabled')
+    // 就绪瞬间补跑一次（此前 tick 因未就绪被跳过）
+    this.tick()
+  }
+
+  public isRendererReady(): boolean {
+    return this.rendererReady
   }
 
   private async load(): Promise<void> {
@@ -205,6 +221,13 @@ export class AutomationService {
         continue
       }
       // outcome === 'due'
+      if (!this.rendererReady) {
+        // 渲染层还没挂上 Automation_TriggerRun 监听：此时派发的事件没人接，
+        // 任务会被标成 running 却永远不执行（只能等 10 分钟看门狗判超时）。
+        // 保持 due 状态不动，等 markRendererReady() 后立刻补触发。
+        logger.debug('Automation deferred: renderer not ready yet', { taskId: task.id })
+        continue
+      }
       if (activeRuns >= MAX_CONCURRENT_RUNS) {
         // 并发已满：不标记触发，下一跳重试（窗口内会补上）
         logger.info('Automation concurrency full, deferring task', { taskId: task.id })
@@ -423,7 +446,11 @@ export class AutomationService {
     if (!task) return null
     const activeRuns = this.data.runs.filter((r) => r.status === 'running').length
     if (activeRuns >= MAX_CONCURRENT_RUNS) return null
-    this.triggerRun(task, Date.now(), true)
+
+    // 主窗口不可用时 triggerRun 返回 false 且不会建 run 记录；
+    // 此时必须返回 null，不能拿 runs[0] 兜底（那是上一条历史记录，会被调用方当成本次结果）。
+    if (!this.triggerRun(task, Date.now(), true)) return null
+
     this.save()
     this.notifyChanged()
     return this.data.runs[0] ?? null
@@ -511,8 +538,9 @@ export class AutomationService {
         const fh = await fsp.open(safePath, 'r')
         try {
           const buf = Buffer.alloc(1024 * 1024)
-          await fh.read(buf, 0, buf.length, 0)
-          return { ok: true, content: buf.toString('utf8') + '\n…[文件超过 1MB，已截断]' }
+          // 短读（实际读到的比请求少）时，未读部分会保留为 \0，必须先按 bytesRead 截断
+          const { bytesRead } = await fh.read(buf, 0, buf.length, 0)
+          return { ok: true, content: buf.subarray(0, bytesRead).toString('utf8') + '\n…[文件超过 1MB，已截断]' }
         } finally {
           await fh.close()
         }

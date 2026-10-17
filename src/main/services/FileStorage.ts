@@ -988,30 +988,10 @@ class FileStorage {
 
     // Search for files using ripgrep
     if (options.includeFiles) {
-      const args: string[] = ['--files']
-
-      // Handle hidden files
-      if (!options.includeHidden) {
-        args.push('--glob', '!.*')
-      }
-
-      // Use --iglob to let ripgrep filter filenames (case-insensitive)
-      if (options.searchPattern && options.searchPattern !== '.') {
-        args.push('--iglob', `*${options.searchPattern}*`)
-      }
-
-      // Exclude common hidden directories and large directories
-      args.push(...COMMON_RIPGREP_EXCLUDES)
-
-      // Handle max depth
-      if (!options.recursive) {
-        args.push('--max-depth', '1')
-      } else if (options.maxDepth > 0) {
-        args.push('--max-depth', options.maxDepth.toString())
-      }
-
-      // Add the directory path
-      args.push(resolvedPath)
+      // --iglob 让 ripgrep 直接按文件名过滤（大小写不敏感），避免把整目录读出来再在 JS 里筛
+      const filenameGlob =
+        options.searchPattern && options.searchPattern !== '.' ? `*${options.searchPattern}*` : undefined
+      const args = this.buildRipgrepBaseArgs(options, resolvedPath, filenameGlob)
 
       const { exitCode, output } = await executeRipgrep(args)
 
@@ -1268,13 +1248,24 @@ class FileStorage {
 
   /**
    * Build common ripgrep arguments for file listing
+   *
+   * @param filenameGlob 可选的 `--iglob` 文件名过滤（大小写不敏感）；传了就插在排除规则之前
    */
-  private buildRipgrepBaseArgs(options: Required<DirectoryListOptions>, resolvedPath: string): string[] {
+  private buildRipgrepBaseArgs(
+    options: Required<DirectoryListOptions>,
+    resolvedPath: string,
+    filenameGlob?: string
+  ): string[] {
     const args: string[] = ['--files']
 
     // Handle hidden files
     if (!options.includeHidden) {
       args.push('--glob', '!.*')
+    }
+
+    // 文件名过滤：让 ripgrep 先按名字筛，避免把整个目录都读出来再在 JS 里过滤
+    if (filenameGlob) {
+      args.push('--iglob', filenameGlob)
     }
 
     // Exclude common hidden directories and large directories

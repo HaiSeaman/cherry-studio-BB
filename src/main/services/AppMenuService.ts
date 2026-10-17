@@ -28,7 +28,7 @@ export class AppMenuService {
           {
             label: appMenu.about + ' ' + app.name,
             click: () => {
-              // Emit event to navigate to About page
+              // 关于信息展示在「常规设置」页底部（/settings/about 路由并不存在）
               const mainWindow = windowService.getMainWindow()
               if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send(IpcChannel.Windows_NavigateToAbout)

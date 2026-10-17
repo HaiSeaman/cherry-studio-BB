@@ -13,21 +13,30 @@ export function usePromptProcessor({ prompt, modelName }: PromptProcessor): stri
   const [processedPrompt, setProcessedPrompt] = useState(prompt)
 
   useEffect(() => {
+    // prompt / modelName 流式变化会频繁重跑；旧的异步结果后返回会覆盖新结果。
+    // 用 cancelled 只让「最后一次」生效，同时避免卸载后 setState。
+    let cancelled = false
+
     const processPrompt = async () => {
       try {
         if (containsSupportedVariables(prompt)) {
           const result = await replacePromptVariables(prompt, modelName)
-          setProcessedPrompt(result)
+          if (!cancelled) setProcessedPrompt(result)
         } else {
-          setProcessedPrompt(prompt)
+          if (!cancelled) setProcessedPrompt(prompt)
         }
       } catch (error) {
+        if (cancelled) return
         logger.error('Failed to process prompt variables, falling back:', error as Error)
         setProcessedPrompt(prompt)
       }
     }
 
     void processPrompt()
+
+    return () => {
+      cancelled = true
+    }
   }, [prompt, modelName])
 
   return processedPrompt

@@ -68,6 +68,19 @@ describe('chunkText', () => {
       expect(c.text).not.toBe('')
     }
   })
+
+  it('overlap >= chunkSize 时不死循环（参数非法也要能正常返回）', () => {
+    const long = Array.from({ length: 40 }, (_, i) => `第${i}段内容用于验证重叠参数边界。`).join('\n')
+    // 等值、超值两种非法组合都必须能返回，且块数有限
+    for (const [size, ov] of [
+      [50, 50],
+      [50, 999]
+    ] as const) {
+      const r = chunkText(long, 'line', size, ov)
+      expect(r.length).toBeGreaterThan(0)
+      expect(r.length).toBeLessThanOrEqual(long.split('\n').length)
+    }
+  })
 })
 
 describe('chunkText 标题层级上下文', () => {

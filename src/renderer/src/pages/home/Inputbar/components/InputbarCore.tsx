@@ -150,6 +150,8 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
   const { searching } = useRuntime()
   const startDragY = useRef<number>(0)
   const startHeight = useRef<number>(0)
+  // 拖拽中的 document 监听清理函数（组件卸载时兜底摘除）
+  const dragCleanupRef = useRef<(() => void) | null>(null)
   const { setTimeoutTimer } = useTimer()
 
   // 全局 QuickPanel Hook (用于控制面板显示状态)
@@ -531,16 +533,31 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
         onHeightChange(newHeight)
       }
 
-      const handleMouseUp = () => {
+      const cleanup = () => {
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
       }
 
+      const handleMouseUp = () => {
+        cleanup()
+        dragCleanupRef.current = null
+      }
+
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
+      // 记住清理函数：拖拽过程中组件若被卸载（切换话题/助手会重建输入栏），
+      // 下面 effect 的 cleanup 才能把这两条 document 监听摘掉，否则会一直泄漏
+      dragCleanupRef.current = cleanup
     },
     [config.enableDragDrop, onHeightChange, textareaRef]
   )
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.()
+      dragCleanupRef.current = null
+    }
+  }, [])
 
   const onQuote = useCallback(
     (quoted: string) => {

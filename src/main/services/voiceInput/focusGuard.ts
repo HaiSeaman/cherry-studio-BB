@@ -55,9 +55,14 @@ export function createFocusGuard(onUserInput: () => void): FocusGuard {
 
   return {
     start(holdKeys) {
-      if (started) return
+      // 按住键集合每次都刷新：会话可能重叠（上一条 start 尚未 stop），
+      // 此时若因 started 提前返回，新会话的快捷键就没被登记，
+      // 它的长按自动重复会被当成「用户输入」，误冻结打字器、丢掉已识别文本。
       pressed.clear()
       for (const key of holdKeys) pressed.add(key)
+
+      if (started) return
+
       uIOhook.on('keydown', handleKeyDown)
       uIOhook.on('keyup', handleKeyUp)
       uIOhook.on('mousedown', handleMouseDown)

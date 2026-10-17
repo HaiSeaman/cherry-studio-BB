@@ -40,14 +40,6 @@ const messageMenubarRegistry = new Map<MessageMenubarScope, MessageMenubarScopeC
   [TopicType.Session, { buttonIds: [...SESSION_MESSAGE_MENUBAR_BUTTON_IDS], dropdownRootAllowKeys: ['save', 'export'] }]
 ])
 
-export const registerMessageMenubarConfig = (scope: MessageMenubarScope, config: MessageMenubarScopeConfig) => {
-  const clonedConfig: MessageMenubarScopeConfig = {
-    buttonIds: [...config.buttonIds],
-    dropdownRootAllowKeys: config.dropdownRootAllowKeys ? [...config.dropdownRootAllowKeys] : undefined
-  }
-  messageMenubarRegistry.set(scope, clonedConfig)
-}
-
 export const getMessageMenubarConfig = (scope: MessageMenubarScope): MessageMenubarScopeConfig => {
   if (messageMenubarRegistry.has(scope)) {
     return messageMenubarRegistry.get(scope) as MessageMenubarScopeConfig

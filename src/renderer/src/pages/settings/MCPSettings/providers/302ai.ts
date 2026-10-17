@@ -19,10 +19,6 @@ export const clearAI302Token = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
 }
 
-export const hasAI302Token = (): boolean => {
-  return !!getAI302Token()
-}
-
 interface Ai302SyncResult {
   success: boolean
   message: string

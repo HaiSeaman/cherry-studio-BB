@@ -112,8 +112,10 @@ const KnowledgePage: FC = () => {
   const [minRelevance, setMinRelevance] = useState(MIN_RELEVANCE)
   const [rerankModel, setRerankModel] = useState<Model | undefined>()
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (isCancelled?: () => boolean) => {
     const list = await KnowledgeService.listBases()
+    // 列表加载期间组件可能已卸载：此时不再写状态
+    if (isCancelled?.()) return
     setBases(list)
     setActiveBase((prev) => {
       // 同一库时返回列表里的新对象（否则改完参数后顶部徽标还是旧值）
@@ -152,7 +154,11 @@ const KnowledgePage: FC = () => {
   }
 
   useEffect(() => {
-    void refresh()
+    let cancelled = false
+    void refresh(() => cancelled)
+    return () => {
+      cancelled = true
+    }
   }, [refresh])
 
   useEffect(() => {

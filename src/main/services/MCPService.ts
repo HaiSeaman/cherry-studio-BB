@@ -805,13 +805,17 @@ class McpService {
   async closeClient(serverKey: string) {
     const client = this.clients.get(serverKey)
     if (client) {
-      // Remove the client from the cache
-      await client.close()
-      logger.debug(`Closed server`, { serverKey })
+      // 先摘掉引用再关闭：close() 抛错时不能让死 client 永久留在 Map 里
+      // （否则后续 activate 会拿到一个已断开的客户端，且再也无法重建）
       this.clients.delete(serverKey)
-      // Clear all caches for this server
       this.clearServerCache(serverKey)
       this.serverLogs.remove(serverKey)
+      try {
+        await client.close()
+        logger.debug(`Closed server`, { serverKey })
+      } catch (error) {
+        logger.warn(`Error closing server client (reference already released)`, { serverKey, error })
+      }
     } else {
       logger.warn(`No client found for server`, { serverKey })
     }

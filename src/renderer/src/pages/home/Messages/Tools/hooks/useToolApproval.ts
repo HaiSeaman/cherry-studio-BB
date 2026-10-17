@@ -38,11 +38,4 @@ export function useToolApproval(block: ToolMessageBlock): ToolApprovalState & To
   return useMcpToolApproval(block)
 }
 
-/**
- * Determine if a block needs approval
- */
-export function isBlockWaitingApproval(block: ToolMessageBlock): boolean {
-  return block.metadata?.rawMcpToolResponse?.status === 'pending'
-}
-
 export { useMcpToolApproval } from './useMcpToolApproval'

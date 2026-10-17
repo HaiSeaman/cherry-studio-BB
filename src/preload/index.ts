@@ -523,6 +523,8 @@ const api = {
       ipcRenderer.on(IpcChannel.Automation_TriggerRun, listener)
       return () => ipcRenderer.removeListener(IpcChannel.Automation_TriggerRun, listener)
     },
+    /** 渲染层监听已挂好，通知主进程可以开始派发任务 */
+    markRendererReady: (): Promise<void> => ipcRenderer.invoke(IpcChannel.Automation_RendererReady),
     /** 任务/运行数据变化（main → renderer），UI 收到后重新拉取 */
     onTasksChanged: (callback: () => void): (() => void) => {
       const listener = () => callback()

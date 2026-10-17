@@ -143,10 +143,6 @@ export function filterAdjacentUserMessages(messages: Message[]): Message[] {
 }
 
 /**
- * @deprecated 拼写兼容别名，请使用 filterAdjacentUserMessages
- */
-
-/**
  * Filters out assistant messages that only contain ErrorBlocks and their associated user messages.
  * An assistant message is associated with a user message via the askId field.
  */

@@ -5,6 +5,111 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.11.4] - 2026-10-17
+
+### 核心主题：全仓深度审查 —— 18 个 BUG 修复 + 死代码清理 + 文档纠错
+
+**不新增功能、不新增依赖、不改数据结构、用户数据完全兼容**。本轮做的是全仓"体检 + 治病 + 减肥"：修掉 18 个真实缺陷（其中 2 个会丢数据、2 个会让程序卡死）、删除 23 个零引用导出与 2 个死文件、合并 3 处重复实现、纠正 3 处文档错误。
+
+---
+
+#### 一、数据安全（P0）
+
+**1. 备份恢复可能同时丢失「现有数据」与「恢复数据」**
+
+- 位置：`src/main/services/BackupManager.ts` 的 `handleStartupRestore()`
+- 问题：旧流程是 `removePath(目标)` → `fsp.rename(.restore → 目标)`，且 `catch` 里再把三个 `.restore` 目录删掉。一旦 rename 失败（跨卷 / 文件被占用 / 权限不足），目标已被删除而恢复数据又被清理，**两边同时丢失**
+- 修复：新增 `swapInRestoreDir(restoreDir, destDir)` —— 旧目录先改名 `${dest}.old`，`.restore` 改名到位，失败则把 `.old` 改回并把 `.restore` 原样保留（可重试 / 手工抢救），成功后才删 `.old`
+- 同时移除 `catch` 中的 `.restore` 清理（该清理会让"失败的恢复"无法重试）
+
+**2. 剪贴板会永久漏捕复制内容**
+
+- 位置：`src/main/services/ClipboardService.ts`
+- 问题一：`poll()` 先提交 `lastSequence` 再读取。读到一半抛错（剪贴板被密码管理器占用）时序号已推进，下一轮同序号被直接跳过，**该次复制永久漏记**
+- 问题二：`deleteItem()` / `setLimits()` 淘汰条目后未重置 `lastCheapKey`，被删/被淘汰的内容再次复制**无法重新入库**
+- 修复：序列号改为「全部读取成功后」才提交；两处淘汰路径补 `lastCheapKey = ''`
+
+---
+
+#### 二、卡死与空转（P0/P1）
+
+**3. 知识库切块在 overlap ≥ chunkSize 时无限循环**
+
+- 位置：`src/renderer/src/pages/knowledge/chunker.ts` 的 `chunkText()`
+- 问题：重叠回退可能退到本块起点甚至更前，`i` 不前进 → 反复处理同一段文本，`chunks` 无限增长直到 JS heap OOM
+- 触发条件：界面允许「切块 256 + 重叠 1024」，两者同时满足
+- 修复：入口钳制 `safeOverlap = min(overlap, chunkSize - 1)`；回退后强制 `i = Math.max(ovStart, i + 1)`
+- 回归：`__tests__/chunker.test.ts` 新增「overlap >= chunkSize 时不死循环」用例
+
+**4. 自动化任务开机「假装执行」**
+
+- 位置：`src/main/services/AutomationService.ts` + `src/main/index.ts`
+- 问题：`automationService.init()` 在 `createMainWindow()` 之后立刻 `tick()`，但渲染层的 `useAutomationRunner` 尚未注册 `Automation_TriggerRun` 监听 → 事件丢失，任务被标 `running` 却无人执行，10 分钟后看门狗判超时
+- 修复：新增渲染层就绪握手 —— `IpcChannel.Automation_RendererReady` + `AutomationService.markRendererReady()`；`tick()` 在未就绪时保持 `due` 不派发，就绪瞬间立刻补触发
+
+---
+
+#### 三、功能正确性（P1/P2）
+
+| # | 位置 | 问题 | 修复 |
+|---|---|---|---|
+| 5 | `pages/notes/services/alarmScheduler.ts` | 倒计时 `fireExternal()` 直接覆盖 `currentRinging`，正在响的闹钟被静默吞掉（关掉倒计时后原闹钟再也回不来） | 引入内部类型 `RingQueueItem`；被打断项以 `resume` 标记挂回队首；`stopRinging()` 保留 `resume` 项并在下一拍恢复 |
+| 6 | `pages/music/components/FmRadio.tsx` | 搜索进行中清空输入框 → `loading` 永不复位（在途请求被序号守卫挡掉，不会走 finally） | `!text` 分支补 `setLoading(false)` |
+| 7 | `hooks/useInPlaceEdit.ts` | 点「取消」先触发 blur → `saveEdit()` 被调用，取消被架空 | 新增 `cancelingRef`，`handleBlur` 见到标记即跳过保存 |
+| 8 | `hooks/useMetaDataParser.ts` | 被 abort 的旧请求在 `finally` 里把新一轮的 `isLoading` 抹成 false | `finally` 判断 `abortControllerRef.current === controller` |
+| 9 | `hooks/usePinnedModels.ts` | providers 变化时旧 `await` 结果覆盖新列表；卸载后仍 setState | 补 `cancelled` 标志与清理函数 |
+| 10 | `hooks/usePromptProcessor.ts` | prompt 流式变化时旧结果覆盖新结果 | 同上 |
+| 11 | `pages/knowledge/KnowledgePage.tsx` | `refresh()` 在组件卸载后仍写状态 | `refresh(isCancelled?)` + effect 清理 |
+| 12 | `pages/home/Inputbar/components/InputbarCore.tsx` | 拖拽调高度期间组件卸载，`document` 监听泄漏 | 新增 `dragCleanupRef` + 卸载 cleanup |
+| 13 | `main/services/voiceInput/focusGuard.ts` | 会话重叠时 `start()` 因 `started` 提前返回，新会话 `holdKeys` 未登记 → 长按自动重复被误判为用户输入，冻结打字器、丢字 | 先刷新 `pressed` 集合，再判断是否需要注册监听 |
+| 14 | `main/services/MCPService.ts` | `closeClient()` 先 `await client.close()` 后 `delete`；close 抛错时死 client 永久留在 Map，该 server 再也无法重建 | 先摘引用与缓存，再 `close()`（异常只记日志） |
+| 15 | `main/services/AutomationService.ts` | `runTaskNow()` 丢弃 `triggerRun()` 返回值，主窗口不可用时返回 `runs[0]`（上一条历史记录）冒充本次结果 | 检查返回值，失败返回 `null` |
+| 16 | `main/services/AutomationService.ts` | `sysFileRead()` 忽略 `fh.read()` 的 `bytesRead`，短读时缓冲区尾部 `\0` 混入正文 | 按 `bytesRead` 截断 |
+| 17 | `handler/NavigationHandler.tsx` + `main/services/AppMenuService.ts` | macOS 菜单「关于」跳转 `/settings/about`，该路由**不存在** | 改为真实存在的 `/settings/general` |
+| 18 | `main/services/FileStorage.ts` | `searchByFilename()` 与 `buildRipgrepBaseArgs()` 各拼一遍相同 ripgrep 参数 | 合并为单一出口，新增可选 `filenameGlob` 参数 |
+
+---
+
+#### 四、死代码清理
+
+所有删除项均通过「全仓引用计数 + `export *` 转发检查 + CLI 调用检查」三重验证：
+
+- **孤儿页面**：`src/renderer/src/pages/launchpad/`（195 行）与 `Router` 路由 —— 全项目无任何入口（侧边栏 / 托盘 / 快捷键 / 设置页 / 引导页均无）
+- **死脚本**：`scripts/scan-unused-deps.mjs` —— 零调用，且实为「编译 + 打包」脚本，与 `build:win` 完全重复
+- **23 个零引用导出**：`OPENAI_NO_SUPPORT_DEV_ROLE_MODELS`、`isGPT52ProModel`、`registerMessageMenubarConfig`、`SYSTEM_PROVIDERS`、`DEFAULT_THEME_ID`、`getModel`、`isBlockWaitingApproval`、`hasAI302Token`、`MCPROUTER_HOST`、`hasMCPRouterToken`、`hasModelScopeToken`、`hasTokenFluxToken`、`isProviderSupportCharge`、`selectActiveToolPermission`、`defaultWebSearchProviders`、`isGeminiFile`、`isMistralFile`、`isOpenAIFile`、`isImageFileMetadata`、`onWebviewStateChange`、`WEEKDAY_MIN`、`WEEKDAY_MAX`、`registeredProviderIds`
+- **3 个连带死类型**：`CoreProviderId`、`ImageFileMetadata`、`PdfFileMetadata`
+- **webview 状态管理器的监听器机制**：`appListeners` / `emitState` / `onWebviewStateChange` / `WebviewStateListener` —— 全项目零订阅者
+- **10 条无效路由标签**（`NavigateTool.tsx`）：`/store`、`/agents`、`/launchpad`、`/settings/about`、`/settings/memory`、`/settings/api-server` 及 5 个不存在的 MCP 子页；同时补齐真实的 `/notes`、`/habits`、`/knowledge`
+- **3 组死文案**（`zh-cn.json`）与 `sidebarIconKeyMap.store`
+- **空注释块**：`filters.ts` 中已无函数体的 `@deprecated` 标记
+
+**依赖包零删除**：21 个「疑似无用」包经逐个核对全部为误报 —— 11 个 `@types/*` 为类型声明包（`lodash` 在源码中被引用 65 处）、`@biomejs/biome` / `vitest` 系列 / `dotenv-cli` / `tsgo` 通过 npm scripts 的 CLI 调用、`tw-animate-css` 在 `tailwind.css` 中 `@import`。
+
+---
+
+#### 五、重复实现合并
+
+- `FileStorage.ts`：两处 ripgrep 参数拼接 → 单一 `buildRipgrepBaseArgs(options, path, filenameGlob?)`
+- `DraggableList`：`list.tsx` 与 `virtual-list.tsx` 逐字重复的 `_onDragEnd` → 抽出 `createDragEndHandler()`（`useDraggableReorder.ts`）
+- `filters.ts`：无函数体的空 `@deprecated` 注释块
+
+---
+
+#### 六、文档纠错
+
+- `docs/wiki/01`：原文称 `ReduxService` / `StoreSyncService`「已标记 `@deprecated`，计划 v2 移除」—— **源码中没有任何 `@deprecated` 标记**，两者分别承载 MCP 服务器读取与跨窗口状态同步，已改为正面说明依赖链路，避免后续被误删
+- `docs/wiki/01`：v1.9.0「网络电视」条目改为「已在 v1.11.0 整体下线」
+- `docs/wiki/04`：删除已删除的 `/launchpad` 路由与 `pages/launchpad/` 条目
+
+---
+
+#### 七、验证
+
+- 单测：**262 个测试文件 / 4006 项通过 / 8 项跳过 / 0 失败**
+- typecheck：node / web / aicore 三端 **0 错误**
+- lint：oxlint **0 告警 0 错误**、eslint **0 错误**
+- diff：**54 个文件，+381 / −565 行**
+
 ## [1.11.3] - 2026-10-04
 
 ### 核心主题：界面微调 + 一次全面的代码审查与清理

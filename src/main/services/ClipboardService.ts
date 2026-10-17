@@ -97,7 +97,9 @@ class ClipboardService {
       const sequence = getClipboardSequenceNumber()
       if (sequence !== null) {
         if (sequence === this.lastSequence) return
-        this.lastSequence = sequence
+        // 注意：这里先不提交 lastSequence。读取过程可能抛错（剪贴板被密码管理器占用），
+        // 若先提交，下一轮序列号相同会被直接跳过，这次复制就永久漏捕。
+        // 因此统一在成功读完并在末尾提交。
       }
 
       const formats = clipboard.availableFormats()
@@ -214,6 +216,9 @@ class ClipboardService {
         this.lastCheapKey = cheap
         this.capture(make())
       }
+
+      // 读取全部成功后才提交序列号：中途抛错时保持旧值，下一轮会重试同一份内容
+      if (sequence !== null) this.lastSequence = sequence
     } catch (error) {
       // 剪贴板被锁定（如某些密码管理器写入瞬间）等瞬时错误：忽略，下一轮重试
       logger.debug('clipboard poll error', { error })
@@ -337,6 +342,8 @@ class ClipboardService {
     if (!item) return
     this.removeThumb(item)
     this.items = this.items.filter((i) => i.id !== id)
+    // 重置轮间变化闸门：删掉的若是当前剪贴板内容，用户再次复制同样的内容时必须能重新入库
+    this.lastCheapKey = ''
     this.scheduleSave()
     this.broadcast()
   }
@@ -368,6 +375,8 @@ class ClipboardService {
     const { items: byTime, evicted: evictedByTime } = pruneByTime(pruned, Date.now(), this.limits.maxDays)
     this.items = byTime
     for (const e of [...evicted, ...evictedByTime]) this.removeThumb(e)
+    // 淘汰后同样要重置闸门：被淘汰的内容再次复制时应能重新入库
+    if (evicted.length > 0 || evictedByTime.length > 0) this.lastCheapKey = ''
     this.persistLimits()
     this.scheduleSave()
     this.broadcast()

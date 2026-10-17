@@ -173,8 +173,6 @@ export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderConfigIds, SystemProv
 
 export const INITIAL_STATE_EXCLUDED_PROVIDER_IDS = [] as const satisfies SystemProviderId[]
 
-export const SYSTEM_PROVIDERS: SystemProvider[] = Object.values(SYSTEM_PROVIDERS_CONFIG)
-
 export const PROVIDER_LOGO_MAP: AtLeast<SystemProviderConfigIds, string> = {
   openai: OpenAiProviderLogo,
   deepseek: DeepSeekProviderLogo,

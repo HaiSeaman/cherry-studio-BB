@@ -7,6 +7,17 @@ import { ALARM_FIRE_WINDOW_SEC, computeDueAlarms, pad2 } from './schedule'
 
 export type RingingInfo = { label: string; sound: string; fromTimer?: boolean }
 
+/** 排队中的待响项：定时闹钟与外部倒计时共用一条队列 */
+type RingQueueItem = {
+  label: string
+  sound: string
+  /** 定时闹钟才有的时刻（用于通知正文）；倒计时为 undefined */
+  timeText?: string
+  fromTimer?: boolean
+  /** 被外部触发打断后挂回队列的项：关闭当前响铃时要恢复它 */
+  resume?: boolean
+}
+
 /**
  * 应用级闹钟调度单例（AlarmEngineHost 挂在 Router 根，任何页面都保持运行）：
  * 每秒检查（90 秒补触发窗口 + 睡眠唤醒 gap 补响 / 跨天重置 / 日历 date 过滤），
@@ -21,7 +32,7 @@ class AlarmScheduler {
   private firedKeys = new Set<string>()
   private currentRinging: RingingInfo | null = null
   /** 同一 tick 内多个闹钟到期（90 秒补触发窗口内可能同时命中多个）：排队依次响；用户点「关闭闹钟」时整批清空 */
-  private ringQueue: HubAlarm[] = []
+  private ringQueue: RingQueueItem[] = []
   private listeners = new Set<() => void>()
   private timer: ReturnType<typeof setInterval> | null = null
 
@@ -58,12 +69,42 @@ class AlarmScheduler {
     this.currentRinging = null
     // 用户点「关闭闹钟」= 要求安静：同批排队的闹钟一并清空，不再接力响下一个
     // （否则点一次只是换下一个接着响，两个关闭按钮看起来都毫无反应）
+    //
+    // 例外：被倒计时打断、挂回队列的那种（resume=true）必须保留 ——
+    // 用户关的是「倒计时」，不是那条还没被确认的原闹钟。
+    const carriedOver = this.ringQueue.filter((item) => item.resume)
     this.ringQueue = []
     this.emit()
+
+    if (carriedOver.length > 0) {
+      // 让界面先渲染一次「已安静」，下一拍再重新响原闹钟（避免看起来像没关掉）
+      setTimeout(() => {
+        if (this.currentRinging) return
+        this.ringQueue.push(...carriedOver)
+        this.ringNext()
+      }, 0)
+    }
   }
 
-  /** 倒计时结束等外部触发 */
+  /**
+   * 倒计时结束等外部触发。
+   *
+   * 倒计时归零是「此刻必须提醒」的事件，所以直接打断当前响铃；
+   * 但被打断的那个**必须挂回队列**，否则用户关掉倒计时后它就被静默吞掉了
+   * （旧实现的 bug：直接覆盖 currentRinging，原闹钟再也回不来）。
+   * 被挂回的项带 `resume` 标记：关闭当前响铃后重新响它。
+   */
   fireExternal(label: string, sound: string): void {
+    const interrupted = this.currentRinging
+    if (interrupted) {
+      // 把被打断的那一项放回队首，关掉倒计时后优先恢复它
+      this.ringQueue.unshift({
+        label: interrupted.label,
+        sound: interrupted.sound,
+        fromTimer: interrupted.fromTimer,
+        resume: true
+      })
+    }
     this.startRinging({ label, sound, fromTimer: true }, '倒计时结束', label.trim() || '你的倒计时已完成！')
   }
 
@@ -83,15 +124,23 @@ class AlarmScheduler {
     this.emit()
   }
 
-  /** 从队列取一个闹钟开始响铃（无则返回） */
+  /** 从队列取一个待响项开始响铃（无则返回） */
   private ringNext(): void {
     const next = this.ringQueue.shift()
     if (!next) return
-    const timeText = `${pad2(next.h)}:${pad2(next.m)}:${pad2(next.s)}`
+    // 倒计时排队项没有 h/m/s，用专门的标题与正文；定时闹钟带上时刻
+    if (next.fromTimer) {
+      this.startRinging(
+        { label: next.label, sound: next.sound, fromTimer: true },
+        '倒计时结束',
+        next.label.trim() || '你的倒计时已完成！'
+      )
+      return
+    }
     this.startRinging(
       { label: next.label, sound: next.sound },
       '闹钟响铃',
-      `${timeText}${next.label ? ` · ${next.label}` : ''}`
+      `${next.timeText ?? ''}${next.label ? ` · ${next.label}` : ''}`
     )
   }
 
@@ -130,7 +179,13 @@ class AlarmScheduler {
       const firedById = new Map(fresh.filter((a) => a.id != null).map((a) => [a.id, a]))
       this.alarms = this.alarms.map((a) => (a.id != null ? (firedById.get(a.id) ?? a) : a))
       // 当前无闹钟在响 → 立即响第一个；其余排队（用户点关闭时整批清空）
-      this.ringQueue.push(...fresh)
+      this.ringQueue.push(
+        ...fresh.map((a) => ({
+          label: a.label,
+          sound: a.sound,
+          timeText: `${pad2(a.h)}:${pad2(a.m)}:${pad2(a.s)}`
+        }))
+      )
       if (!this.currentRinging) this.ringNext()
     }
   }

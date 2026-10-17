@@ -8,7 +8,6 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import NavigationHandler from './handler/NavigationHandler'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import HomePage from './pages/home/HomePage'
-import LaunchpadPage from './pages/launchpad/LaunchpadPage'
 import AlarmEngineHost from './pages/notes/components/AlarmEngineHost'
 import { OnboardingPage } from './pages/onboarding'
 
@@ -32,7 +31,6 @@ const Router: FC = () => {
             <Route path="/habits" element={<HabitsPage />} />
             <Route path="/knowledge" element={<KnowledgePage />} />
             <Route path="/settings/*" element={<SettingsPage />} />
-            <Route path="/launchpad" element={<LaunchpadPage />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>

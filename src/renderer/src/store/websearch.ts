@@ -48,8 +48,6 @@ export const initialState: WebSearchState = {
   }
 }
 
-export const defaultWebSearchProviders = initialState.providers
-
 const websearchSlice = createSlice({
   name: 'websearch',
   initialState,

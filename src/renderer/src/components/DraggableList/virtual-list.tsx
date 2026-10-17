@@ -1,15 +1,10 @@
-import type {
-  DroppableProps,
-  DropResult,
-  OnDragEndResponder,
-  OnDragStartResponder,
-  ResponderProvided
-} from '@hello-pangea/dnd'
+import type { DroppableProps, OnDragEndResponder, OnDragStartResponder } from '@hello-pangea/dnd'
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd'
 import Scrollbar from '@renderer/components/Scrollbar'
-import { droppableReorder } from '@renderer/utils'
 import { type ScrollToOptions, useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
 import { type Key, memo, useCallback, useId, useImperativeHandle, useRef } from 'react'
+
+import { createDragEndHandler } from './useDraggableReorder'
 
 export interface DraggableVirtualListRef {
   measure: () => void
@@ -86,17 +81,7 @@ function DraggableVirtualList<T>({
   children,
   disabled
 }: DraggableVirtualListProps<T>): React.ReactElement {
-  const _onDragEnd = (result: DropResult, provided: ResponderProvided) => {
-    onDragEnd?.(result, provided)
-    if (onUpdate && result.destination) {
-      const sourceIndex = result.source.index
-      const destIndex = result.destination.index
-      if (sourceIndex !== destIndex) {
-        const reorderAgents = droppableReorder(list, sourceIndex, destIndex)
-        onUpdate(reorderAgents)
-      }
-    }
-  }
+  const _onDragEnd = createDragEndHandler({ list, onUpdate, onDragEnd })
 
   // 虚拟列表滚动容器的 ref
   const parentRef = useRef<HTMLDivElement>(null)

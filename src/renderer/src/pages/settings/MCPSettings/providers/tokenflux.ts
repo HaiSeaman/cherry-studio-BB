@@ -19,10 +19,6 @@ export const clearTokenFluxToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
 }
 
-export const hasTokenFluxToken = (): boolean => {
-  return !!getTokenFluxToken()
-}
-
 interface TokenFluxServerAuthSchemaApiKey {
   location: string
   name: string

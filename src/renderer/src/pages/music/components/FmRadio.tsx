@@ -113,6 +113,9 @@ const FmRadio: FC = () => {
     if (!text) {
       searchReqId.current += 1
       setSearchList([])
+      // 清空输入必须一并复位 loading：在途请求返回后会被序号守卫挡掉，
+      // 不会再走 finally 里的 setLoading(false)，否则搜索页会一直转圈
+      setLoading(false)
       return
     }
     const reqId = ++searchReqId.current

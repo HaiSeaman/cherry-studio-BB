@@ -5,7 +5,6 @@ const logger = loggerService.withContext('MCPRouterSyncUtils')
 
 // Token storage constants and utilities
 const TOKEN_STORAGE_KEY = 'mcprouter_token'
-export const MCPROUTER_HOST = 'https://mcprouter.co'
 
 export const saveMCPRouterToken = (token: string): void => {
   localStorage.setItem(TOKEN_STORAGE_KEY, token)
@@ -17,10 +16,6 @@ export const getMCPRouterToken = (): string | null => {
 
 export const clearMCPRouterToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
-}
-
-export const hasMCPRouterToken = (): boolean => {
-  return !!getMCPRouterToken()
 }
 
 interface MCPRouterServer {

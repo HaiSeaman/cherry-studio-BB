@@ -1,14 +1,13 @@
 import type {
   DroppableProps,
-  DropResult,
   OnDragEndResponder,
-  OnDragStartResponder,
-  ResponderProvided
+  OnDragStartResponder
 } from '@hello-pangea/dnd'
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd'
-import { droppableReorder } from '@renderer/utils'
 import type { HTMLAttributes, Key } from 'react'
 import { useCallback, useId } from 'react'
+
+import { createDragEndHandler } from './useDraggableReorder'
 
 interface Props<T> {
   list: T[]
@@ -35,17 +34,7 @@ function DraggableList<T>({
   onUpdate,
   onDragEnd
 }: Props<T>) {
-  const _onDragEnd = (result: DropResult, provided: ResponderProvided) => {
-    onDragEnd?.(result, provided)
-    if (result.destination) {
-      const sourceIndex = result.source.index
-      const destIndex = result.destination.index
-      if (sourceIndex !== destIndex) {
-        const reorderAgents = droppableReorder(list, sourceIndex, destIndex)
-        onUpdate(reorderAgents)
-      }
-    }
-  }
+  const _onDragEnd = createDragEndHandler({ list, onUpdate, onDragEnd })
 
   const getId = useCallback(
     (item: T) => {

@@ -23,11 +23,6 @@ export function isProviderSupportAuth(provider: Provider) {
   return supportProviders.includes(provider.id)
 }
 
-export function isProviderSupportCharge(provider: Provider) {
-  const supportProviders = ['302ai', 'silicon', 'aihubmix', 'ppio']
-  return supportProviders.includes(provider.id)
-}
-
 export function getProviderById(id: string) {
   return getStoreProviders().find((p) => p.id === id)
 }

@@ -50,7 +50,11 @@ export function useMetaDataParser<T extends string>(
       }
       setError(err instanceof Error ? err : new Error('Failed to fetch HTML'))
     } finally {
-      setIsLoading(false)
+      // 只有「当前这轮请求」才能关掉 loading：上一轮被 abort 的请求
+      // 也会走到 finally，若不加判断会把新一轮刚设的 true 抹成 false
+      if (abortControllerRef.current === controller) {
+        setIsLoading(false)
+      }
     }
   }, [link, properties, timeout])
 

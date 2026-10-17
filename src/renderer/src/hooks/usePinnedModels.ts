@@ -14,6 +14,10 @@ export const usePinnedModels = () => {
   const { providers } = useProviders()
 
   useEffect(() => {
+    // providers 变化会重跑本 effect，卸载也会。用 cancelled 挡住过期结果：
+    // 旧的 await 返回后若直接 setState，会覆盖新一轮刚算出的列表（甚至写到已卸载组件上）。
+    let cancelled = false
+
     const loadPinnedModels = async () => {
       setLoading(true)
       const setting = await db.settings.get('pinned:models')
@@ -23,9 +27,12 @@ export const usePinnedModels = () => {
       const allModelIds = providers.flatMap((p) => p.models || []).map((m) => getModelUniqId(m))
       const validPinnedModels = savedPinnedModels.filter((id) => allModelIds.includes(id))
 
+      if (cancelled) return
+
       // Update storage if there were invalid models
       if (validPinnedModels.length !== savedPinnedModels.length) {
         await db.settings.put({ id: 'pinned:models', value: validPinnedModels })
+        if (cancelled) return
       }
 
       setPinnedModels(sortBy(validPinnedModels))
@@ -33,10 +40,15 @@ export const usePinnedModels = () => {
     }
 
     loadPinnedModels().catch((error) => {
+      if (cancelled) return
       logger.error('Failed to load pinned models', error)
       setPinnedModels([])
       setLoading(false)
     })
+
+    return () => {
+      cancelled = true
+    }
   }, [providers])
 
   const updatePinnedModels = useCallback(async (models: string[]) => {

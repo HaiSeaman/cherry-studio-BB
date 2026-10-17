@@ -7,10 +7,6 @@ export type AutomationSchedule =
   | { type: 'daily'; time: string }
   | { type: 'weekly'; weekdays: number[]; time: string }
 
-/** weekly 的 weekday 取值：1=周一 … 7=周日 */
-export const WEEKDAY_MIN = 1
-export const WEEKDAY_MAX = 7
-
 /** weekday(1-7, 周一为首) → JS Date.getDay()（0=周日…6=周六） */
 export function weekdayToJsDay(weekday: number): number {
   return weekday % 7

@@ -118,6 +118,20 @@ describe('createFocusGuard', () => {
     expect(onUserInput).not.toHaveBeenCalled()
   })
 
+  it('会话重叠时重复 start 必须刷新按住键集合，否则长按重复会被误判为用户输入', () => {
+    const onUserInput = vi.fn()
+    const guard = createFocusGuard(onUserInput)
+    // 第一次会话没带 holdKeys（例如键码识别为空）
+    guard.start([])
+    // 用户快速松手再按：第二次会话在新一次 start 里带来反引号键码，
+    // 此时上一次的 start 还没被 stop（VoiceInputService.start 只关 adapter 不停 guard）
+    guard.start([41])
+
+    noRecentInjection()
+    uiohookMock.emit('keydown', keydown(41)) // 长按反引号的自动重复
+    expect(onUserInput).not.toHaveBeenCalled()
+  })
+
   it('紧跟我们自己注入的键鼠事件视为回声，不触发冻结', () => {
     const onUserInput = vi.fn()
     createFocusGuard(onUserInput).start([])

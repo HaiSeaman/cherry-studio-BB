@@ -58,6 +58,13 @@ export function estimateTokens(text: string): number {
 export function chunkText(text: string, kind: 'line' | 'flow', chunkSize: number, overlap: number): ChunkResult[] {
   if (!text || text.trim() === '') return []
 
+  // 防御非法参数：overlap >= chunkSize 时边界可能不前进（死循环）。
+  // chunkSize 至少在 1 以上，overlap 最多退到「比一块少 1」，保证每轮必然前进。
+  const safeChunkSize = Math.max(1, Math.floor(chunkSize))
+  const safeOverlap = Math.max(0, Math.min(Math.floor(overlap), safeChunkSize - 1))
+  chunkSize = safeChunkSize
+  overlap = safeOverlap
+
   const lines = text.split('\n')
   const headingPaths = headingPathsOf(lines)
   const chunks: ChunkResult[] = []
@@ -122,7 +129,10 @@ export function chunkText(text: string, kind: 'line' | 'flow', chunkSize: number
         ovStart--
       }
     }
-    i = ovStart
+    // 硬性保证前进：回退可能退到本块起点 i（甚至更靠前，当 overlap 覆盖了整块时），
+    // 这样下一轮会重复处理同一段文本，chunks 无限增长直到内存耗尽。
+    // 无论 overlap 怎么配，起点每轮至少要往后挪一行。
+    i = Math.max(ovStart, i + 1)
   }
 
   return chunks

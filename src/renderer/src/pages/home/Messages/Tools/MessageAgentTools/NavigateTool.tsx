@@ -6,14 +6,14 @@ interface NavigateToolInput {
 }
 
 const ROUTE_LABELS: Record<string, { icon: string; label: string }> = {
-  // Top-level pages
+  // 顶层页面（与 Router.tsx 实际注册的路由一一对应）
   '/': { icon: '🏠', label: 'Home' },
-  '/store': { icon: '🏪', label: 'Store' },
   '/apps': { icon: '📦', label: 'Mini Apps' },
-  '/launchpad': { icon: '🚀', label: 'Launchpad' },
-  '/agents': { icon: '🤖', label: 'Agents' },
+  '/notes': { icon: '📝', label: '效率助手' },
+  '/habits': { icon: '📅', label: '打卡' },
+  '/knowledge': { icon: '📚', label: '知识库' },
 
-  // Settings pages
+  // 设置页（与 SettingsPage.tsx 的实际子路由一致）
   '/settings/provider': { icon: '🔑', label: 'Provider' },
   '/settings/model': { icon: '🤖', label: 'Models' },
   '/settings/general': { icon: '⚙️', label: 'General' },
@@ -21,25 +21,16 @@ const ROUTE_LABELS: Record<string, { icon: string; label: string }> = {
   '/settings/data': { icon: '💾', label: 'Data' },
   '/settings/mcp': { icon: '🔌', label: 'MCP' },
   '/settings/websearch': { icon: '🔍', label: 'Web Search' },
-  '/settings/memory': { icon: '🧠', label: 'Memory' },
-  '/settings/api-server': { icon: '🌐', label: 'API Server' },
   '/settings/quickphrase': { icon: '⚡', label: 'Quick Phrases' },
   '/settings/shortcut': { icon: '⌨️', label: 'Shortcuts' },
   '/settings/quickAssistant': { icon: '🪟', label: 'Quick Assistant' },
   '/settings/selectionAssistant': { icon: '✂️', label: 'Selection Assistant' },
-  '/settings/about': { icon: 'ℹ️', label: 'About' },
 
-  // MCP sub-pages
+  // MCP 子页面
   '/settings/mcp/servers': { icon: '📋', label: 'MCP Servers' },
-  '/settings/mcp/builtin': { icon: '📦', label: 'Built-in MCP' },
-  '/settings/mcp/marketplaces': { icon: '🛒', label: 'MCP Market' },
-  '/settings/mcp/npx-search': { icon: '🔍', label: 'NPX Search' },
-  '/settings/mcp/mcp-install': { icon: '📥', label: 'Install MCP' },
-  '/settings/mcp/settings': { icon: '⚙️', label: 'MCP Settings' },
 
-  // Web Search sub-pages
-  '/settings/websearch/general': { icon: '🔍', label: 'Search Settings' },
-  '/settings/websearch/provider': { icon: '🔍', label: 'Search Provider' }
+  // 网络搜索子页面
+  '/settings/websearch/general': { icon: '🔍', label: 'Search Settings' }
 }
 
 // Sorted by path length descending for longest prefix match

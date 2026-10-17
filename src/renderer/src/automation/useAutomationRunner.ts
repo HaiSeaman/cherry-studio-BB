@@ -30,6 +30,12 @@ export function useAutomationRunner() {
         runningTasks.delete(task.id)
       }
     })
+
+    // 监听挂好后再告诉主进程「可以派发了」：
+    // 主进程启动时会立刻补跑一次错过的任务，若此时监听还没注册，事件会丢失，
+    // 任务被标成 running 却永远不执行（只能等 10 分钟看门狗判超时）。
+    void window.api.automation.markRendererReady()
+
     return off
   }, [])
 }

@@ -67,8 +67,6 @@ export const THEMES: ThemeInfo[] = [
   }
 ]
 
-export const DEFAULT_THEME_ID: ThemeId = 'oasis'
-
 export const getThemeInfo = (id: string): ThemeInfo => THEMES.find((t) => t.id === id) ?? THEMES[0]
 
 export const getThemeMode = (id: string): 'light' | 'dark' => getThemeInfo(id).mode

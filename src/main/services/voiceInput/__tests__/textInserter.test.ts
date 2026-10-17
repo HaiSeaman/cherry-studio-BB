@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type * as TextInserterModule from '../textInserter'
+
 const { sendInputMock, getAsyncKeyStateMock, downKeys, loadMock } = vi.hoisted(() => {
   const downKeys = new Set<number>()
   return {
@@ -137,7 +139,7 @@ describe('全局逐字输入', () => {
     expect(sendInputMock).toHaveBeenCalledTimes(2) // 第二批只发还原记录
     const [count, records] = sendInputMock.mock.calls[1]
     expect(count).toBe(1)
-    expect(parseRecord(records as Buffer, 0)).toMatchObject({ vk: VK_LCONTROL, flags: 0 })
+    expect(parseRecord(records, 0)).toMatchObject({ vk: VK_LCONTROL, flags: 0 })
   })
 
   it('修饰键没按住时，部分失败也不需要补还原（本来就没动过它）', () => {
@@ -239,7 +241,7 @@ describe('修饰键释放：退格不能变成「Ctrl+退格」（删一整个�
 
 describe('isInjectedEcho：把「自己注入的事件」登记下来，供焦点守卫/按住检测器排除', () => {
   // 回声登记表是模块级状态：每个用例都取一份全新实例，避免用例之间互相污染
-  let mod: typeof import('../textInserter')
+  let mod: typeof TextInserterModule
 
   beforeEach(async () => {
     vi.resetModules()

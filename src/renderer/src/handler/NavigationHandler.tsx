@@ -27,10 +27,11 @@ const NavigationHandler: React.FC = () => {
     }
   )
 
-  // Listen for navigate to About page event from macOS menu
+  // macOS 应用菜单「关于」：关于信息（版本、开源协议等）位于「常规设置」页底部。
+  // 原先跳转的 /settings/about 路由并不存在，属失效跳转，这里改为真实页面。
   useEffect(() => {
     const handleNavigateToAbout = () => {
-      navigate('/settings/about')
+      navigate('/settings/general')
     }
 
     const removeListener = window.electron.ipcRenderer.on(IpcChannel.Windows_NavigateToAbout, handleNavigateToAbout)

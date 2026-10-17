@@ -192,4 +192,40 @@ describe('闹钟响铃与关闭（全局调度器）', () => {
     alarmScheduler.stopRinging()
     expect(soundOn()).toBe(false)
   })
+
+  it('倒计时结束撞上正在响的闹钟：倒计时先响，关闭倒计时后闹钟恢复响（不静默丢失）', () => {
+    alarmScheduler.setAlarms([alarm({ id: 1, label: '起床' })])
+    vi.advanceTimersByTime(1000) // 08:00:00 闹钟响
+    expect(alarmScheduler.getRinging()?.label).toBe('起床')
+
+    // 倒计时归零：不能把正在响的闹钟静默覆盖掉
+    alarmScheduler.fireExternal('泡面好了', 'default')
+    expect(alarmScheduler.getRinging()?.label).toBe('泡面好了')
+    expect(alarmScheduler.getRinging()?.fromTimer).toBe(true)
+    expect(soundOn()).toBe(true)
+
+    // 关掉倒计时 → 之前被抢占的闹钟在下一拍恢复响铃（用户还听得见）
+    alarmScheduler.stopRinging()
+    expect(alarmScheduler.getRinging()).toBeNull()
+    vi.advanceTimersByTime(1) // 下一拍：挂回队列的原闹钟重新响
+    expect(alarmScheduler.getRinging()?.label).toBe('起床')
+    expect(soundOn()).toBe(true)
+
+    // 再关一次 → 彻底安静
+    alarmScheduler.stopRinging()
+    expect(alarmScheduler.getRinging()).toBeNull()
+    expect(soundOn()).toBe(false)
+  })
+
+  it('没有闹钟在响时，倒计时结束照常响铃', () => {
+    alarmScheduler.setAlarms([])
+    alarmScheduler.fireExternal('泡面好了', 'default')
+    expect(alarmScheduler.getRinging()?.label).toBe('泡面好了')
+    expect(alarmScheduler.getRinging()?.fromTimer).toBe(true)
+    expect(soundOn()).toBe(true)
+
+    alarmScheduler.stopRinging()
+    expect(alarmScheduler.getRinging()).toBeNull()
+    expect(soundOn()).toBe(false)
+  })
 })
