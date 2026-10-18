@@ -24,11 +24,9 @@ vi.mock('../fileProcessor', () => ({
 }))
 
 const visionModelIds = new Set(['gpt-4o-mini', 'qwen-image-edit'])
-const imageEnhancementModelIds = new Set(['qwen-image-edit'])
 
 vi.mock('@renderer/config/models', () => ({
-  isVisionModel: (model: Model) => visionModelIds.has(model.id),
-  isImageEnhancementModel: (model: Model) => imageEnhancementModelIds.has(model.id)
+  isVisionModel: (model: Model) => visionModelIds.has(model.id)
 }))
 
 type MockableMessage = Message & {

@@ -7,7 +7,6 @@ import {
   findTokenLimit,
   getModelSupportedReasoningEffortOptions,
   getThinkModelType,
-  isClaude4SeriesModel,
   isClaude45ReasoningModel,
   isClaudeReasoningModel,
   isDeepSeekHybridInferenceModel,
@@ -18,7 +17,6 @@ import {
   isGeminiReasoningModel,
   isGrok4FastReasoningModel,
   isHunyuanReasoningModel,
-  isInterleavedThinkingModel,
   isKimiK27CodeModel,
   isKimiReasoningModel,
   isLingReasoningModel,
@@ -34,8 +32,8 @@ import {
   isSupportedThinkingTokenDoubaoModel,
   isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenKimiModel,
-  isSupportedThinkingTokenLongCatModel,
   isSupportedThinkingTokenMiMoModel,
+  isSupportedThinkingTokenLongCatModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
   isSupportedThinkingTokenZhipuModel,
@@ -319,16 +317,7 @@ describe('Ling Models', () => {
 describe('Claude & regional providers', () => {
   it('identifies claude 4.5 variants', () => {
     expect(isClaude45ReasoningModel(createModel({ id: 'claude-sonnet-4.5-preview' }))).toBe(true)
-    expect(isClaude4SeriesModel(createModel({ id: 'claude-sonnet-4-5@20250929' }))).toBe(true)
     expect(isClaude45ReasoningModel(createModel({ id: 'claude-3-sonnet' }))).toBe(false)
-  })
-
-  it('identifies claude 4 variants', () => {
-    expect(isClaude4SeriesModel(createModel({ id: 'claude-opus-4' }))).toBe(true)
-    expect(isClaude4SeriesModel(createModel({ id: 'claude-sonnet-4@20250514' }))).toBe(true)
-    expect(isClaude4SeriesModel(createModel({ id: 'anthropic.claude-sonnet-4-20250514-v1:0' }))).toBe(true)
-    expect(isClaude4SeriesModel(createModel({ id: 'claude-4.2-sonnet-variant' }))).toBe(false)
-    expect(isClaude4SeriesModel(createModel({ id: 'claude-3-haiku' }))).toBe(false)
   })
 
   it('detects general claude reasoning support', () => {
@@ -2560,157 +2549,6 @@ describe('getModelSupportedReasoningEffortOptions', () => {
   })
 })
 
-describe('isInterleavedThinkingModel', () => {
-  describe('MiniMax models', () => {
-    it('should return true for minimax-m2', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2' }))).toBe(true)
-    })
-
-    it('should return true for minimax-m2.1', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2.1' }))).toBe(true)
-    })
-
-    it('should return true for minimax-m2 with suffixes', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2-pro' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2-preview' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2-lite' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2-ultra-lite' }))).toBe(true)
-    })
-
-    it('should return true for minimax-m2.x with suffixes', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2.1-pro' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2.2-preview' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m2.5-lite' }))).toBe(true)
-    })
-
-    it('should return false for non-m2 minimax models', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m1' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-m3' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'minimax-pro' }))).toBe(false)
-    })
-
-    it('should handle case insensitivity', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'MiniMax-M2' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'MINIMAX-M2.1' }))).toBe(true)
-    })
-  })
-
-  describe('MiMo models', () => {
-    it('should support thinking control for V2.5 models only on chat models', () => {
-      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5' }))).toBe(true)
-      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5-pro' }))).toBe(true)
-      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5-tts' }))).toBe(false)
-      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5-tts-voiceclone' }))).toBe(false)
-    })
-
-    it('should return true for mimo-v2-flash', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'mimo-v2-flash' }))).toBe(true)
-    })
-
-    it('should return false for other mimo models', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'mimo-v1-flash' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'mimo-v2' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'mimo-v2-pro' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'mimo-flash' }))).toBe(false)
-    })
-
-    it('should handle case insensitivity', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'MiMo-V2-Flash' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'MIMO-V2-FLASH' }))).toBe(true)
-    })
-  })
-
-  describe('Zhipu GLM models', () => {
-    it('should return true for glm-4.5', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.5' }))).toBe(true)
-    })
-
-    it('should return true for glm-4.6', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.6' }))).toBe(true)
-    })
-
-    it('should return true for glm-4.7 and higher versions', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.7' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.8' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.9' }))).toBe(true)
-    })
-
-    it('should return true for glm-4.x with suffixes', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.5-pro' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.6-preview' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.7-lite' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4.8-ultra' }))).toBe(true)
-    })
-
-    it('should return false for glm-4 without decimal version', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-4-pro' }))).toBe(false)
-    })
-
-    it('should return false for other glm models', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-3.5' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-zero-preview' }))).toBe(false)
-    })
-
-    it('should handle case insensitivity', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'GLM-4.5' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'Glm-4.6-Pro' }))).toBe(true)
-    })
-
-    it('should return true for glm-5', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-5' }))).toBe(true)
-    })
-
-    it('should return true for glm-5 with suffixes', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-5-pro' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-5-lite' }))).toBe(true)
-    })
-
-    it('should return true for glm-5.x versions (future versions maintain same behavior)', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-5.0' }))).toBe(true)
-      expect(isInterleavedThinkingModel(createModel({ id: 'glm-5.1' }))).toBe(true)
-    })
-  })
-
-  describe('Kimi models', () => {
-    it('should return true for kimi-k2-thinking', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2-thinking' }))).toBe(true)
-    })
-
-    it('should return true for kimi-k2-thinking-turbo', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2-thinking-turbo' }))).toBe(true)
-    })
-
-    it('should return true for kimi-k2.5', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2.5' }))).toBe(true)
-    })
-
-    it('should return true for kimi-k2.6', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2.6' }))).toBe(true)
-    })
-
-    it('should return true for kimi-k2.6 variants', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2.6-preview' }))).toBe(true)
-    })
-
-    it('should return false for other kimi models', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2-preview' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2-turbo' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'kimi-k2-0905-Preview' }))).toBe(false)
-    })
-  })
-
-  describe('Non-matching models', () => {
-    it('should return false for unrelated models', () => {
-      expect(isInterleavedThinkingModel(createModel({ id: 'gpt-4' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'claude-3-opus' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'gemini-pro' }))).toBe(false)
-      expect(isInterleavedThinkingModel(createModel({ id: 'deepseek-v3' }))).toBe(false)
-    })
-  })
-})
-
 describe('Claude Models', () => {
   describe('getThinkModelType for Claude reasoning models', () => {
     it('should return claude for Claude 3.7 models', () => {
@@ -2925,6 +2763,15 @@ describe('Kimi Models', () => {
     })
   })
 
+  describe('MiMo models', () => {
+    it('should support thinking control for V2.5 models only on chat models', () => {
+      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5' }))).toBe(true)
+      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5-pro' }))).toBe(true)
+      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5-tts' }))).toBe(false)
+      expect(isSupportedThinkingTokenMiMoModel(createModel({ id: 'mimo-v2.5-tts-voiceclone' }))).toBe(false)
+    })
+  })
+
   describe('isSupportedThinkingTokenKimiModel', () => {
     describe('should return true for Kimi models with thinking token support', () => {
       it('should recognize kimi-k2.5', () => {
@@ -3136,12 +2983,6 @@ describe('Fireworks provider model name normalization', () => {
 
   it('should detect MiniMax reasoning models from Fireworks', () => {
     expect(isMiniMaxReasoningModel(createModel({ id: 'accounts/fireworks/models/minimax-m2p1' }))).toBe(true)
-  })
-
-  it('should detect interleaved thinking models from Fireworks', () => {
-    expect(isInterleavedThinkingModel(createModel({ id: 'accounts/fireworks/models/minimax-m2p1' }))).toBe(true)
-    expect(isInterleavedThinkingModel(createModel({ id: 'accounts/fireworks/models/glm-4p7' }))).toBe(true)
-    expect(isInterleavedThinkingModel(createModel({ id: 'accounts/fireworks/models/kimi-k2p5' }))).toBe(true)
   })
 })
 

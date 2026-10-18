@@ -7,7 +7,6 @@ import {
   isAutoEnableImageGenerationModel,
   isDedicatedImageGenerationModel,
   isGenerateImageModel,
-  isImageEnhancementModel,
   isPureGenerateImageModel,
   isTextToImageModel,
   isVisionModel
@@ -118,11 +117,6 @@ describe('vision helpers', () => {
     it('matches predefined keywords', () => {
       expect(isTextToImageModel(createModel({ id: 'midjourney-v6' }))).toBe(true)
       expect(isTextToImageModel(createModel({ id: 'gpt-4o' }))).toBe(false)
-    })
-
-    it('detects models with restricted image size support and enhancement', () => {
-      expect(isImageEnhancementModel(createModel({ id: 'qwen-image-edit' }))).toBe(true)
-      expect(isImageEnhancementModel(createModel({ id: 'gpt-4o' }))).toBe(false)
     })
 
     it('identifies dedicated and auto-enabled image generation models', () => {

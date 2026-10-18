@@ -1,9 +1,4 @@
-import {
-  isImageEnhancementModel,
-  isQwenReasoningModel,
-  isSupportedThinkingTokenQwenModel,
-  isVisionModel
-} from '@renderer/config/models'
+import { isQwenReasoningModel, isSupportedThinkingTokenQwenModel, isVisionModel } from '@renderer/config/models'
 import { isQwen35to39Model } from '@renderer/config/models/qwen'
 import type { Model } from '@renderer/types'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -130,12 +125,5 @@ describe('Vision Model Detection', () => {
   test('isVisionModel', () => {
     expect(isVisionModel({ id: 'qwen-vl-max' } as Model)).toBe(true)
     expect(isVisionModel({ id: 'qwen-omni-turbo' } as Model)).toBe(true)
-  })
-  test('isImageEnhancementModel', () => {
-    expect(isImageEnhancementModel({ id: 'gpt-image-1' } as Model)).toBe(true)
-    expect(isImageEnhancementModel({ id: 'gemini-2.5-flash-image-preview' } as Model)).toBe(true)
-    expect(isImageEnhancementModel({ id: 'gemini-2.0-flash-preview-image-generation' } as Model)).toBe(true)
-    expect(isImageEnhancementModel({ id: 'qwen-image-edit' } as Model)).toBe(true)
-    expect(isImageEnhancementModel({ id: 'grok-2-image-latest' } as Model)).toBe(true)
   })
 })

@@ -1,5 +1,3 @@
-import type OpenAI from '@cherrystudio/openai'
-import { isEmbeddingModel, isRerankModel } from '@renderer/config/models/embedding'
 import type { Assistant } from '@renderer/types'
 import { type Model, SystemProviderIds } from '@renderer/types'
 import type { OpenAIVerbosity, ValidOpenAIVerbosity } from '@renderer/types/aiCoreTypes'
@@ -17,8 +15,7 @@ import {
 } from './openai'
 import { isQwenMTModel } from './qwen'
 import { isClaude45ReasoningModel } from './reasoning'
-import { isGenerateImageModel, isTextToImageModel, isVisionModel } from './vision'
-export const NOT_SUPPORTED_REGEX = /(?:^tts|whisper|speech)/i
+import { isGenerateImageModel, isVisionModel } from './vision'
 export const GEMINI_FLASH_MODEL_REGEX = new RegExp('gemini.*-flash.*$', 'i')
 
 export const withModelIdAndNameAsId = <T>(model: Model, fn: (model: Model) => T): { idResult: T; nameResult: T } => {
@@ -41,16 +38,6 @@ export function isSupportFlexServiceTierModel(model: Model): boolean {
 
 export function isSupportedFlexServiceTier(model: Model): boolean {
   return isSupportFlexServiceTierModel(model)
-}
-
-export function isSupportedModel(model: OpenAI.Models.Model): boolean {
-  if (!model) {
-    return false
-  }
-
-  const modelId = getLowerBaseModelName(model.id)
-
-  return !NOT_SUPPORTED_REGEX.test(modelId)
 }
 
 /**
@@ -225,10 +212,6 @@ export const isNotSupportTextDeltaModel = (model: Model): boolean => {
   return NOT_SUPPORT_TEXT_DELTA_MODEL_REGEX.test(modelId)
 }
 
-export const isNotSupportSystemMessageModel = (model: Model): boolean => {
-  return isQwenMTModel(model) || isGemmaModel(model)
-}
-
 // Verbosity settings is only supported by GPT-5 and newer models
 const MODEL_SUPPORTED_VERBOSITY: readonly {
   readonly validator: (model: Model) => boolean
@@ -305,10 +288,6 @@ export const isGeminiModel = (model: Model) => {
 export const isGrokModel = (model: Model) => {
   const modelId = getLowerBaseModelName(model.id)
   return modelId.includes('grok')
-}
-
-export const agentModelFilter = (model: Model): boolean => {
-  return !isEmbeddingModel(model) && !isRerankModel(model) && !isTextToImageModel(model)
 }
 
 export const isMaxTemperatureOneModel = (model: Model): boolean => {

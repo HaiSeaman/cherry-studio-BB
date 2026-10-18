@@ -1,15 +1,7 @@
-import * as z from 'zod'
-
 /**
  * Serializable type
  */
 export type Serializable = string | number | boolean | null | Serializable[] | { [key: string]: Serializable }
-
-/**
- * Zod schema for serializable values
- * Uses z.custom() with isSerializable type guard to ensure consistent validation behavior
- */
-export const SerializableSchema: z.ZodType<Serializable> = z.custom<Serializable>(isSerializable)
 
 /**
  * Check if a value is serializable (suitable for Redux state)

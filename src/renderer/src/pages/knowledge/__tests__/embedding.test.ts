@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertDimensions, batchTexts, toFloat32Array } from '../embedding'
+import { assertDimensions, batchTexts } from '../embedding'
 
 describe('batchTexts', () => {
   it('空数组返回空批次', () => {
@@ -24,18 +24,6 @@ describe('batchTexts', () => {
 
   it('批次上限非法时抛错', () => {
     expect(() => batchTexts(['a'], 0)).toThrow()
-  })
-})
-
-describe('toFloat32Array', () => {
-  it('number[][] 转 Float32Array[]', () => {
-    const r = toFloat32Array([
-      [1, 2, 3],
-      [4, 5]
-    ])
-    expect(r).toHaveLength(2)
-    expect(r[0]).toBeInstanceOf(Float32Array)
-    expect(Array.from(r[0])).toEqual([1, 2, 3])
   })
 })
 

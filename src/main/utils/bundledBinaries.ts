@@ -9,10 +9,6 @@ const require_ = createRequire(import.meta.url)
 const RIPGREP_PLATFORM_KEY = 'x64-win32'
 const RIPGREP_EXECUTABLE = 'rg.exe'
 
-export function getRipgrepPlatformKey(): string {
-  return RIPGREP_PLATFORM_KEY
-}
-
 export function resolveBundledRipgrepPath(): string {
   const packageRoot = path.dirname(require_.resolve('@cherrystudio/ripgrep/package.json'))
 

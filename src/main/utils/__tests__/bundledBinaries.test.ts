@@ -11,16 +11,12 @@ vi.mock('electron', () => ({
 
 import { app } from 'electron'
 
-import { getRipgrepPlatformKey, resolveBundledRipgrepPath } from '../bundledBinaries'
+import { resolveBundledRipgrepPath } from '../bundledBinaries'
 
 describe('bundled native binaries', () => {
   beforeEach(() => {
     vi.mocked(app.getAppPath).mockReturnValue('/Applications/Cherry Studio.app/Contents/Resources/app.asar')
     Object.defineProperty(app, 'isPackaged', { configurable: true, value: false })
-  })
-
-  it('always maps ripgrep to the Windows x64 variant', () => {
-    expect(getRipgrepPlatformKey()).toBe('x64-win32')
   })
 
   it('resolves installed native executables for the current host', () => {

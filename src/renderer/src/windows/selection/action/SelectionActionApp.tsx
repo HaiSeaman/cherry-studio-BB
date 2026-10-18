@@ -2,6 +2,7 @@ import { isMac } from '@renderer/config/constant'
 import { useSelectionAssistant } from '@renderer/hooks/useSelectionAssistant'
 import { useSettings } from '@renderer/hooks/useSettings'
 import type { ActionItem } from '@renderer/types/selectionTypes'
+import { applyUserCustomCss } from '@renderer/utils/window'
 import { IpcChannel } from '@shared/IpcChannel'
 import { Button, Slider, Tooltip } from 'antd'
 import { Droplet, Minus, Pin, X } from 'lucide-react'
@@ -67,17 +68,7 @@ const SelectionActionApp: FC = () => {
   }, [isAutoClose, isPinned])
 
   useEffect(() => {
-    let customCssElement = document.getElementById('user-defined-custom-css') as HTMLStyleElement
-    if (customCssElement) {
-      customCssElement.remove()
-    }
-
-    if (customCss) {
-      customCssElement = document.createElement('style')
-      customCssElement.id = 'user-defined-custom-css'
-      customCssElement.textContent = customCss
-      document.head.appendChild(customCssElement)
-    }
+    applyUserCustomCss(customCss)
   }, [customCss])
 
   useEffect(() => {

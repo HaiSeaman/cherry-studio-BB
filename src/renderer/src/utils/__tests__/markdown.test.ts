@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest'
 import {
   convertMathFormula,
   findCitationInChildren,
-  isHtmlCode,
   markdownToPlainText,
   processLatexBrackets,
   purifyMarkdownImages,
@@ -606,33 +605,6 @@ $$
 
         expect(processLatexBrackets(complexInput)).toBe(expectedOutput)
       })
-    })
-  })
-
-  describe('isHtmlCode', () => {
-    it('should detect HTML with DOCTYPE', () => {
-      expect(isHtmlCode('<!DOCTYPE html>')).toBe(true)
-      expect(isHtmlCode('<!doctype html>')).toBe(true)
-    })
-
-    it('should detect HTML with valid tags', () => {
-      expect(isHtmlCode('<html>')).toBe(true)
-      expect(isHtmlCode('</html>')).toBe(true)
-      expect(isHtmlCode('<head>')).toBe(true)
-      expect(isHtmlCode('<body>')).toBe(true)
-      expect(isHtmlCode('<div>')).toBe(true)
-    })
-
-    it('should detect complete HTML structure', () => {
-      const html = '<html><head><title>Test</title></head><body>Hello</body></html>'
-      expect(isHtmlCode(html)).toBe(true)
-    })
-
-    it('should return false for non-HTML content', () => {
-      expect(isHtmlCode(null)).toBe(false)
-      expect(isHtmlCode('')).toBe(false)
-      expect(isHtmlCode('Hello world')).toBe(false)
-      expect(isHtmlCode('a < b')).toBe(false)
     })
   })
 

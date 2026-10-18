@@ -1,5 +1,6 @@
 import {
   Clipboard as ClipboardIcon,
+  CloudSun,
   ExternalLink,
   Lock,
   Maximize2,
@@ -23,15 +24,18 @@ import LocalPlayerView from './LocalPlayerView'
 import NotesView, { flushPendingDraft, TodosView } from './NotesTodosView'
 import type { WidgetPlayerState } from './protocol'
 import { emitPosition, onHostMessage, sendCmd } from './transport'
+import WeatherView from './weather/WeatherView'
 
-type View = 'clipboard' | 'local' | 'fm' | 'notes' | 'todos'
+type View = 'weather' | 'clipboard' | 'local' | 'fm' | 'notes' | 'todos'
 
 const VIEW_STORAGE_KEY = 'musicWidgetView'
-const VIEWS: View[] = ['clipboard', 'local', 'fm', 'notes', 'todos']
+/** 天气固定在第一位（剪贴板左边） */
+const VIEWS: View[] = ['weather', 'clipboard', 'local', 'fm', 'notes', 'todos']
 const isView = (v: unknown): v is View => typeof v === 'string' && (VIEWS as string[]).includes(v)
 
 /** 各视图默认窗口内容尺寸（挂件窗口 useContentSize:true，与 setContentSize 语义一致） */
 const VIEW_DEFAULT_SIZE: Record<View, { w: number; h: number }> = {
+  weather: { w: 380, h: 470 },
   clipboard: { w: 340, h: 460 },
   local: { w: 380, h: 220 },
   fm: { w: 380, h: 220 },
@@ -39,6 +43,7 @@ const VIEW_DEFAULT_SIZE: Record<View, { w: number; h: number }> = {
   todos: { w: 320, h: 440 }
 }
 const VIEW_META: Record<View, { icon: React.ReactNode; title: string }> = {
+  weather: { icon: <CloudSun size={13} />, title: '天气' },
   clipboard: { icon: <ClipboardIcon size={13} />, title: '剪贴板' },
   local: { icon: <Music2 size={13} />, title: '本地音乐' },
   fm: { icon: <Radio size={13} />, title: 'FM 电台' },
@@ -59,12 +64,14 @@ function readViewSize(v: View): { w: number; h: number } {
 }
 
 /**
- * 桌面助手挂件（音乐挂件扩展为 4 模块：本地音乐 / FM 电台 / 便签 / 待办）。
+ * 桌面助手挂件（音乐挂件扩展为 6 模块：天气 / 剪贴板 / 本地音乐 / FM 电台 / 便签 / 待办）。
  * 轻量独立入口，无 antd/Redux/router；数据与主程序共享同一 Dexie。
+ * - 天气：免费无 Key 的 Open-Meteo 接口，数据层见 ./weather/api.ts
  * - 本地/FM：纯遥控器，播放命令经主进程中转 IPC 发往主窗口 playerStore
  * - 便签/待办：Dexie 直读写，useLiveQuery 跨窗口实时双向同步
- * 4 视图始终挂载（切换仅 CSS 隐藏），保证便签草稿防抖与 pagehide 兜底不被卸载打断。
- * 切换视图时按 per-view 记忆尺寸自动调整窗口（380×220 音乐 ↔ 320×480 便签）。
+ * 便签/待办等视图始终挂载（切换仅 CSS 隐藏），保证草稿防抖与 pagehide 兜底不被卸载打断；
+ * 天气视图首次切到才挂载（避免挂件启动就去 IP 定位），挂载后同样保持常驻。
+ * 切换视图时按 per-view 记忆尺寸自动调整窗口（天气 380×470 / 剪贴板 340×460 ↔ 音乐 380×220）。
  */
 const MusicWidgetApp: FC = () => {
   const [pinned, setPinned] = useState(true)
@@ -76,7 +83,10 @@ const MusicWidgetApp: FC = () => {
     const v = localStorage.getItem(VIEW_STORAGE_KEY)
     return isView(v) ? v : 'local'
   })
+  // 天气面板延迟挂载：首次切到天气 tab 才创建，避免挂件一启动就去 IP 定位/上报网络请求
+  const [weatherVisited, setWeatherVisited] = useState(() => view === 'weather')
   const snapshotTimer = useRef<number>(0)
+  const viewSwitchRef = useRef<HTMLDivElement | null>(null)
   const viewRef = useRef<View>(view)
   // 程序化 setSize 时间戳：resize 回存时忽略其引发的事件，避免把默认尺寸回写覆盖用户手动调整
   const lastAutoResize = useRef(0)
@@ -132,6 +142,7 @@ const MusicWidgetApp: FC = () => {
 
   const switchView = (v: View) => {
     setView(v)
+    if (v === 'weather') setWeatherVisited(true)
     localStorage.setItem(VIEW_STORAGE_KEY, v)
     // 切换视图 → 应用该视图记忆的窗口尺寸
     const s = readViewSize(v)
@@ -139,6 +150,12 @@ const MusicWidgetApp: FC = () => {
     void window.api.musicWidget.setSize(Math.round(s.w), Math.round(s.h))
     syncMaximized()
   }
+
+  // 窄窗口下 tab 可能横向滚动，切换后把当前按钮滚进可见区，避免选中项看不见
+  useEffect(() => {
+    const active = viewSwitchRef.current?.querySelector<HTMLElement>('button.active')
+    active?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [view])
 
   // 手动调整窗口尺寸 → 防抖回存到当前视图（忽略程序化 setSize 引发的事件）
   useEffect(() => {
@@ -175,7 +192,7 @@ const MusicWidgetApp: FC = () => {
         <span className="title">
           <Music2 size={12} className="title-icon" /> 桌面助手
         </span>
-        <div className="btns view-switch">
+        <div className="btns view-switch" ref={viewSwitchRef}>
           {VIEWS.map((v) => (
             <button
               key={v}
@@ -228,6 +245,7 @@ const MusicWidgetApp: FC = () => {
       </header>
 
       <main className="body">
+        <div className={`view-panel ${view === 'weather' ? '' : 'hidden'}`}>{weatherVisited && <WeatherView />}</div>
         <div className={`view-panel ${view === 'clipboard' ? '' : 'hidden'}`}>
           <ClipboardView />
         </div>

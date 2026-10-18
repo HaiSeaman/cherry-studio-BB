@@ -173,17 +173,3 @@ export function isOpenAIWebSearchModel(model: Model): boolean {
     (modelId.includes('gpt-5') && !modelId.includes('chat'))
   )
 }
-
-export function isHunyuanSearchModel(model?: Model): boolean {
-  if (!model) {
-    return false
-  }
-
-  const modelId = getLowerBaseModelName(model.id)
-
-  if (model.provider === 'hunyuan') {
-    return modelId !== 'hunyuan-lite'
-  }
-
-  return false
-}

@@ -165,9 +165,22 @@ body {
   color: var(--accent-strong);
 }
 
-/* 4 视图切换组：非当前视图为普通按钮态，当前视图高亮主色 */
+/* 视图切换组：非当前视图为普通按钮态，当前视图高亮主色。
+   窄窗口下按钮放不下时允许横向滑动，保证每个 tab（含天气）都能点到，不会被裁掉 */
 .btns.view-switch {
   margin-right: 6px;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.btns.view-switch::-webkit-scrollbar {
+  display: none;
+}
+
+.btns.view-switch button {
+  flex-shrink: 0;
 }
 
 .btns.view-switch button.mode-btn {
@@ -200,7 +213,7 @@ body {
   background: var(--bg);
 }
 
-/* 视图面板：4 个模块始终挂载，切换仅 CSS 隐藏（保护便签草稿防抖/待办热力图不被卸载打断） */
+/* 视图面板：全部模块始终挂载，切换仅 CSS 隐藏（保护便签草稿防抖/待办热力图不被卸载打断） */
 .view-panel {
   flex: 1;
   min-height: 0;
@@ -1376,4 +1389,402 @@ body {
 .clip-detail-copy {
   color: var(--accent-strong);
   border-color: var(--accent-soft);
+}
+
+/* ================= 天气视图（第一个 tab，位于剪贴板左侧） ================= */
+.wx {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: var(--text);
+}
+
+.wx-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px 4px;
+  flex-shrink: 0;
+}
+
+.wx-place {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-2);
+}
+
+.wx-city {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wx-region,
+.wx-updated {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.wx-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.wx-actions button,
+.wx-search-input button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.wx-actions button:hover:not(:disabled),
+.wx-search-input button:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+
+.wx-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.wx-spin {
+  animation: wx-rotate 1s linear infinite;
+}
+
+@keyframes wx-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wx-search {
+  margin: 0 10px 6px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: var(--soft);
+  flex-shrink: 0;
+}
+
+.wx-search-input {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--text-3);
+}
+
+.wx-search-input input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.wx-search-input input::placeholder {
+  color: var(--text-3);
+}
+
+.wx-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.wx-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.wx-link:hover:not(:disabled) {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.wx-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.wx-hint {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.wx-results {
+  display: flex;
+  flex-direction: column;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.wx-result {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wx-result:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.wx-result-meta {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.wx-notice {
+  margin: 0 10px 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--soft);
+  font-size: 11px;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.wx-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 10px 10px;
+}
+
+.wx-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.wx-error {
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 11px;
+}
+
+.wx-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.wx-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wx-temp-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.wx-temp {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wx-feels {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.wx-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: auto;
+  text-align: right;
+}
+
+.wx-desc {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.wx-sub {
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+.wx-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px 8px;
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+.wx-sun {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+.wx-sun span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.wx-sun b {
+  margin-left: 3px;
+  font-weight: 600;
+}
+
+.wx-section {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.wx-daily {
+  display: flex;
+  flex-direction: column;
+}
+
+.wx-day {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 0;
+  font-size: 11.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wx-day:last-child {
+  border-bottom: none;
+}
+
+.wx-day-name {
+  width: 32px;
+  flex-shrink: 0;
+  color: var(--text);
+}
+
+.wx-day-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wx-day-range {
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.wx-day-rain {
+  width: 46px;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.wx-air {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.wx-air b {
+  font-weight: 600;
+}
+
+.wx-foot {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+/* 天气图标配色（跟随亮/暗主题仍可辨认） */
+.wx-icon-sun {
+  color: var(--amber);
+}
+
+.wx-icon-night {
+  color: #7c8fd6;
+}
+
+.wx-icon-muted {
+  color: var(--text-3);
+}
+
+.wx-icon-rain {
+  color: #4a9ee8;
+}
+
+.wx-icon-snow {
+  color: #66b7e8;
+}
+
+.wx-icon-storm {
+  color: #e0a020;
 }

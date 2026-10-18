@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isSerializable, SerializableSchema } from '../serialize'
+import { isSerializable } from '../serialize'
 
 describe('isSerializable', () => {
   describe('primitives', () => {
@@ -117,25 +117,5 @@ describe('isSerializable', () => {
       arr.push(arr)
       expect(isSerializable(arr)).toBe(false)
     })
-  })
-})
-
-describe('SerializableSchema', () => {
-  it('should accept valid serializable values', () => {
-    const value = { a: 1, b: [true, 'hello', null], c: { nested: 42 } }
-    expect(SerializableSchema.safeParse(value).success).toBe(true)
-  })
-
-  it('should reject non-serializable values', () => {
-    expect(SerializableSchema.safeParse(undefined).success).toBe(false)
-    expect(SerializableSchema.safeParse(() => {}).success).toBe(false)
-    expect(SerializableSchema.safeParse(new Date()).success).toBe(false)
-  })
-
-  it('should have consistent behavior with isSerializable', () => {
-    const cases = [null, 42, 'str', true, [1, 2], { a: 1 }, undefined, new Date(), new Map(), () => {}]
-    for (const value of cases) {
-      expect(SerializableSchema.safeParse(value).success).toBe(isSerializable(value))
-    }
   })
 })

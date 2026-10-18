@@ -6,6 +6,7 @@ import db from '@renderer/databases'
 import { handleSaveData, useAppDispatch } from '@renderer/store'
 import { setAvatar, setFilesPath, setResourcesPath } from '@renderer/store/runtime'
 import { checkDataLimit } from '@renderer/utils'
+import { applyUserCustomCss } from '@renderer/utils/window'
 import { IpcChannel } from '@shared/IpcChannel'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect } from 'react'
@@ -110,17 +111,7 @@ export function useAppInit() {
   }, [dispatch])
 
   useEffect(() => {
-    let customCssElement = document.getElementById('user-defined-custom-css') as HTMLStyleElement
-    if (customCssElement) {
-      customCssElement.remove()
-    }
-
-    if (customCss) {
-      customCssElement = document.createElement('style')
-      customCssElement.id = 'user-defined-custom-css'
-      customCssElement.textContent = customCss
-      document.head.appendChild(customCssElement)
-    }
+    applyUserCustomCss(customCss)
   }, [customCss])
 
   useEffect(() => {

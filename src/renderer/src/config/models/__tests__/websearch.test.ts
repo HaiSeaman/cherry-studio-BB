@@ -87,7 +87,6 @@ import { SystemProviderIds } from '@renderer/types'
 import { isOpenAIDeepResearchModel } from '../openai'
 import {
   GEMINI_SEARCH_REGEX,
-  isHunyuanSearchModel,
   isMandatoryWebSearchModel,
   isOpenAIWebSearchChatCompletionOnlyModel,
   isOpenAIWebSearchModel,
@@ -312,18 +311,6 @@ describe('websearch helpers', () => {
 
     it.each(['gpt-4o-search-preview', 'gpt-4o-mini-search-preview'])('flags %s as chat-completion-only', (id) => {
       expect(isOpenAIWebSearchChatCompletionOnlyModel(createModel({ id }))).toBe(true)
-    })
-  })
-
-  describe('isHunyuanSearchModel', () => {
-    it('identifies hunyuan models except lite', () => {
-      expect(isHunyuanSearchModel(createModel({ id: 'hunyuan-pro', provider: 'hunyuan' }))).toBe(true)
-      expect(isHunyuanSearchModel(createModel({ id: 'hunyuan-lite', provider: 'hunyuan' }))).toBe(false)
-      expect(isHunyuanSearchModel(createModel())).toBe(false)
-    })
-
-    it.each(['hunyuan-standard', 'hunyuan-advanced'])('accepts %s', (suffix) => {
-      expect(isHunyuanSearchModel(createModel({ id: suffix, provider: 'hunyuan' }))).toBe(true)
     })
   })
 

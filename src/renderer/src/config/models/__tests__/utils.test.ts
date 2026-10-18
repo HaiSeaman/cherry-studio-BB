@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { isOpenAIReasoningModel } from '../openai'
 import { isQwenMTModel } from '../qwen'
 import {
-  agentModelFilter,
   getModelSupportedVerbosity,
   groupQwenModels,
   isAnthropicModel,
@@ -22,11 +21,9 @@ import {
   isGemmaModel,
   isGenerateImageModels,
   isMaxTemperatureOneModel,
-  isNotSupportSystemMessageModel,
   isNotSupportTextDeltaModel,
   isSupportAdaptiveThinkingClaudeModel,
   isSupportedFlexServiceTier,
-  isSupportedModel,
   isSupportFlexServiceTierModel,
   isSupportTemperatureModel,
   isSupportTopPModel,
@@ -601,14 +598,6 @@ describe('model utils', () => {
     })
   })
 
-  describe('System message support', () => {
-    describe('isNotSupportSystemMessageModel', () => {
-      it('returns true for models that do not support system messages', () => {
-        expect(isNotSupportSystemMessageModel(createModel({ id: 'gemma-moe' }))).toBe(true)
-      })
-    })
-  })
-
   describe('Model grouping', () => {
     describe('groupQwenModels', () => {
       it('groups qwen models by prefix', () => {
@@ -648,41 +637,6 @@ describe('model utils', () => {
         const models = [createModel({ id: 'gpt-4o' }), createModel({ id: 'gpt-4o-mini' })]
         generateImageMock.mockReturnValueOnce(true).mockReturnValueOnce(false)
         expect(isGenerateImageModels(models)).toBe(false)
-      })
-    })
-  })
-
-  describe('Model filtering', () => {
-    describe('isSupportedModel', () => {
-      it('filters supported OpenAI catalog entries', () => {
-        expect(isSupportedModel({ id: 'gpt-4', object: 'model' } as any)).toBe(true)
-      })
-
-      it('filters unsupported OpenAI catalog entries', () => {
-        expect(isSupportedModel({ id: 'tts-1', object: 'model' } as any)).toBe(false)
-      })
-    })
-
-    describe('agentModelFilter', () => {
-      it('returns true for regular models', () => {
-        expect(agentModelFilter(createModel())).toBe(true)
-      })
-
-      it('filters out embedding models', () => {
-        embeddingMock.mockReturnValueOnce(true)
-        expect(agentModelFilter(createModel({ id: 'text-embedding' }))).toBe(false)
-      })
-
-      it('filters out rerank models', () => {
-        embeddingMock.mockReturnValue(false)
-        rerankMock.mockReturnValueOnce(true)
-        expect(agentModelFilter(createModel({ id: 'rerank' }))).toBe(false)
-      })
-
-      it('filters out text-to-image models', () => {
-        rerankMock.mockReturnValue(false)
-        textToImageMock.mockReturnValueOnce(true)
-        expect(agentModelFilter(createModel({ id: 'gpt-image-1' }))).toBe(false)
       })
     })
   })

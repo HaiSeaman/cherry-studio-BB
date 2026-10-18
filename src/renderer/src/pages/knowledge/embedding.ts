@@ -14,11 +14,6 @@ export function batchTexts(texts: string[], batchSize: number): string[][] {
   return batches
 }
 
-/** number[][] → Float32Array[]（存 IndexedDB 用，省一半内存） */
-export function toFloat32Array(values: number[][]): Float32Array[] {
-  return values.map((v) => Float32Array.from(v))
-}
-
 /**
  * 维度强校验：远端返回的每个向量维度必须等于建库时固化的 embedding_dim。
  * 不一致说明远端模型变更或配置错误，禁止静默写入（否则余弦相似度会算错）。

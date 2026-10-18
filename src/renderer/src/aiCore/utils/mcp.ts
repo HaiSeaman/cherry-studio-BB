@@ -31,19 +31,6 @@ export function setupToolsConfig(
 }
 
 /**
- * 检查 MCP 工具调用结果是否包含可能携带大体积 base64 数据的多模态内容。
- * 包括 image、audio 以及含 blob 的 resource 类型。
- */
-export function hasMultimodalContent(result: MCPCallToolResponse): boolean {
-  return (
-    Array.isArray(result?.content) &&
-    result.content.some(
-      (item) => item.type === 'image' || item.type === 'audio' || (item.type === 'resource' && !!item.resource?.blob)
-    )
-  )
-}
-
-/**
  * 将 MCP 工具调用结果转换为纯文本摘要，把图片/音频/resource blob 替换为文本占位描述，
  * 避免 base64 数据超出消息大小限制（如 kimi 的 4MB 限制）。
  */

@@ -242,65 +242,6 @@ export function isOpenFenceBlock(codeLength?: number, metaLength?: number, posit
 }
 
 /**
- * 检查代码是否具有HTML特征
- * @param code 输入的代码字符串
- * @returns 是HTML代码 true，否则 false
- */
-export function isHtmlCode(code: string | null): boolean {
-  if (!code || !code.trim()) {
-    return false
-  }
-
-  const trimmedCode = code.trim().toLowerCase()
-
-  // 1. 检查是否包含完整的HTML文档结构
-  if (
-    trimmedCode.includes('<!doctype html>') ||
-    trimmedCode.includes('<html') ||
-    trimmedCode.includes('</html>') ||
-    trimmedCode.includes('<head') ||
-    trimmedCode.includes('</head>') ||
-    trimmedCode.includes('<body') ||
-    trimmedCode.includes('</body>')
-  ) {
-    return true
-  }
-
-  // 2. 检查是否包含常见的HTML/SVG标签
-  const commonTags = [
-    '<div',
-    '<span',
-    '<p',
-    '<a',
-    '<img',
-    '<svg',
-    '<table',
-    '<ul',
-    '<ol',
-    '<section',
-    '<header',
-    '<footer',
-    '<nav',
-    '<article',
-    '<button',
-    '<form',
-    '<input'
-  ]
-  if (commonTags.some((tag) => trimmedCode.includes(tag))) {
-    return true
-  }
-
-  // 3. 检查是否存在至少一个闭合的HTML标签
-  // 这个正则表达式查找 <tag>...</tag> 或 <tag .../> 结构
-  const pairedTagPattern = /<([a-z0-9]+)([^>]*?)>(.*?)<\/\1>|<([a-z0-9]+)([^>]*?)\/>/
-  if (pairedTagPattern.test(trimmedCode)) {
-    return true
-  }
-
-  return false
-}
-
-/**
  * 将 Markdown 字符串转换为纯文本。
  * @param markdown Markdown 字符串。
  * @returns 纯文本字符串。

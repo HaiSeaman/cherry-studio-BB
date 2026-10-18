@@ -5,6 +5,7 @@ import { getToastUtilities } from '@renderer/components/TopView/toast'
 import { useSettings } from '@renderer/hooks/useSettings'
 import store, { persistor, useAppDispatch } from '@renderer/store'
 import { setFilesPath, setResourcesPath } from '@renderer/store/runtime'
+import { applyUserCustomCss } from '@renderer/utils/window'
 import { useEffect } from 'react'
 import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
@@ -31,17 +32,7 @@ function MiniWindowContent(): React.ReactElement {
   }, [dispatch])
 
   useEffect(() => {
-    let customCssElement = document.getElementById('user-defined-custom-css') as HTMLStyleElement
-    if (customCssElement) {
-      customCssElement.remove()
-    }
-
-    if (customCss) {
-      customCssElement = document.createElement('style')
-      customCssElement.id = 'user-defined-custom-css'
-      customCssElement.textContent = customCss
-      document.head.appendChild(customCssElement)
-    }
+    applyUserCustomCss(customCss)
   }, [customCss])
 
   return <HomeWindow />

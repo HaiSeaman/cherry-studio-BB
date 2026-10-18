@@ -5,6 +5,120 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.11.5] - 2026-10-18
+
+### 核心主题：桌面助手挂件新增「天气」TAB + 全仓死代码清理
+
+**不新增依赖、不改数据库结构、用户数据完全兼容**。本轮给常驻桌面的小挂件加了天气页（位于剪贴板左侧），并顺手做了一次全仓代码体检：删掉 12 个生产代码从不调用的函数、1 个孤儿常量，合并 3 处逐字相同的重复实现。
+
+---
+
+#### 一、新功能：天气 TAB
+
+**1. 位置与入口**
+
+- 挂件顶栏视图顺序由 `[剪贴板, 本地音乐, FM 电台, 便签, 待办]` 变为 `[天气, 剪贴板, 本地音乐, FM 电台, 便签, 待办]`
+- 实现：`src/renderer/src/widgets/music/MusicWidgetApp.tsx` 的 `View` 类型与 `VIEWS` 数组，`weather` 置于首位
+- 默认窗口尺寸 380×470（`VIEW_DEFAULT_SIZE`），与其他视图共用 per-view 尺寸记忆
+
+**2. 显示内容**
+
+| 区域 | 字段 |
+|---|---|
+| 当前天气 | 温度、体感、天气码对应图标与中文名、今日最低~最高、降水概率 |
+| 详细数据 | 湿度、风向（八方位）+ 风速、气压、云量、阵风、降水量 |
+| 日出日落 | 日出、日落、紫外线数值 + WHO 强度等级 |
+| 5 天预报 | 星期标签、图标、天气文字、温度区间、降雨概率 |
+| 空气质量 | PM2.5、PM10、US AQI + 等级（优/良/轻度/中度/重度/严重污染） |
+
+**3. 本地定位与手动搜索**
+
+- 首次进入顺序：读取上次保存的城市 → 没有则 IP 定位 → 定位失败则回落北京并提示
+- IP 定位：`https://ipwho.is/` 取坐标 → BigDataCloud 反查中文地名（IP 接口对国内城市常返回拼音）
+- 手动搜索：Open-Meteo Geocoding，`language=zh`，返回中文名 + 省份，用于区分同名城市
+- 选中城市后经 `window.api.config.set` 持久化（键名 `musicWidgetWeatherLocation`），重启后仍生效
+- **只有真正取到天气数据才保存城市**；切换城市失败会回滚标题，避免「标题写新城市、数据还是旧城市」
+
+**4. 免费数据源（无需注册 / 无需 API Key）**
+
+| 用途 | 接口 |
+|---|---|
+| 天气 + 5 天预报 | `api.open-meteo.com/v1/forecast` |
+| 空气质量 | `air-quality-api.open-meteo.com/v1/air-quality` |
+| 城市中文搜索 | `geocoding-api.open-meteo.com/v1/search` |
+| 坐标转中文地名 | `api.bigdatacloud.net/data/reverse-geocode-client` |
+| IP 粗定位 | `ipwho.is` |
+
+**5. 可靠性设计**
+
+- **CSP 放行**：`src/renderer/musicWidget.html` 的 `connect-src` 精确新增上述 5 个域名（其余策略不变，已实测未放行的域名仍被拦截）
+- **延迟挂载**：天气面板首次切到该 tab 才创建组件，**挂件启动不会发起任何定位或网络请求**
+- **不白屏**：请求失败保留上次数据并显示重试；定位期间显示「正在定位…/正在获取天气…」
+- **分区容错**：空气质量是独立接口，失败只隐藏该行
+- **超时与缓存**：8 秒超时；同城市 30 分钟内走内存缓存（窗口关闭后缓存随进程销毁）
+- **竞态保护**：`requestId` + `alive` 双保险，快速切城市时旧响应不会覆盖新城市
+- **跨午夜正确性**：以接口 `timezone=auto` 返回的**目标城市当地日期**判定「今天」，顶部卡片与 5 天列表始终指向同一天
+- **异常兜底**：接口返回非 JSON（代理劫持）时转成中文提示，不把英文 `SyntaxError` 抛给界面
+- **窄窗口**：顶栏视图按钮放不下时可横向滚动，切换后自动把当前 tab 滚入可见区
+
+**6. 测试**
+
+`src/renderer/src/widgets/music/weather/__tests__/` 共 47 个用例：
+
+- `weatherCodes.test.ts`（19）：天气码→中文/图标、AQI 与紫外线分级、风向、时分/星期格式化、本地日期、`findTodayIndex` 命中与未命中
+- `api.test.ts`（28）：五个接口的数据归一化、字段缺失兜底、缓存命中/强制刷新、HTTP 错误、超时中止、城市搜索、IP 定位回退、城市持久化与脏数据
+
+---
+
+#### 二、死代码清理（12 个导出 + 1 个常量）
+
+以下导出经 TypeScript 语言服务核实：**生产代码调用数为 0，仅测试引用**，已连同其专属测试一并删除。
+
+| 文件 | 删除的导出 |
+|---|---|
+| `config/models/reasoning.ts` | `isClaude4SeriesModel`、`isInterleavedThinkingModel` |
+| `config/models/utils.ts` | `isSupportedModel`、`isNotSupportSystemMessageModel`、`agentModelFilter` |
+| `config/models/vision.ts` | `isImageEnhancementModel` |
+| `config/models/websearch.ts` | `isHunyuanSearchModel` |
+| `aiCore/utils/mcp.ts` | `hasMultimodalContent` |
+| `pages/knowledge/embedding.ts` | `toFloat32Array` |
+| `types/serialize.ts` | `SerializableSchema`（连带移除已无用的 `zod` 导入） |
+| `utils/markdown.ts` | `isHtmlCode` |
+| `main/utils/bundledBinaries.ts` | `getRipgrepPlatformKey` |
+| `config/models/utils.ts` | `NOT_SUPPORTED_REGEX`（唯一消费者被删后成为孤儿） |
+
+**刻意保留（经核实不能删）**：`selectPendingPermission`、`getPendingToolIds`、`clearToolIdToNameMappings`、`refreshShellEnv`、`rtkRewrite` —— 它们分别被测试 mock、其他用例的状态清理、测试用缓存重置依赖，或与辅助函数紧密耦合。
+
+---
+
+#### 三、重复代码合并
+
+**自定义 CSS 注入逻辑（3 处 → 1 处）**
+
+- 位置：`hooks/useAppInit.ts`、`windows/mini/MiniWindowApp.tsx`、`windows/selection/action/SelectionActionApp.tsx`
+- 问题：主窗口、快捷助手、划词动作窗口各自是独立渲染进程，原本各写了一份**逐字相同**的 11 行注入逻辑
+- 修复：抽取为 `utils/window.ts` 的 `applyUserCustomCss(css)`，三处改为调用
+- 语义等价：先移除旧 `<style id="user-defined-custom-css">` 节点，空值直接返回（不注入空标签）
+
+---
+
+#### 四、核实后未处理的项目（避免误删）
+
+- **依赖**：207 个依赖中唯一疑似孤立的 `jest-styled-components` 实际被 `tests/renderer.setup.ts` 引用（styled-components 快照序列化），保留
+- **25 个未被引用的图片资源**（约 0.32MB）：可能是品牌素材，删除不可逆，按保守原则保留
+- **6 处 TopView 弹窗样板**：属项目既定模式，抽取需改动弹窗基础设施，风险高于收益
+- **paint / video 两套页面的相似逻辑**：相似但不等同，强行合并会引入耦合
+
+---
+
+#### 五、质量验证
+
+- 全仓单元测试：**264 个测试文件 / 3997 项通过 / 8 项跳过 / 0 失败**
+- TypeScript 类型检查：渲染进程 **0 错误**、主进程 **0 错误**
+- 代码规范：oxlint **0 告警 0 错误**、ESLint 通过
+- 格式检查：30 个改动文件 **0 待改**
+- 独立代码审查：确认删除项无生产调用、无孤立常量、CSS 抽取行为等价；审查发现并已修复 2 个问题（误删的 MiMo 测试断言已补回、孤儿常量已清除）
+
 ## [1.11.4] - 2026-10-17
 
 ### 核心主题：全仓深度审查 —— 18 个 BUG 修复 + 死代码清理 + 文档纠错

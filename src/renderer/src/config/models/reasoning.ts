@@ -611,16 +611,6 @@ export function isClaude45ReasoningModel(model: Model): boolean {
   return regex.test(modelId)
 }
 
-export function isClaude4SeriesModel(model: Model): boolean {
-  const modelId = getLowerBaseModelName(model.id, '/')
-  // Supports various formats including:
-  // - Direct API: claude-sonnet-4, claude-opus-4-20250514
-  // - GCP Vertex AI: claude-sonnet-4@20250514
-  // - AWS Bedrock: anthropic.claude-sonnet-4-20250514-v1:0
-  const regex = /claude-(sonnet|opus|haiku)-4(?:[.-]\d+)?(?:[@\-:][\w\-:]+)?$/i
-  return regex.test(modelId)
-}
-
 export function isClaudeReasoningModel(model?: Model): boolean {
   if (!model) {
     return false
@@ -997,18 +987,3 @@ export const isFixedReasoningModel = (model: Model) =>
 // https://platform.minimaxi.com/docs/guides/text-m2-function-call#openai-sdk
 // https://docs.z.ai/guides/capabilities/thinking-mode
 // https://platform.moonshot.cn/docs/guide/use-kimi-k2-thinking-model#%E5%A4%9A%E6%AD%A5%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8
-/** @deprecated No longer used. */
-const INTERLEAVED_THINKING_MODEL_REGEX =
-  /minimax-m2(.(\d+))?(?:-[\w-]+)?|mimo-v2-flash|glm-5(?:.\d+)?(?:-[\w-]+)?|glm-4.(\d+)(?:-[\w-]+)?|kimi-k2-thinking?|kimi-k2\.[56](?:-[\w-]+)?$/i
-
-/**
- * Determines whether the given model supports interleaved thinking.
- *
- * @deprecated No longer used.
- * @param model - The model object to check.
- * @returns `true` if the model's ID matches the interleaved thinking model pattern; otherwise, `false`.
- */
-export const isInterleavedThinkingModel = (model: Model) => {
-  const modelId = getLowerBaseModelName(model.id)
-  return INTERLEAVED_THINKING_MODEL_REGEX.test(modelId)
-}

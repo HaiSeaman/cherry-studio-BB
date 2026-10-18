@@ -7,7 +7,7 @@ import type { MCPTool } from '@renderer/types'
 import type { Tool } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { convertMcpToolsToAiSdkTools, hasMultimodalContent, mcpResultToTextSummary, setupToolsConfig } from '../mcp'
+import { convertMcpToolsToAiSdkTools, mcpResultToTextSummary, setupToolsConfig } from '../mcp'
 
 // Mock dependencies
 vi.mock('@logger', () => ({
@@ -288,64 +288,6 @@ describe('mcp utils', () => {
       expect(result['string-tool-id']).toBeDefined()
       expect(result['number-tool-id']).toBeDefined()
       expect(result['boolean-tool-id']).toBeDefined()
-    })
-  })
-
-  describe('hasMultimodalContent', () => {
-    it('should return false for pure text content', () => {
-      expect(hasMultimodalContent({ content: [{ type: 'text', text: 'hello' }] })).toBe(false)
-    })
-
-    it('should return true for image content', () => {
-      expect(hasMultimodalContent({ content: [{ type: 'image', data: 'base64...', mimeType: 'image/png' }] })).toBe(
-        true
-      )
-    })
-
-    it('should return true for audio content', () => {
-      expect(hasMultimodalContent({ content: [{ type: 'audio', data: 'base64...', mimeType: 'audio/mp3' }] })).toBe(
-        true
-      )
-    })
-
-    it('should return true for resource with blob', () => {
-      expect(
-        hasMultimodalContent({
-          content: [{ type: 'resource', resource: { blob: 'base64...', mimeType: 'image/png', uri: 'file://a.png' } }]
-        })
-      ).toBe(true)
-    })
-
-    it('should return false for resource without blob', () => {
-      expect(
-        hasMultimodalContent({
-          content: [{ type: 'resource', resource: { text: 'plain text', uri: 'file://a.txt' } }]
-        })
-      ).toBe(false)
-    })
-
-    it('should return true for mixed content with at least one multimodal item', () => {
-      expect(
-        hasMultimodalContent({
-          content: [
-            { type: 'text', text: 'hello' },
-            { type: 'image', data: 'base64...', mimeType: 'image/png' }
-          ]
-        })
-      ).toBe(true)
-    })
-
-    it('should return false for empty content array', () => {
-      expect(hasMultimodalContent({ content: [] })).toBe(false)
-    })
-
-    it('should return false for null/undefined result', () => {
-      expect(hasMultimodalContent(null as any)).toBe(false)
-      expect(hasMultimodalContent(undefined as any)).toBe(false)
-    })
-
-    it('should return false when content is not an array', () => {
-      expect(hasMultimodalContent({ content: 'not-array' } as any)).toBe(false)
     })
   })
 
