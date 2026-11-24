@@ -164,6 +164,3 @@ class ScreenshotService {
 const screenshotService = new ScreenshotService()
 
 export default screenshotService
-export const initScreenshotService = () => {
-  screenshotService.init()
-}

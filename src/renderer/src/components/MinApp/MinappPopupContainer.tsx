@@ -33,8 +33,8 @@ import WebviewContainer from './WebviewContainer'
 
 const logger = loggerService.withContext('MinappPopupContainer')
 
-/** 小程序闲置回收：闲置 30 分钟回收，每 5 分钟检查一次 */
-const IDLE_RECYCLE_MS = 30 * 60 * 1000
+/** 小程序闲置回收：闲置 10 分钟回收，每 5 分钟检查一次 */
+const IDLE_RECYCLE_MS = 10 * 60 * 1000
 const IDLE_RECYCLE_CHECK_MS = 5 * 60 * 1000
 
 interface AppExtraInfo {
@@ -183,7 +183,7 @@ const MinappPopupContainer: React.FC = () => {
 
   useBridge()
 
-  /** 闲置回收：非当前小程序 30 分钟未使用且未在发声时，销毁其 webview 渲染进程（~300MB/个）。
+  /** 闲置回收：非当前小程序 10 分钟未使用且未在发声时，销毁其 webview 渲染进程（~300MB/个）。
    *  重开时 WebviewContainer 会通过 localStorage 的 last url 恢复到关闭前页面 */
   const lastActiveMapRef = useRef<Map<string, number>>(new Map())
 

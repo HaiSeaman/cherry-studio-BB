@@ -5,6 +5,44 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 并遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.12.0] - 2026-11-25
+
+### 核心主题：三处内存优化 —— 截图按需启动、快捷助手闲置释放、小程序回收提速
+
+**不新增依赖、不改数据库结构、不新增功能入口，用户数据完全兼容。** 本版只做一件事：把「开机就常驻、但大多数时间用不到」的隐藏窗口和渲染进程改成按需创建或闲置销毁。
+
+---
+
+#### 一、截图服务改为首次使用时初始化
+
+- **旧行为**：`app.whenReady()` 末尾无条件调用 `initScreenshotService()`；`electron-screenshots` 在构造时立即创建一个隐藏 `BrowserView` 并加载截图界面 —— 即使从不截图，也常驻一个沙箱渲染进程（正式版实测约 100MB，另有 0.69MB 原生模块一直挂在主进程）。
+- **新行为**：删除启动时的 eager init；`ScreenshotService.startCapture()` 内部本来就会执行 `this.init()`，首次按截图快捷键时才创建截图视图。
+- **影响**：启动时少一个隐藏渲染进程；第一次截图多等约 0.5 秒（现场加载截图界面），之后无感。
+- **代码**：`src/main/index.ts`（删除启动调用）、`src/main/services/ScreenshotService.ts`（删除无引用的 `initScreenshotService` 导出）。
+- **边界**：截图结束后 `electron-screenshots` 仍会保留这个 BrowserView（库自身设计），这部分内存会留到本次退出；完全不使用截图时不会产生。
+
+#### 二、快捷助手闲置 30 分钟自动销毁
+
+- **旧行为**：快捷助手窗口一旦创建就常驻；Windows 上失焦是「最小化」，渲染进程（实测约 190MB）一直保留。
+- **新行为**：窗口 `hide` / `minimize` 后开始 30 分钟计时；`show` / `restore` 或主动呼出时立即取消计时；到点后复查窗口仍处于隐藏或最小化状态才销毁，复用现有 `closeMiniWindow()` 释放渲染进程，下次呼出按需重建。
+- **影响**：常用场景无感；闲置超过 30 分钟释放约 190MB；重开约 1 秒，输入框里未发送的内容会丢失。
+- **代码**：`src/main/services/WindowService.ts`（`MINI_WINDOW_IDLE_DESTROY_MS`、`miniWindowIdleTimer`、`scheduleMiniWindowIdleDestroy()`、`clearMiniWindowIdleTimer()`）。
+- **兼容**：窗口位置/尺寸仍由 `electron-window-state` 持久化；重建后 `ShowMiniWindow` 事件照常发送，待处理截图仍可由 HomeWindow 取回。
+
+#### 三、小程序 webview 闲置回收 30 → 10 分钟
+
+- `MinappPopupContainer.tsx` 的 `IDLE_RECYCLE_MS` 由 30 分钟改为 10 分钟；巡检间隔仍为 5 分钟，因此实际在闲置 10~15 分钟时回收。
+- 保持原有约束：当前正在看的小程序不回收；正在播放音频/视频的不回收；重开时通过 localStorage 恢复上次访问的 URL。
+- **影响**：后台小程序网页（每个 100~400MB）更快让出内存；切回时需要重新加载网页。
+
+#### 实测与验证
+
+- **优化前正式版 v1.11.5 实测**：只开主窗口 5 个进程 / 约 663MB；快捷助手 + 音乐挂件 + 2 个小程序全开 10 个进程 / 约 1.69GB 工作集（私有 1.22GB）。
+- **开发模式验证**：启动后仅 4 个 Electron 进程（主进程 / GPU / 网络 / 主窗口），主进程模块列表确认截图隐藏视图未创建；打开全部功能模块后 9 个进程 / 约 1.57GB（开发模式含 Vite 热更新与未压缩代码，数值偏高，不能与正式版直接比较）。
+- **静态验证**：`typecheck:node`、`typecheck:web` 通过；oxlint / biome / eslint 对改动文件检查 0 错误；`pnpm test:main` 45 个测试文件、513 项测试全部通过。
+
+---
+
 ## [1.11.5] - 2026-10-18
 
 ### 核心主题：桌面助手挂件新增「天气」TAB + 全仓死代码清理

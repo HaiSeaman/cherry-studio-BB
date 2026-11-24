@@ -21,6 +21,8 @@ import { initSessionUserAgent } from './WebviewService'
 
 const DEFAULT_MINIWINDOW_WIDTH = 550
 const DEFAULT_MINIWINDOW_HEIGHT = 400
+/** 快捷助手隐藏/最小化后闲置多久销毁窗口（释放约 200MB 渲染进程内存） */
+const MINI_WINDOW_IDLE_DESTROY_MS = 30 * 60 * 1000
 
 /** 桌面挂件窗口配置（便签/音乐挂件共用同一控制器） */
 type WidgetWindowConfig = {
@@ -185,6 +187,7 @@ export class WindowService {
   //to restore the focus status when miniWindow hides
   private wasMainWindowFocused: boolean = false
   private lastRendererProcessCrashTime: number = 0
+  private miniWindowIdleTimer: ReturnType<typeof setTimeout> | null = null
 
   public createMainWindow(): BrowserWindow {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -683,12 +686,18 @@ export class WindowService {
     })
 
     this.miniWindow.on('closed', () => {
+      this.clearMiniWindowIdleTimer()
       this.miniWindow = null
     })
 
     this.miniWindow.on('show', () => {
+      this.clearMiniWindowIdleTimer()
       this.miniWindow?.webContents.send(IpcChannel.ShowMiniWindow)
     })
+
+    this.miniWindow.on('restore', () => this.clearMiniWindowIdleTimer())
+    this.miniWindow.on('hide', () => this.scheduleMiniWindowIdleDestroy())
+    this.miniWindow.on('minimize', () => this.scheduleMiniWindowIdleDestroy())
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       void this.miniWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/miniWindow.html')
@@ -705,6 +714,9 @@ export class WindowService {
     if (!enableQuickAssistant) {
       return
     }
+
+    // 主动呼出时立即取消闲置销毁计时，避免刚显示就被计时器关掉
+    this.clearMiniWindowIdleTimer()
 
     if (this.miniWindow && !this.miniWindow.isDestroyed()) {
       this.wasMainWindowFocused = this.mainWindow?.isFocused() || false
@@ -789,7 +801,29 @@ export class WindowService {
   }
 
   public closeMiniWindow() {
+    this.clearMiniWindowIdleTimer()
     this.miniWindow?.close()
+  }
+
+  /** 隐藏/最小化后开始计时，闲置超时销毁窗口以释放渲染进程内存 */
+  private scheduleMiniWindowIdleDestroy() {
+    this.clearMiniWindowIdleTimer()
+    this.miniWindowIdleTimer = setTimeout(() => {
+      this.miniWindowIdleTimer = null
+      const win = this.getMiniWindow()
+      // show/restore 会清掉计时器；这里只在窗口仍处于隐藏或最小化状态时销毁
+      if (win && (!win.isVisible() || win.isMinimized())) {
+        logger.info('Destroying idle mini window to release memory')
+        this.closeMiniWindow()
+      }
+    }, MINI_WINDOW_IDLE_DESTROY_MS)
+  }
+
+  private clearMiniWindowIdleTimer() {
+    if (this.miniWindowIdleTimer) {
+      clearTimeout(this.miniWindowIdleTimer)
+      this.miniWindowIdleTimer = null
+    }
   }
 
   public toggleMiniWindow() {

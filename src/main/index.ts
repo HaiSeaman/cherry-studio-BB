@@ -27,7 +27,7 @@ import {
   setupAppImageDeepLink
 } from './services/ProtocolClient'
 import selectionService, { initSelectionService } from './services/SelectionService'
-import screenshotService, { initScreenshotService } from './services/ScreenshotService'
+import screenshotService from './services/ScreenshotService'
 import { registerShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { versionService } from './services/VersionService'
@@ -260,8 +260,8 @@ if (!app.requestSingleInstanceLock()) {
     //start selection assistant service
     initSelectionService()
 
-    //start screenshot service
-    initScreenshotService()
+    // 截图服务改为首次使用时由 startCapture() 内部懒初始化，
+    // 避免开机常驻一个隐藏 BrowserView 渲染进程（约 100MB）
   })
 
   registerProtocolClient(app)
